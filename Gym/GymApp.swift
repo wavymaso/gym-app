@@ -123,7 +123,7 @@ struct MainView: View {
         case .dashboard: DashboardView()
         case .strategy: StrategyView()
         case .settings: SettingsView()
-        case .food: ComingSoon(page: s, phase: 2, text: "Log what you eat on a timeline: search foods, scan barcodes, quick add, recipes.")
+        case .food: FoodLogView()
         case .weight: ComingSoon(page: s, phase: 3, text: "Log your weight and see your trend, with the daily swings smoothed out.")
         case .workouts: ComingSoon(page: s, phase: 5, text: "Routines, logging sets, rest timer and your progress on every lift.")
         case .exercises: ComingSoon(page: s, phase: 5, text: "The exercise library, grouped by muscle, plus your own exercises.")
@@ -150,7 +150,8 @@ struct ComingSoon: View {
 @MainActor func saveSnapshot(to path: String) async {
     try? await Task.sleep(nanoseconds: 2_500_000_000)
     #if os(macOS)
-    guard let view = NSApp.windows.first(where: { $0.isVisible })?.contentView,
+    let visible = NSApp.windows.filter(\.isVisible)
+    guard let view = (visible.first(where: \.isSheet) ?? visible.first)?.contentView,
           let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
     view.cacheDisplay(in: view.bounds, to: rep)
     // Sandboxed: only the app's own temporary folder is writable (~/Library/Containers/com.wavymaso.gym/Data/tmp).
@@ -167,5 +168,22 @@ func addDemoProfile(_ ctx: ModelContext) {
     ctx.insert(WeightEntry(kg: 78.4))
     let exp = startingExpenditure(sex: .male, weightKg: 78.4, heightCm: 180, age: age(born: born), activity: .moderate)
     ctx.startProgram(goal: .lose, ratePercent: 0.5, diet: .balanced, protein: .high, weightKg: 78.4, expenditure: exp, sex: .male, reason: "setup")
+    // A morning of food, so the log and dashboard have something to show.
+    let oats = Food(key: "custom:demo-oats", name: "Copos de avena", brand: "Hacendado", source: "custom",
+                    per100: Nutrients(kcal: 372, protein: 14, fat: 7, carbs: 59, fiber: 10), servings: [Serving(name: "1 bowl", grams: 60)])
+    let yogurt = Food(key: "off:20416690", name: "Yogur Griego Natural Light", brand: "Milbona", source: "off",
+                      per100: Nutrients(kcal: 59, protein: 6, fat: 2, carbs: 4), servings: [Serving(name: "1 pot", grams: 125)])
+    let chicken = Food(key: "usda:demo-chicken", name: "Chicken breast, roasted", source: "usda",
+                       per100: Nutrients(kcal: 165, protein: 31, fat: 3.6, carbs: 0))
+    [oats, yogurt, chicken].forEach(ctx.insert)
+    let cal = Calendar.current
+    func at(_ h: Int, _ m: Int) -> Date { cal.date(bySettingHour: h, minute: m, second: 0, of: Date())! }
+    ctx.log(oats, amount: 1, unit: "1 bowl", day: dayKey(), time: at(8, 15))
+    ctx.log(yogurt, amount: 1, unit: "1 pot", day: dayKey(), time: at(8, 20))
+    ctx.log(chicken, amount: 180, unit: "g", day: dayKey(), time: at(14, 0))
+    ctx.insert(FoodEntry(day: dayKey(), time: at(17, 30), name: "Café con leche", brand: nil, foodKey: nil, amount: 1, unit: "",
+                         grams: 0, nutrients: Nutrients(kcal: 80, protein: 4, fat: 4, carbs: 6)))
+    yogurt.isFavorite = true
+    try? ctx.save()
 }
 #endif

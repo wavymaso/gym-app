@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var ctx
     @Query private var profiles: [Profile]
     @State private var confirmReset = false
+    @AppStorage("usdaKey") private var usdaKey = ""
 
     var body: some View {
         Form {
@@ -32,6 +33,14 @@ struct SettingsView: View {
                     Text("About you")
                 } footer: {
                     Text("Only used for the starting expenditure estimate. Once you've logged food and weight for a while, your own data takes over.")
+                }
+                Section {
+                    TextField("USDA API key", text: $usdaKey, prompt: Text("Using the shared demo key"))
+                    Link("Get a free key (takes a minute)", destination: URL(string: "https://fdc.nal.usda.gov/api-key-signup")!)
+                } header: {
+                    Text("Food search")
+                } footer: {
+                    Text("Plain foods come from USDA FoodData Central. The shared demo key allows only a few searches an hour; your own key is free and unlimited. Products come from Open Food Facts and need no key.")
                 }
                 Section {
                     Button("Start over…", role: .destructive) { confirmReset = true }

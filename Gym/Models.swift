@@ -81,7 +81,8 @@ import SwiftData
     }
 }
 
-let allModels: [any PersistentModel.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self]
+let allModels: [any PersistentModel.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self,
+                                             Food.self, RecipeIngredient.self, FoodEntry.self]
 
 // MARK: - Looking things up
 

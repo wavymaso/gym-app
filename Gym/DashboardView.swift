@@ -8,6 +8,12 @@ struct DashboardView: View {
     @Query(sort: \TargetSet.fromDay, order: .reverse) private var targetSets: [TargetSet]
     @Query(sort: \WeightEntry.day, order: .reverse) private var weights: [WeightEntry]
     @Query(filter: #Predicate<Program> { $0.isActive }) private var programs: [Program]
+    @Query private var todaysEntries: [FoodEntry]
+
+    init() {
+        let today = dayKey()
+        _todaysEntries = Query(filter: #Predicate<FoodEntry> { $0.day == today })
+    }
 
     private var profile: Profile? { profiles.first }
     private var today: TargetSet? { targetSets.first { $0.fromDay <= dayKey() } }
@@ -49,11 +55,11 @@ struct DashboardView: View {
     }
 
     private func nutritionCard(_ t: TargetSet, _ energy: EnergyUnit) -> some View {
-        let eaten = Targets(kcal: 0, protein: 0, fat: 0, carbs: 0)       // the food log arrives in phase 2
+        let eaten = todaysEntries.reduce(Nutrients.zero) { $0 + $1.nutrients }.targets
         return Card(title: "Today", systemImage: "fork.knife") {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(number(energy.fromKcal(max(0, t.kcal - eaten.kcal)))).font(.system(size: 40, weight: .bold, design: .rounded)).monospacedDigit()
-                Text("\(energy.rawValue) left").font(.title3).foregroundStyle(.secondary)
+                Text(number(energy.fromKcal(abs(t.kcal - eaten.kcal)))).font(.system(size: 40, weight: .bold, design: .rounded)).monospacedDigit()
+                Text("\(energy.rawValue) \(t.kcal >= eaten.kcal ? "left" : "over")").font(.title3).foregroundStyle(.secondary)
             }
             VStack(spacing: 14) {
                 ForEach(Macro.allCases, id: \.self) { m in

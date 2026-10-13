@@ -78,6 +78,7 @@ struct GoalEditor: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save) }
             }
         }
+        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
         #if os(macOS)
         .frame(width: 560, height: 720)
         #endif
