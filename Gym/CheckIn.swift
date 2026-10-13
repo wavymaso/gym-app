@@ -47,7 +47,7 @@ struct CheckInView: View {
                                 .buttonStyle(.borderedProminent)
                         }
                     }
-                    .padding(24)
+                    .padding(pagePadding)
                 } else {
                     ContentUnavailableView("Nothing to check in yet", systemImage: "calendar",
                                            description: Text("Log your weight first."))

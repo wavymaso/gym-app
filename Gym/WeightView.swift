@@ -64,7 +64,7 @@ struct WeightView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: 820, alignment: .leading)
             .frame(maxWidth: .infinity)
         }

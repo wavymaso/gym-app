@@ -31,6 +31,7 @@ struct AddFoodView: View {
     @State private var opening: String?
     @State private var newFood = false
     @State private var newRecipe = false
+    @State private var scanning = false
     @FocusState private var focused: Bool
 
     enum Tab: String, CaseIterable { case search = "Search", recent = "Recent", favourites = "Favourites", mine = "My foods" }
@@ -62,6 +63,9 @@ struct AddFoodView: View {
             .navigationDestination(item: $chosen) { f in FoodAmountView(food: f, mode: mode, done: { dismiss() }) }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                #if os(iOS)
+                ToolbarItem { Button { scanning = true } label: { Label("Scan barcode", systemImage: "barcode.viewfinder") } }
+                #endif
                 if !isPicking {
                     ToolbarItem {
                         Menu {
@@ -71,6 +75,9 @@ struct AddFoodView: View {
                     }
                 }
             }
+            #if os(iOS)
+            .sheet(isPresented: $scanning) { BarcodeScanner { code in tab = .search; query = code } }
+            #endif
             .sheet(isPresented: $newFood) { CustomFoodView(food: nil) }
             .sheet(isPresented: $newRecipe) { RecipeView(recipe: nil) }
             .sheet(item: $editingFood) { CustomFoodView(food: $0) }

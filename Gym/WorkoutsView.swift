@@ -62,7 +62,7 @@ struct WorkoutsView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: 860, alignment: .leading)
             .frame(maxWidth: .infinity)
         }

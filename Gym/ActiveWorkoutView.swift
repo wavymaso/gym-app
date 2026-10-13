@@ -43,7 +43,7 @@ struct ActiveWorkoutView: View {
                 Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }
                     .controlSize(.large)
             }
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: 860, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -74,7 +74,7 @@ struct ActiveWorkoutView: View {
             Button("Finish") { ctx.finish(workout) }
                 .buttonStyle(.borderedProminent).disabled(!sets.contains(where: \.done))
         }
-        .controlSize(.large)
+        .controlSize(isPhone ? .regular : .large)
     }
 
     private func tick(_ row: WorkoutSet) {
@@ -130,9 +130,11 @@ private struct ExerciseBlock: View {
                 } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
             }
-            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
+            Grid(alignment: .leading, horizontalSpacing: isPhone ? 10 : 14, verticalSpacing: 8) {
                 GridRow {
-                    Text("Set"); Text("Previous"); Text(unit.rawValue); Text("Reps"); Text("RIR"); Text("")
+                    Text("Set"); Text("Previous"); Text(unit.rawValue); Text("Reps")
+                    if !isPhone { Text("RIR") }                         // the phone has no room; add RIR on the Mac
+                    Text("")
                 }
                 .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
@@ -151,13 +153,16 @@ private struct ExerciseBlock: View {
                         }
                         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                         Text(previousText(previous, workingIndex: working - 1, row: row))
-                            .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: 90, alignment: .leading)
+                            .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 72 : 90, alignment: .leading)
+                            .lineLimit(1).minimumScaleFactor(0.8)
                         DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); try? ctx.save() }), digits: 2)
-                            .frame(width: 70)
+                            .frame(width: isPhone ? 64 : 70)
                         DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); try? ctx.save() }), digits: 0)
-                            .frame(width: 50)
-                        DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; try? ctx.save() }), digits: 1, emptyBelowZero: true)
-                            .frame(width: 44)
+                            .frame(width: isPhone ? 44 : 50)
+                        if !isPhone {
+                            DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; try? ctx.save() }), digits: 1, emptyBelowZero: true)
+                                .frame(width: 44)
+                        }
                         HStack(spacing: 6) {
                             Button { onDone(row) } label: {
                                 Image(systemName: row.done ? "checkmark.circle.fill" : "circle").font(.title3)
@@ -199,6 +204,7 @@ struct DecimalField: View {
             .multilineTextAlignment(.trailing).monospacedDigit().focused($focused)
             #if os(iOS)
             .keyboardType(.decimalPad)
+            .textFieldStyle(.roundedBorder)
             #endif
             .onAppear(perform: load)
             .onChange(of: value) { _, _ in if !focused { load() } }

@@ -62,7 +62,7 @@ struct StrategyView: View {
                     .controlSize(.large)
                 }
             }
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: 700, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -106,7 +106,7 @@ struct GoalEditor: View {
                         TargetsGrid(targets: newTargets, energy: draft.energyUnit)
                     }
                 }
-                .padding(24)
+                .padding(pagePadding)
             }
             .navigationTitle("Change goal")
             .toolbar {

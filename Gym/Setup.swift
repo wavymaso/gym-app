@@ -54,7 +54,7 @@ struct SetupView: View {
                     }
                 }
                 .frame(maxWidth: 520, alignment: .leading)
-                .padding(24)
+                .padding(pagePadding)
                 .frame(maxWidth: .infinity)
             }
             HStack {
@@ -69,7 +69,7 @@ struct SetupView: View {
             }
             .controlSize(.large)
             .frame(maxWidth: 520)
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: .infinity)
         }
         .background(Color.pageBackground)

@@ -44,6 +44,9 @@ struct Root: View {
         }
         .task {
             ctx.seedExercises()
+            #if os(iOS)
+            if UserDefaults.standard.bool(forKey: "healthWeights") { _ = await HealthWeights.importNew(into: ctx) }
+            #endif
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "demo") && profiles.isEmpty { addDemoProfile(ctx) }
             if let path = UserDefaults.standard.string(forKey: "snapshot") { await saveSnapshot(to: path) }   // -snapshot dashboard.png
@@ -112,8 +115,9 @@ struct MainView: View {
             NavigationStack { page(page ?? .dashboard) }
         }
         #else
+        // Four tabs, the rest under "More".
         TabView(selection: Binding(get: { page ?? .dashboard }, set: { page = $0 })) {
-            ForEach([Page.dashboard, .food, .strategy, .workouts, .settings]) { s in
+            ForEach([Page.dashboard, .food, .workouts, .weight, .insights, .strategy, .exercises, .settings]) { s in
                 NavigationStack { page(s) }.tabItem { Label(s.label, systemImage: s.icon) }.tag(s)
             }
         }

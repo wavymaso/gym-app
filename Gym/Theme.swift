@@ -32,6 +32,17 @@ enum Macro: CaseIterable {
     }
 }
 
+#if os(iOS)
+let isPhone = true
+let pagePadding: CGFloat = 16
+#else
+let isPhone = false
+let pagePadding: CGFloat = 24
+#endif
+
+/// Side by side on the Mac, stacked on the iPhone.
+var adaptiveStack: AnyLayout { isPhone ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 18)) }
+
 extension Color {
     static var cardBackground: Color {
         #if os(macOS)

@@ -203,6 +203,11 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Gym-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Gym-iOS.entitlements";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gym uses the camera to scan food barcodes.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym reads your weigh-ins from Apple Health so you don't have to type them.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym doesn't write to Apple Health.";
 				ENABLE_HARDENED_RUNTIME = YES;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";
@@ -244,6 +249,11 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Gym-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Gym-iOS.entitlements";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gym uses the camera to scan food barcodes.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym reads your weigh-ins from Apple Health so you don't have to type them.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym doesn't write to Apple Health.";
 				ENABLE_HARDENED_RUNTIME = YES;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";

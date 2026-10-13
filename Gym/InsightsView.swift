@@ -76,7 +76,7 @@ struct InsightsView: View {
                     .chartYAxisLabel("kcal from each")
                     .frame(height: 200)
                     if let a = d.avg, let t = d.avgTarget {
-                        HStack(spacing: 18) {
+                        adaptiveStack {
                             ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
                                 MacroBar(macro: m, eaten: m.value(a.targets), target: m.value(t), energy: energy)
                             }
@@ -85,7 +85,7 @@ struct InsightsView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: 900, alignment: .leading)
             .frame(maxWidth: .infinity)
         }

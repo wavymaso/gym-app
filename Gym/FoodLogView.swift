@@ -33,7 +33,7 @@ struct FoodLogView: View {
                 DayPicker(day: $day)
                 DayEntries(day: day, energy: energy, target: ctx.targets(on: day)) { sheet = .edit($0) }
             }
-            .padding(24)
+            .padding(pagePadding)
             .frame(maxWidth: 820, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -72,7 +72,7 @@ struct DayPicker: View {
     var body: some View {
         HStack(spacing: 8) {
             Button { move(-1) } label: { Image(systemName: "chevron.left") }
-            Text(label).font(.title2.bold()).frame(minWidth: 230)
+            Text(label).font(.title2.bold()).frame(minWidth: isPhone ? nil : 230).lineLimit(1).minimumScaleFactor(0.7)
             Button { move(1) } label: { Image(systemName: "chevron.right") }
             Spacer()
             DatePicker("Day", selection: Binding(get: { date(fromKey: day) }, set: { day = dayKey($0) }), displayedComponents: .date)
@@ -120,7 +120,7 @@ struct DayEntries: View {
                     Text(left >= 0 ? "\(energy.format(left)) left" : "\(energy.format(-left)) over")
                         .foregroundStyle(left >= 0 ? Color.secondary : Macro.protein.color)
                 }
-                HStack(spacing: 18) {
+                adaptiveStack {
                     ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
                         MacroBar(macro: m, eaten: m.value(total.targets), target: m.value(t), energy: energy)
                     }
