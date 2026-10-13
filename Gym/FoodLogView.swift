@@ -144,10 +144,10 @@ struct DayEntries: View {
                             Button("Duplicate") {
                                 ctx.insert(FoodEntry(day: e.day, time: e.time, name: e.name, brand: e.brand, foodKey: e.foodKey,
                                                      amount: e.amount, unit: e.unit, grams: e.grams, nutrients: e.nutrients))
-                                try? ctx.save()
+                                ctx.commit()
                             }
                             Divider()
-                            Button("Delete", role: .destructive) { ctx.delete(e); try? ctx.save() }
+                            Button("Delete", role: .destructive) { ctx.delete(e); ctx.commit() }
                         }
                     if e.id != entries.last?.id { Divider().padding(.leading, 70) }
                 }

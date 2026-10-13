@@ -30,7 +30,7 @@ struct StrategyView: View {
                     }
                     Card(title: "Weekly check-in", systemImage: "calendar.badge.clock") {
                         Picker("Targets", selection: Binding(get: { g.mode }, set: { m in
-                            if m == "manual" { manual = true } else { g.mode = "coached"; try? ctx.save(); checkingIn = true }
+                            if m == "manual" { manual = true } else { g.mode = "coached"; ctx.commit(); checkingIn = true }
                         })) {
                             Text("Coached").tag("coached")
                             Text("Manual").tag("manual")
@@ -40,7 +40,7 @@ struct StrategyView: View {
                              ? "Once a week the app compares what you ate with how your trend weight moved, updates your expenditure, and suggests targets for the week ahead."
                              : "You set your own targets. Check-ins still show how your week went.")
                             .font(.callout).foregroundStyle(.secondary)
-                        Picker("Check-in day", selection: Binding(get: { g.checkInWeekday }, set: { g.checkInWeekday = $0; try? ctx.save() })) {
+                        Picker("Check-in day", selection: Binding(get: { g.checkInWeekday }, set: { g.checkInWeekday = $0; ctx.commit() })) {
                             ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in
                                 Text(weekdayName(d)).tag(d)
                             }

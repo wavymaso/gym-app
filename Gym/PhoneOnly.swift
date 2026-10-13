@@ -94,7 +94,7 @@ enum HealthWeights {
         for (day, kg) in firstOfDay where !have.contains(day) {
             ctx.insert(WeightEntry(day: day, kg: kg)); added += 1
         }
-        try? ctx.save()
+        ctx.commit()
         return added
     }
 }

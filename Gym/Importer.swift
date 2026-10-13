@@ -93,7 +93,7 @@ extension ModelContext {
             }
             r.workouts += 1
         }
-        try? save()
+        commit()
         return r
     }
 }

@@ -6,6 +6,8 @@ import SwiftData
 
 /// A food you've used or made: from a database, your own, or a recipe.
 @Model final class Food {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     @Attribute(.unique) var key: String       // off:<barcode> | usda:<fdcId> | custom:<id> | recipe:<id>
     var name: String
     var brand: String?
@@ -54,6 +56,8 @@ import SwiftData
 
 /// One ingredient of a recipe (a copy of the food's nutrition at the time).
 @Model final class RecipeIngredient {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var recipeKey: String
     var foodKey: String?
     var name: String
@@ -71,6 +75,8 @@ import SwiftData
 
 /// Something you ate, at a time on a day.
 @Model final class FoodEntry {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var day: String
     var time: Date
     var name: String
@@ -128,7 +134,7 @@ extension ModelContext {
                           grams: food.grams(amount, unit: unit), nutrients: food.nutrients(amount, unit: unit))
         insert(e)
         food.useCount += 1; food.lastUsed = Date(); food.lastAmount = amount; food.lastUnit = unit
-        try? save()
+        commit()
         return e
     }
 
@@ -144,7 +150,7 @@ extension ModelContext {
                              grams: e.grams, nutrients: e.nutrients))
             n += 1
         }
-        try? save()
+        commit()
         return n
     }
 

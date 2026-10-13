@@ -65,11 +65,11 @@ struct SettingsView: View {
     }
 
     private func binding<T>(_ p: Profile, _ key: ReferenceWritableKeyPath<Profile, T>) -> Binding<T> {
-        Binding(get: { p[keyPath: key] }, set: { p[keyPath: key] = $0; try? ctx.save() })
+        Binding(get: { p[keyPath: key] }, set: { p[keyPath: key] = $0; ctx.commit() })
     }
 
     private func reset() {
         for m in allModels { try? ctx.delete(model: m) }
-        try? ctx.save()
+        ctx.commit()
     }
 }

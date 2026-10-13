@@ -251,6 +251,6 @@ func addDemoProfile(_ ctx: ModelContext) {
         let first = ctx.sets(of: w.key).prefix(2)
         first.forEach { $0.done = true; $0.kg += 2.5 }
     }
-    try? ctx.save()
+    ctx.commit()
 }
 #endif

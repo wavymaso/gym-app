@@ -135,7 +135,7 @@ struct ManualTargetsView: View {
         let exp = ctx.expenditureEstimates().last?.kcal ?? ctx.targets()?.expenditure ?? t.kcal
         ctx.activeProgram?.mode = "manual"
         ctx.insert(TargetSet(targets: t, expenditure: exp, reason: "manual"))
-        try? ctx.save()
+        ctx.commit()
         dismiss()
     }
 }
