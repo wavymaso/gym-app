@@ -42,12 +42,13 @@ struct Root: View {
                 MainView()
             }
         }
-        #if DEBUG
         .task {
+            ctx.seedExercises()
+            #if DEBUG
             if UserDefaults.standard.bool(forKey: "demo") && profiles.isEmpty { addDemoProfile(ctx) }
             if let path = UserDefaults.standard.string(forKey: "snapshot") { await saveSnapshot(to: path) }   // -snapshot dashboard.png
+            #endif
         }
-        #endif
     }
 }
 
@@ -84,6 +85,7 @@ enum Page: String, CaseIterable, Identifiable {
 
 /// Sidebar on the Mac, tabs on the iPhone.
 struct MainView: View {
+    @Environment(\.modelContext) private var ctx
     @State private var page: Page? = {
         #if DEBUG
         if let s = UserDefaults.standard.string(forKey: "page"), let v = Page(rawValue: s) { return v }   // -page strategy
@@ -128,8 +130,13 @@ struct MainView: View {
         case .settings: SettingsView()
         case .food: FoodLogView()
         case .weight: WeightView()
-        case .workouts: ComingSoon(page: s, phase: 5, text: "Routines, logging sets, rest timer and your progress on every lift.")
-        case .exercises: ComingSoon(page: s, phase: 5, text: "The exercise library, grouped by muscle, plus your own exercises.")
+        case .workouts: WorkoutsView()
+        case .exercises:
+            #if DEBUG
+            if let k = UserDefaults.standard.string(forKey: "exercise"), let e = ctx.exercise(k) { ExerciseDetail(exercise: e) } else { ExercisesView() }   // testing only
+            #else
+            ExercisesView()
+            #endif
         }
     }
 }
@@ -204,6 +211,42 @@ func addDemoProfile(_ ctx: ModelContext) {
         if i % 6 != 2 { ctx.logWeight(mass + noise() * 1.4, on: day) }
     }
     ctx.logWeight(mass - 0.2)
+    // Training: Push / Pull / Legs, three times a week for four weeks, adding weight as it goes.
+    ctx.seedExercises()
+    let plan: [(String, [(String, Double, Int)])] = [
+        ("Push", [("bench-press", 70, 8), ("overhead-press", 42.5, 8), ("lateral-raise", 10, 12), ("triceps-pushdown", 25, 12)]),
+        ("Pull", [("deadlift", 110, 5), ("lat-pulldown", 55, 10), ("barbell-row", 60, 8), ("db-curl", 12, 10)]),
+        ("Legs", [("squat", 90, 6), ("romanian-deadlift", 80, 8), ("leg-extension", 45, 12), ("standing-calf-raise", 60, 12)]),
+    ]
+    for (i, (name, items)) in plan.enumerated() {
+        let r = Routine(name: name, order: i); ctx.insert(r)
+        for (j, it) in items.enumerated() {
+            ctx.insert(RoutineExercise(routineKey: r.key, exerciseKey: "builtin:\(it.0)", order: j, sets: 3, repLow: it.2, repHigh: it.2 + 2, restSeconds: j == 0 ? 180 : 90))
+        }
+    }
+    for week in 0..<4 {
+        for (i, (name, items)) in plan.enumerated() {
+            let start = date(fromKey: addDays(dayKey(), -26 + week * 7 + i * 2)).addingTimeInterval(18 * 3600)
+            let w = Workout(name: name, start: start); w.end = start.addingTimeInterval(3600 + Double(i) * 300); ctx.insert(w)
+            for (j, it) in items.enumerated() {
+                let kg = it.1 + Double(week) * (j == 0 ? 2.5 : 1.25)
+                ctx.insert(WorkoutSet(workoutKey: w.key, exerciseKey: "builtin:\(it.0)", exerciseOrder: j, setOrder: 0, kind: .warmup,
+                                      kg: (kg * 0.5).rounded(), reps: 10, day: w.day))
+                for k in 1...3 {
+                    let s = WorkoutSet(workoutKey: w.key, exerciseKey: "builtin:\(it.0)", exerciseOrder: j, setOrder: k, kg: kg,
+                                       reps: it.2 - (k - 1) + (week % 2), day: w.day)
+                    s.done = true; ctx.insert(s)
+                }
+                for s in ctx.sets(of: w.key) { s.done = true }
+            }
+        }
+    }
+    if UserDefaults.standard.bool(forKey: "activeWorkout") {
+        let push = try? ctx.fetch(FetchDescriptor<Routine>(predicate: #Predicate { $0.name == "Push" })).first
+        let w = ctx.startWorkout(routine: push)
+        let first = ctx.sets(of: w.key).prefix(2)
+        first.forEach { $0.done = true; $0.kg += 2.5 }
+    }
     try? ctx.save()
 }
 #endif

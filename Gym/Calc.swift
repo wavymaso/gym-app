@@ -222,6 +222,13 @@ func number(_ x: Double, digits: Int = 0) -> String {
     return numberFormatter.string(from: NSNumber(value: x)) ?? String(format: "%.\(digits)f", x)
 }
 
+/// Up to `digits` decimals, without trailing zeros: 77,5 · 46,25 · 80.
+func trimmed(_ x: Double, digits: Int = 2) -> String {
+    numberFormatter.minimumFractionDigits = 0
+    numberFormatter.maximumFractionDigits = digits
+    return numberFormatter.string(from: NSNumber(value: x)) ?? String(x)
+}
+
 /// "72,4" or "72.4" -> 72.4
 func parseNumber(_ text: String) -> Double? {
     let t = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
