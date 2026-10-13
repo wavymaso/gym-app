@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Query private var profiles: [Profile]
     @State private var confirmReset = false
     @AppStorage("usdaKey") private var usdaKey = ""
+    @State private var importing = false
 
     var body: some View {
         Form {
@@ -43,6 +44,11 @@ struct SettingsView: View {
                     Text("Plain foods come from USDA FoodData Central. The shared demo key allows only a few searches an hour; your own key is free and unlimited. Products come from Open Food Facts and need no key.")
                 }
                 Section {
+                    Button("Import from MacroFactor…") { importing = true }
+                } footer: {
+                    Text("Weight, daily nutrition, expenditure and targets from the Quick Export; food log and workouts from the Granular Export.")
+                }
+                Section {
                     Button("Start over…", role: .destructive) { confirmReset = true }
                 } footer: {
                     Text("Deletes everything in this app on this device and goes back to setup.")
@@ -51,6 +57,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Settings")
+        .sheet(isPresented: $importing) { ImportView() }
         .confirmationDialog("Delete all your data and start again?", isPresented: $confirmReset) {
             Button("Delete everything", role: .destructive, action: reset)
         }
