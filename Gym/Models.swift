@@ -37,6 +37,8 @@ import SwiftData
     var startWeightKg: Double
     var startExpenditure: Double
     var isActive: Bool
+    var checkInWeekday: Int = 2      // Calendar weekday: 1 = Sunday, 2 = Monday ...
+    var lastCheckIn: String? = nil   // the day of the last check-in (applied or skipped)
 
     init(goal: GoalType, ratePercent: Double, diet: DietStyle, protein: ProteinLevel, startWeightKg: Double, startExpenditure: Double) {
         self.startDay = dayKey(); self.goal = goal.rawValue; self.ratePercent = ratePercent; self.dietStyle = diet.rawValue
@@ -110,9 +112,12 @@ extension ModelContext {
     /// Start a new program (the old one is kept, inactive) with targets from today.
     func startProgram(goal: GoalType, ratePercent: Double, diet: DietStyle, protein: ProteinLevel,
                       weightKg: Double, expenditure: Double, sex: Sex, reason: String) {
-        for p in (try? fetch(FetchDescriptor<Program>(predicate: #Predicate { $0.isActive }))) ?? [] { p.isActive = false }
-        insert(Program(goal: goal, ratePercent: ratePercent, diet: diet, protein: protein, startWeightKg: weightKg,
-                       startExpenditure: expenditure))
+        let old = (try? fetch(FetchDescriptor<Program>(predicate: #Predicate { $0.isActive }))) ?? []
+        old.forEach { $0.isActive = false }
+        let p = Program(goal: goal, ratePercent: ratePercent, diet: diet, protein: protein, startWeightKg: weightKg,
+                        startExpenditure: expenditure)
+        p.checkInWeekday = old.first?.checkInWeekday ?? 2      // keep your check-in day
+        insert(p)
         let t = makeTargets(expenditure: expenditure, weightKg: weightKg, sex: sex, goal: goal, ratePercent: ratePercent,
                             diet: diet, protein: protein)
         insert(TargetSet(targets: t, expenditure: expenditure, reason: reason))

@@ -10,6 +10,13 @@ struct DashboardView: View {
     @Query(sort: \WeightEntry.day, order: .reverse) private var weights: [WeightEntry]
     @Query(filter: #Predicate<Program> { $0.isActive }) private var programs: [Program]
     @Query private var todaysEntries: [FoodEntry]
+    @State private var checkingIn: Bool = {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "checkIn")       // testing only
+        #else
+        return false
+        #endif
+    }()
 
     init() {
         let today = dayKey()
@@ -25,6 +32,22 @@ struct DashboardView: View {
                 Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))
                     .font(.headline).foregroundStyle(.secondary)
                 if let t = today, let p = profile {
+                    if ctx.dueCheckIn != nil {
+                        Button { checkingIn = true } label: {
+                            HStack {
+                                Image(systemName: "calendar.badge.clock").font(.title2)
+                                VStack(alignment: .leading) {
+                                    Text("Your weekly check-in is ready").font(.headline)
+                                    Text("See how the week went and update your targets.").font(.callout).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+                            }
+                            .padding(16)
+                            .background(Macro.calories.color.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                    }
                     nutritionCard(t, p.energy)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16, alignment: .top)], spacing: 16) {
                         let exp = ExpenditureSummary(ctx.expenditureEstimates())
@@ -59,6 +82,7 @@ struct DashboardView: View {
         }
         .background(Color.pageBackground)
         .navigationTitle("Dashboard")
+        .sheet(isPresented: $checkingIn) { CheckInView() }
     }
 
     private func nutritionCard(_ t: TargetSet, _ energy: EnergyUnit) -> some View {

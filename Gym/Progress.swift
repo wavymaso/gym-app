@@ -8,10 +8,14 @@ extension ModelContext {
         ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.kg) }
     }
 
-    /// kcal per day, for days with anything logged. Days with nothing logged are left out, not zero.
+    /// kcal per finished day (before today), for days with anything logged. Days with nothing
+    /// logged are left out, not counted as zero, and today is left out because it isn't over yet.
     func dailyIntake() -> [String: Double] {
+        let today = dayKey()
         var out: [String: Double] = [:]
-        for e in (try? fetch(FetchDescriptor<FoodEntry>())) ?? [] { out[e.day, default: 0] += e.nutrients.kcal }
+        for e in (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day < today }))) ?? [] {
+            out[e.day, default: 0] += e.nutrients.kcal
+        }
         return out
     }
 
@@ -34,6 +38,61 @@ extension ModelContext {
         } else {
             insert(WeightEntry(day: day, kg: kg))
         }
+        try? save()
+    }
+}
+
+// MARK: - Weekly check-in: how the week went, your updated expenditure, and new
+// targets for the week ahead (coached), or just the summary (manual targets).
+
+struct CheckInSummary {
+    let day: String
+    let expenditure: Double
+    let trendKg: Double
+    let weekChangeKg: Double?
+    let avgIntake: Double?
+    let trackedDays: Int
+    let current: Targets
+    let proposed: Targets?          // nil in manual mode
+}
+
+extension ModelContext {
+    /// The check-in day that's waiting, if any: the latest check-in weekday not yet done.
+    var dueCheckIn: String? {
+        guard let p = activeProgram else { return nil }
+        var d = dayKey()
+        for _ in 0..<7 {
+            if Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d)) == p.checkInWeekday { break }
+            d = addDays(d, -1)
+        }
+        // Not on the day the program started, and not twice for the same day.
+        guard d > p.startDay, d > (p.lastCheckIn ?? "") else { return nil }
+        return d
+    }
+
+    func checkInSummary() -> CheckInSummary? {
+        guard let p = activeProgram, let profile, let current = targets() else { return nil }
+        let today = dayKey()
+        let exp = expenditureEstimates(through: today).last?.kcal ?? current.expenditure
+        let series = trendSeries(weightValues, through: today)
+        guard let trend = series.last?.trend else { return nil }
+        let week = days(from: addDays(today, -7), through: addDays(today, -1))      // the last 7 finished days
+        let intake = dailyIntake()
+        let logged = week.compactMap { intake[$0] }
+        let weekAgo = series.count > 7 ? series[series.count - 8].trend : nil
+        let proposed = p.mode == "coached"
+            ? makeTargets(expenditure: exp, weightKg: trend, sex: profile.sexValue, goal: p.goalValue, ratePercent: p.ratePercent,
+                          diet: p.dietValue, protein: p.proteinValue)
+            : nil
+        return CheckInSummary(day: today, expenditure: exp, trendKg: trend, weekChangeKg: weekAgo.map { trend - $0 },
+                              avgIntake: logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count),
+                              trackedDays: logged.count, current: current.targets, proposed: proposed)
+    }
+
+    /// Apply (or skip) a check-in.
+    func finishCheckIn(apply targets: Targets?, expenditure: Double) {
+        if let targets { insert(TargetSet(targets: targets, expenditure: expenditure, reason: "check-in")) }
+        activeProgram?.lastCheckIn = dayKey()
         try? save()
     }
 }

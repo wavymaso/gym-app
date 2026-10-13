@@ -52,7 +52,7 @@ struct Root: View {
 }
 
 enum Page: String, CaseIterable, Identifiable {
-    case dashboard, food, weight, strategy, workouts, exercises, settings
+    case dashboard, food, weight, insights, strategy, workouts, exercises, settings
     var id: String { rawValue }
 
     var label: String {
@@ -61,6 +61,7 @@ enum Page: String, CaseIterable, Identifiable {
         case .food: return "Food log"
         case .weight: return "Weight"
         case .strategy: return "Strategy"
+        case .insights: return "Insights"
         case .workouts: return "Workouts"
         case .exercises: return "Exercises"
         case .settings: return "Settings"
@@ -73,6 +74,7 @@ enum Page: String, CaseIterable, Identifiable {
         case .food: return "fork.knife"
         case .weight: return "scalemass"
         case .strategy: return "target"
+        case .insights: return "chart.line.uptrend.xyaxis"
         case .workouts: return "dumbbell"
         case .exercises: return "list.bullet.rectangle"
         case .settings: return "gearshape"
@@ -94,7 +96,7 @@ struct MainView: View {
         NavigationSplitView {
             List(selection: $page) {
                 Section("Nutrition") {
-                    ForEach([Page.dashboard, .food, .weight, .strategy]) { row($0) }
+                    ForEach([Page.dashboard, .food, .weight, .insights, .strategy]) { row($0) }
                 }
                 Section("Training") {
                     ForEach([Page.workouts, .exercises]) { row($0) }
@@ -122,6 +124,7 @@ struct MainView: View {
         switch s {
         case .dashboard: DashboardView()
         case .strategy: StrategyView()
+        case .insights: InsightsView()
         case .settings: SettingsView()
         case .food: FoodLogView()
         case .weight: WeightView()
