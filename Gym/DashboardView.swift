@@ -1,3 +1,4 @@
+import Charts
 import SwiftData
 import SwiftUI
 
@@ -26,15 +27,21 @@ struct DashboardView: View {
                 if let t = today, let p = profile {
                     nutritionCard(t, p.energy)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16, alignment: .top)], spacing: 16) {
+                        let exp = ExpenditureSummary(ctx.expenditureEstimates())
                         Card(title: "Expenditure", systemImage: "flame") {
-                            big(p.energy.format(t.expenditure))
-                            Text("Starting estimate. It adapts to your own data once you log food and weight.")
-                                .font(.callout).foregroundStyle(.secondary)
+                            big(p.energy.format(exp?.current ?? t.expenditure))
+                            if let exp, exp.series.count > 2 {
+                                Sparkline(values: exp.series.suffix(60).map(\.kcal), color: Macro.calories.color)
+                            }
+                            Text(exp?.status ?? "Starting estimate.").font(.callout).foregroundStyle(.secondary)
                         }
-                        Card(title: "Weight", systemImage: "scalemass") {
-                            if let w = weights.first {
-                                big(p.weight.format(w.kg))
-                                Text("Logged \(relative(w.day))").font(.callout).foregroundStyle(.secondary)
+                        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+                        Card(title: "Trend weight", systemImage: "scalemass") {
+                            if let now = series.last, let w = weights.first {
+                                big(p.weight.format(now.trend))
+                                if series.count > 2 { Sparkline(values: series.suffix(60).map(\.trend), color: .accentColor) }
+                                Text("\(weeklyTrendChange(series).map { signed(p.weight, $0) + " a week · " } ?? "")scale \(p.weight.format(w.kg)) \(relative(w.day))")
+                                    .font(.callout).foregroundStyle(.secondary)
                             }
                         }
                         if let g = programs.first {
@@ -87,4 +94,20 @@ func relative(_ day: String) -> String {
     if cal.isDateInToday(d) { return "today" }
     if cal.isDateInYesterday(d) { return "yesterday" }
     return d.formatted(.dateTime.day().month(.abbreviated).locale(appLocale))
+}
+
+/// A small line with no axes, for the dashboard tiles.
+struct Sparkline: View {
+    let values: [Double]
+    let color: Color
+    var body: some View {
+        let lo = values.min() ?? 0, hi = values.max() ?? 1
+        Chart(Array(values.enumerated()), id: \.offset) { p in
+            LineMark(x: .value("Day", p.offset), y: .value("Value", p.element))
+                .foregroundStyle(color).interpolationMethod(.monotone)
+        }
+        .chartXAxis(.hidden).chartYAxis(.hidden)
+        .chartYScale(domain: (lo - max(0.5, (hi - lo) * 0.15))...(hi + max(0.5, (hi - lo) * 0.15)))
+        .frame(height: 44)
+    }
 }

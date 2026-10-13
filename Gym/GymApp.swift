@@ -124,7 +124,7 @@ struct MainView: View {
         case .strategy: StrategyView()
         case .settings: SettingsView()
         case .food: FoodLogView()
-        case .weight: ComingSoon(page: s, phase: 3, text: "Log your weight and see your trend, with the daily swings smoothed out.")
+        case .weight: WeightView()
         case .workouts: ComingSoon(page: s, phase: 5, text: "Routines, logging sets, rest timer and your progress on every lift.")
         case .exercises: ComingSoon(page: s, phase: 5, text: "The exercise library, grouped by muscle, plus your own exercises.")
         }
@@ -184,6 +184,23 @@ func addDemoProfile(_ ctx: ModelContext) {
     ctx.insert(FoodEntry(day: dayKey(), time: at(17, 30), name: "Café con leche", brand: nil, foodKey: nil, amount: 1, unit: "",
                          grams: 0, nutrients: Nutrients(kcal: 80, protein: 4, fat: 4, carbs: 6)))
     yogurt.isFavorite = true
+    // Five weeks of history: really burns ~2950 (the formula said 2790), eats ~2450, so loses ~0,45 kg a week.
+    let start = addDays(dayKey(), -35)
+    ctx.activeProgram?.startDay = start
+    for t in (try? ctx.fetch(FetchDescriptor<TargetSet>())) ?? [] { t.fromDay = start }
+    var mass = 80.6, seed: UInt64 = 42
+    func noise() -> Double { seed = seed &* 6364136223846793005 &+ 1442695040888963407; return Double(seed >> 11) / Double(1 << 53) - 0.5 }
+    for i in 0..<35 {
+        let day = addDays(start, i)
+        let ate = 2450 + noise() * 700
+        mass += (ate - 2950) / kcalPerKg
+        if i % 9 != 4 {
+            ctx.insert(FoodEntry(day: day, time: date(fromKey: day).addingTimeInterval(13 * 3600), name: "Day's food", brand: nil, foodKey: nil,
+                                 amount: 1, unit: "", grams: 0, nutrients: Nutrients(kcal: ate, protein: 170, fat: 75, carbs: ate / 4 - 170 - 170)))
+        }
+        if i % 6 != 2 { ctx.logWeight(mass + noise() * 1.4, on: day) }
+    }
+    ctx.logWeight(mass - 0.2)
     try? ctx.save()
 }
 #endif
