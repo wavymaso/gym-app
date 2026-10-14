@@ -19,7 +19,8 @@ struct CheckInView: View {
             ScrollView {
                 if let s = ctx.checkInSummary() {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("How your week went").font(.title2.bold())
+                        if !fast { WeeklyReview() }
+                        Text(fast ? "How your week went" : "The numbers").font(.title2.bold())
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
                             tile("Trend weight", unit.format(s.trendKg), s.weekChangeKg.map { "\(signed(unit, $0)) this week" } ?? "")
                             tile("Average intake", s.avgIntake.map { energy.format($0) } ?? "–", "\(s.trackedDays) of 7 days logged")

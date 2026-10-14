@@ -168,11 +168,11 @@ struct StrengthRetentionCard: View {
     }
 
     var body: some View {
-        let working = sets.filter { $0.kindValue.counts && $0.reps > 0 && $0.reps <= 15 && $0.kg > 0 }
+        let working = sets.filter { $0.kindValue.counts && $0.reps > 0 && $0.reps <= 10 && $0.kg > 0 }   // e1RM is unreliable past 10 reps
         let top = Dictionary(grouping: working, by: \.exerciseKey).sorted { $0.value.count > $1.value.count }.prefix(4)
         let lifts: [Lift] = top.map { key, rows in
             let weekly = Dictionary(grouping: rows) { weekStart($0.day) }
-                .map { (week: $0.key, e1rm: $0.value.map { estimatedOneRepMax(kg: $0.kg, reps: $0.reps) }.max() ?? 0) }
+                .map { (week: $0.key, e1rm: $0.value.map(\.e1rm).max() ?? 0) }
                 .sorted { $0.week < $1.week }
             return Lift(key: key, name: ctx.exercise(key)?.name ?? key, weekly: weekly)
         }
