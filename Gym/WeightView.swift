@@ -26,7 +26,7 @@ struct WeightView: View {
                     Card(title: "Weight", systemImage: "chart.xyaxis.line") {
                         Picker("", selection: $range) { ForEach(ChartRange.allCases, id: \.self) { Text($0.label).tag($0) } }
                             .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
-                        WeightChart(series: range.clip(series), unit: unit).frame(height: 260)
+                        WeightChart(series: range.clip(series), unit: unit, goalKg: profiles.first?.goalWeightKg).frame(height: 260)
                         HStack(spacing: 16) {
                             Label("Scale", systemImage: "circle.fill").labelStyle(DotLabel(color: Color.primary.opacity(0.4)))
                             Label("Trend", systemImage: "circle.fill").labelStyle(DotLabel(color: palette.accent))
@@ -111,11 +111,18 @@ enum ChartRange: CaseIterable {
 struct WeightChart: View {
     let series: [(day: String, scale: Double, trend: Double, logged: Bool)]
     let unit: WeightUnit
+    var goalKg: Double? = nil
 
     var body: some View {
         let values = series.flatMap { [$0.trend] + ($0.logged ? [$0.scale] : []) }.map(unit.fromKg)
-        let lo = (values.min() ?? 0) - 0.5, hi = (values.max() ?? 1) + 0.5
+        let goal = goalKg.map(unit.fromKg)
+        let showGoal = goal.map { g in g >= (values.min() ?? 0) - 6 && g <= (values.max() ?? 0) + 6 } ?? false
+        let lo = min((values.min() ?? 0), showGoal ? goal! : .infinity) - 0.5, hi = max((values.max() ?? 1), showGoal ? goal! : -.infinity) + 0.5
         Chart {
+            if showGoal, let goal {
+                RuleMark(y: .value("Goal", goal)).foregroundStyle(palette.good.opacity(0.8)).lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                    .annotation(position: .top, alignment: .leading) { Text("Goal").font(.caption2.weight(.bold)).foregroundStyle(palette.good) }
+            }
             ForEach(series.filter(\.logged), id: \.day) { p in
                 PointMark(x: .value("Day", date(fromKey: p.day)), y: .value("Scale", unit.fromKg(p.scale)))
                     .foregroundStyle(Color.primary.opacity(0.4)).symbolSize(22)

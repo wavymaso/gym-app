@@ -60,6 +60,7 @@ struct WorkoutsView: View {
                     }
                 }
                 WeekCard()
+                StrengthCard(unit: unit)
                 if finished.isEmpty {
                     ContentUnavailableView("No workouts yet", systemImage: "dumbbell",
                                            description: Text("Start an empty workout, or make a routine like Push / Pull / Legs first."))
@@ -81,6 +82,7 @@ struct WorkoutsView: View {
             .frame(maxWidth: 860, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .debugScrollAnchor()
         .background(Color.pageBackground)
         .navigationTitle("Workouts")
         .sheet(item: $editingRoutine) { RoutineEditor(routine: $0) }
@@ -461,5 +463,64 @@ struct RoutineEditor: View {
         }
         ctx.commit()
         dismiss()
+    }
+}
+
+/// Training over the last 12 weeks: volume per week, and your most-trained lifts getting stronger (or not).
+struct StrengthCard: View {
+    let unit: WeightUnit
+    @Environment(\.modelContext) private var ctx
+    @Query private var sets: [WorkoutSet]
+
+    init(unit: WeightUnit) {
+        self.unit = unit
+        let from = addDays(dayKey(), -83)
+        _sets = Query(filter: #Predicate<WorkoutSet> { $0.day >= from && $0.done })
+    }
+
+    var body: some View {
+        let working = sets.filter { $0.kindValue.counts && $0.reps > 0 }
+        if working.count >= 6 {
+            let weeks = (0..<12).map { i in mondayOf(addDays(dayKey(), -7 * (11 - i))) }
+            let volume = Dictionary(grouping: working) { mondayOf($0.day) }.mapValues { $0.reduce(0) { $0 + $1.kg * Double($1.reps) } }
+            let top = Dictionary(grouping: working, by: \.exerciseKey).sorted { $0.value.count > $1.value.count }.prefix(5)
+            let cut = addDays(dayKey(), -27)
+            Card(title: "Strength, last 12 weeks", systemImage: "chart.line.uptrend.xyaxis") {
+                Chart(weeks, id: \.self) { w in
+                    BarMark(x: .value("Week", date(fromKey: w), unit: .weekOfYear), y: .value("Volume", unit.fromKg(volume[w] ?? 0) / 1000))
+                        .foregroundStyle(w == weeks.last ? palette.accent : palette.accent.opacity(0.55)).cornerRadius(4)
+                }
+                .numberYAxis(digits: 1)
+                .chartYAxisLabel("Volume, t")
+                .frame(height: 130)
+                Divider()
+                ForEach(Array(top), id: \.key) { key, rows in
+                    let recent = rows.filter { $0.day >= cut }.map { estimatedOneRepMax(kg: $0.kg, reps: $0.reps) }.max()
+                    let before = rows.filter { $0.day < cut }.map { estimatedOneRepMax(kg: $0.kg, reps: $0.reps) }.max()
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(ctx.exercise(key)?.name ?? "Exercise").font(.callout.weight(.medium)).lineLimit(1)
+                            Text("\(rows.count) sets").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if let r = recent {
+                            Text("\(number(unit.fromKg(r), digits: 1)) \(unit.rawValue)").font(.callout.weight(.semibold)).monospacedDigit()
+                        }
+                        if let r = recent, let b = before, b > 0 {
+                            let pct = (r - b) / b * 100
+                            Delta(text: (pct >= 0 ? "+" : "−") + "\(number(abs(pct), digits: 1))%", good: abs(pct) < 0.5 ? nil : pct > 0)
+                        } else {
+                            Text("new").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Text("Estimated 1-rep max: best of the last 4 weeks, against the 8 weeks before.").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func mondayOf(_ day: String) -> String {
+        let n = dayNumber(day)
+        return dayKey(number: n - ((n + 3) % 7 + 7) % 7)
     }
 }

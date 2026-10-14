@@ -128,3 +128,12 @@ struct ExpenditureSummary {
 /// Goes up whenever saved data changes (commit or sync), so caches know to start again.
 var dataVersion = 0
 private var expenditureCache: [String: [ExpenditurePoint]] = [:]
+
+/// When your trend reaches your goal weight at the current weekly rate (nil if it's moving the other way or too slowly).
+func goalDate(trendKg: Double, goalKg: Double, weeklyKg: Double) -> Date? {
+    let gap = goalKg - trendKg
+    guard abs(gap) >= 0.1, abs(weeklyKg) >= 0.03, gap.sign == weeklyKg.sign else { return nil }
+    let weeks = gap / weeklyKg
+    guard weeks < 260 else { return nil }                       // more than five years: not a useful date
+    return Calendar.current.date(byAdding: .day, value: Int((weeks * 7).rounded()), to: Date())
+}

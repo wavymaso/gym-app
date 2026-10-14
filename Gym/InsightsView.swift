@@ -23,6 +23,7 @@ struct InsightsView: View {
                     tile("On target", d.adherence.map { "\(Int(($0 * 100).rounded()))%" } ?? "–", "Days within 10% of your calories")
                     tile("Average protein", d.avg.map { "\(number($0.protein)) g" } ?? "–",
                          d.avgTarget.map { "Target \(number($0.protein)) g" } ?? "")
+                    tile("Protein target hit", d.proteinHit.map { "\(Int(($0 * 100).rounded()))%" } ?? "–", "Days at 90% of your protein or more")
                     tile("Expenditure", d.expenditure.last.map { energy.format($0.kcal) } ?? "–",
                          d.expenditureChange.map { "\(signedKcal($0, energy)) over this period" } ?? "")
                 }
@@ -84,11 +85,14 @@ struct InsightsView: View {
                         Text("Daily averages against your average targets.").font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                EnergyBalanceCard(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
+                WeeklyTable(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
             }
             .padding(pagePadding)
             .frame(maxWidth: 900, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .debugScrollAnchor()
         .background(Color.pageBackground)
         .navigationTitle("Insights")
         .appStyle()
@@ -161,8 +165,110 @@ struct InsightData {
         return scored.isEmpty ? nil : Double(scored.filter { $0 }.count) / Double(scored.count)
     }
 
+    /// Share of logged days (not imported totals with no protein) reaching 90% of the protein target.
+    var proteinHit: Double? {
+        let scored = logged.filter { $0.n.protein > 0 }.compactMap { x in target(x.day).map { x.n.protein >= $0.protein * 0.9 } }
+        return scored.isEmpty ? nil : Double(scored.filter { $0 }.count) / Double(scored.count)
+    }
+
+    /// Finished days only (today isn't over).
+    var finished: [(day: String, n: Nutrients)] { logged.filter { $0.day < dayKey() } }
+
     var expenditureChange: Double? {
         guard let a = expenditure.first, let b = expenditure.last, expenditure.count > 1 else { return nil }
         return b.kcal - a.kcal
+    }
+}
+
+/// Average surplus or deficit over the period, and the weight change it implies next to what your trend did.
+struct EnergyBalanceCard: View {
+    let d: InsightData
+    let weights: [WeightEntry]
+    let energy: EnergyUnit
+    let unit: WeightUnit
+
+    var body: some View {
+        let exp = Dictionary(d.expenditure.map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+        let days = d.finished.compactMap { x in exp[x.day].map { (day: x.day, balance: x.n.kcal - $0) } }
+        Card(title: "Energy balance", systemImage: "plusminus") {
+            if days.count < 3 {
+                Text("Log a few more days to see your average surplus or deficit.").foregroundStyle(.secondary)
+            } else {
+                let avg = days.reduce(0) { $0 + $1.balance } / Double(days.count)
+                let implied = days.reduce(0) { $0 + $1.balance } / kcalPerKg
+                let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+                let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+                let actual = (byDay[days.last!.day] ?? 0) - (byDay[days.first!.day] ?? 0)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(signedKcal(avg, energy)).font(.number(28)).monospacedDigit().foregroundStyle(avg < 0 ? palette.good : palette.warn)
+                    Text(avg < 0 ? "a day, deficit" : "a day, surplus").foregroundStyle(.secondary)
+                }
+                Chart(days, id: \.day) { x in
+                    BarMark(x: .value("Day", date(fromKey: x.day), unit: .day), y: .value("kcal", x.balance))
+                        .foregroundStyle(x.balance < 0 ? palette.good.opacity(0.85) : palette.warn.opacity(0.85))
+                }
+                .numberYAxis().frame(height: 140)
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(signed(unit, implied)).font(.number(18, weight: .semibold)).monospacedDigit()
+                        Text("Implied by the balance").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(byDay.isEmpty ? "–" : signed(unit, actual)).font(.number(18, weight: .semibold)).monospacedDigit()
+                        Text("What your trend did").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Text("Expenditure is estimated from your weight trend and intake, so these agree over time; big gaps usually mean days logged incompletely or water swings.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// Week by week (Monday to Sunday): averages, logging and the trend's change.
+struct WeeklyTable: View {
+    let d: InsightData
+    let weights: [WeightEntry]
+    let energy: EnergyUnit
+    let unit: WeightUnit
+
+    var body: some View {
+        let weeks = Dictionary(grouping: d.finished) { mondayOf($0.day) }.sorted { $0.key > $1.key }.prefix(12)
+        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let trend = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+        Card(title: "Week by week", systemImage: "tablecells") {
+            if weeks.isEmpty {
+                Text("Weeks you log show up here.").foregroundStyle(.secondary)
+            } else {
+                Grid(alignment: .trailing, horizontalSpacing: 14, verticalSpacing: 8) {
+                    GridRow {
+                        Text("Week").gridColumnAlignment(.leading); Text(energy.rawValue); Text("Protein"); Text("Days"); Text("Trend")
+                    }
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    ForEach(Array(weeks), id: \.key) { monday, items in
+                        let n = Double(items.count)
+                        let kcal = items.reduce(0) { $0 + $1.n.kcal } / n
+                        let protein = items.reduce(0) { $0 + $1.n.protein } / n
+                        let end = min(addDays(monday, 6), dayKey())                 // this week: up to today
+                        let change = trend[end].flatMap { e in trend[addDays(monday, -1)].map { e - $0 } }
+                        GridRow {
+                            Text(date(fromKey: monday).formatted(.dateTime.day().month(.abbreviated).locale(appLocale))).gridColumnAlignment(.leading)
+                            Text(number(energy.fromKcal(kcal)))
+                            Text(protein > 0 ? "\(number(protein)) g" : "–")
+                            Text("\(items.count)/7")
+                            Text(change.map { signed(unit, $0) } ?? "–")
+                        }
+                        .font(.callout).monospacedDigit()
+                    }
+                }
+            }
+        }
+    }
+
+    private func mondayOf(_ day: String) -> String {
+        // dayNumber 0 = Thursday 1970-01-01, so Monday is (n + 3) % 7 == 0.
+        let n = dayNumber(day)
+        return dayKey(number: n - ((n + 3) % 7 + 7) % 7)
     }
 }

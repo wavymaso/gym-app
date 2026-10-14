@@ -328,3 +328,14 @@ struct MacroDonut: View {
         }
     }
 }
+
+extension View {
+    /// Testing only (-scrollBottom YES): open long pages scrolled to the end, for snapshots.
+    func debugScrollAnchor() -> some View {
+        #if DEBUG
+        defaultScrollAnchor(UserDefaults.standard.bool(forKey: "scrollBottom") ? .bottom : nil)
+        #else
+        self
+        #endif
+    }
+}

@@ -56,6 +56,7 @@ struct DashboardView: View {
             .frame(maxWidth: 1000, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .debugScrollAnchor()
         .background(Color.pageBackground)
         .navigationTitle("Dashboard")
         #if os(iOS)
@@ -190,12 +191,36 @@ struct DashboardView: View {
                 Text("week \(weeks + 1)").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
             }
             Text(goalDetail(g, p)).font(.callout).foregroundStyle(.secondary)
-            if let now = series.last?.trend, g.startWeightKg > 0 {
-                let change = now - g.startWeightKg
+            // Where the trend stood on the day this goal started (imports can move that day back).
+            let startKg = series.first { $0.day >= g.startDay }?.trend ?? g.startWeightKg
+            if let now = series.last?.trend, startKg > 0 {
+                let change = now - startKg
                 HStack {
                     Text("Since you started").font(.callout)
                     Spacer()
                     Delta(text: signed(p.weight, change), good: goodDirection(change))
+                }
+                if let goal = p.goalWeightKg {
+                    let start = startKg, total = goal - start
+                    let done = total != 0 ? max(0, min(1, (now - start) / total)) : 1
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("To \(p.weight.format(goal))").font(.callout)
+                            Spacer()
+                            Text("\(Int((done * 100).rounded()))%").font(.callout.weight(.bold)).monospacedDigit()
+                        }
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(palette.good.opacity(0.16))
+                                Capsule().fill(palette.good).frame(width: max(8, g.size.width * done))
+                            }
+                        }
+                        .frame(height: 8)
+                        if let wk = weeklyTrendChange(series), let d = goalDate(trendKg: now, goalKg: goal, weeklyKg: wk) {
+                            Text("At this rate: \(d.formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)))")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
         }

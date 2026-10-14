@@ -175,11 +175,12 @@ extension Profile: Syncable {
     var naturalID: String { "profile" }                       // one per person
     func encode() -> [String: Any] {
         ["sex": sex, "birthDate": t(birthDate), "heightCm": heightCm, "activity": activity, "weightUnit": weightUnit,
-         "energyUnit": energyUnit, "createdAt": t(createdAt)]
+         "energyUnit": energyUnit, "createdAt": t(createdAt), "goalWeightKg": n(goalWeightKg)]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
         weightUnit = d.str("weightUnit"); energyUnit = d.str("energyUnit"); createdAt = d.date("createdAt")
+        goalWeightKg = d.optNum("goalWeightKg")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
 }

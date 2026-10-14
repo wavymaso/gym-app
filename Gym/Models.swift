@@ -15,6 +15,7 @@ import SwiftData
     var weightUnit: String
     var energyUnit: String
     var createdAt: Date
+    var goalWeightKg: Double? = nil           // optional: where you'd like your trend weight to end up
 
     init(sex: Sex, birthDate: Date, heightCm: Double, activity: Activity, weightUnit: WeightUnit, energyUnit: EnergyUnit) {
         self.sex = sex.rawValue; self.birthDate = birthDate; self.heightCm = heightCm; self.activity = activity.rawValue

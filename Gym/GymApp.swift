@@ -212,6 +212,11 @@ struct ComingSoon: View {
 #if DEBUG
 /// Testing only: save a picture of the window, then quit (no screen-recording permission needed).
 @MainActor func saveSnapshot(to path: String) async {
+    #if os(macOS)
+    if UserDefaults.standard.bool(forKey: "tall"), let w = NSApp.windows.first(where: \.isVisible) {      // -tall YES: see more of long pages
+        w.setFrame(NSRect(x: 0, y: 0, width: w.frame.width, height: 2600), display: true)
+    }
+    #endif
     try? await Task.sleep(nanoseconds: 2_500_000_000)
     #if os(macOS)
     let visible = NSApp.windows.filter(\.isVisible)
@@ -228,7 +233,9 @@ struct ComingSoon: View {
 /// Testing only (-demo): a filled-in profile, so setup can be skipped.
 func addDemoProfile(_ ctx: ModelContext) {
     let born = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2003, month: 5, day: 10))!
-    ctx.insert(Profile(sex: .male, birthDate: born, heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal))
+    let profile = Profile(sex: .male, birthDate: born, heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal)
+    profile.goalWeightKg = 75
+    ctx.insert(profile)
     ctx.insert(WeightEntry(kg: 78.4))
     let exp = startingExpenditure(sex: .male, weightKg: 78.4, heightCm: 180, age: age(born: born), activity: .moderate)
     ctx.startProgram(goal: .lose, ratePercent: 0.5, diet: .balanced, protein: .high, weightKg: 78.4, expenditure: exp, sex: .male, reason: "setup")

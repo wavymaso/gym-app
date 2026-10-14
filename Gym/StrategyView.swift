@@ -11,6 +11,20 @@ struct StrategyView: View {
     @State private var checkingIn = false
     @State private var manual = false
 
+    @State private var editingGoalWeight = false
+    @Query(sort: \WeightEntry.day) private var weighIns: [WeightEntry]
+
+    /// "At −0,62 kg a week you'll reach 100 kg around 12 Mar 2027."
+    private func projection(_ p: Profile, _ goal: Double) -> String? {
+        let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        guard let now = series.last?.trend else { return nil }
+        if abs(now - goal) < 0.1 { return "You're there." }
+        guard let wk = weeklyTrendChange(series), let d = goalDate(trendKg: now, goalKg: goal, weeklyKg: wk) else {
+            return nil
+        }
+        return "At \(signed(p.weight, wk)) a week: \(p.weight.format(goal)) around \(d.formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)))"
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -22,6 +36,15 @@ struct StrategyView: View {
                         row("Diet", g.dietValue.label)
                         row("Protein", "\(g.proteinValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg")
                         row("Started", date(fromKey: g.startDay).formatted(.dateTime.day().month(.wide).year().locale(appLocale)))
+                        HStack {
+                            Text("Goal weight").foregroundStyle(.secondary)
+                            Spacer()
+                            Button(p.goalWeightKg.map { p.weight.format($0) } ?? "Set…") { editingGoalWeight = true }
+                                .buttonStyle(.borderless)
+                        }
+                        if let gw = p.goalWeightKg, let proj = projection(p, gw) {
+                            Text(proj).font(.callout).foregroundStyle(palette.good)
+                        }
                     }
                     Card(title: "Daily targets", systemImage: "chart.bar") {
                         HStack(spacing: 20) {
@@ -74,6 +97,7 @@ struct StrategyView: View {
         .sheet(isPresented: $editing) { GoalEditor() }
         .sheet(isPresented: $checkingIn) { CheckInView() }
         .sheet(isPresented: $manual) { ManualTargetsView() }
+        .sheet(isPresented: $editingGoalWeight) { if let p = profiles.first { GoalWeightSheet(profile: p) } }
     }
 
     private func nextCheckIn(_ g: Program) -> String {
@@ -154,4 +178,48 @@ func weekdayName(_ d: Int) -> String {
     var c = Calendar(identifier: .gregorian)
     c.locale = appLocale
     return c.weekdaySymbols[d - 1]
+}
+
+/// Set or clear the goal weight.
+struct GoalWeightSheet: View {
+    let profile: Profile
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                HStack {
+                    TextField("Goal weight", text: $text, prompt: Text(profile.weight == .kg ? "100" : "220"))
+                        #if os(iOS)
+                        .keyboardType(.decimalPad)
+                        #endif
+                    Text(profile.weight.rawValue).foregroundStyle(.secondary)
+                }
+                Text("Used for a projected date on your dashboard and a line on the weight chart. Your weekly targets still come from your goal and rate.")
+                    .font(.callout).foregroundStyle(.secondary)
+                if profile.goalWeightKg != nil {
+                    Button("Remove goal weight", role: .destructive) { profile.goalWeightKg = nil; ctx.commit(); dismiss() }
+                }
+            }
+            .themedForm()
+            .navigationTitle("Goal weight")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        if let v = parseNumber(text) { profile.goalWeightKg = profile.weight.toKg(v); ctx.commit() }
+                        dismiss()
+                    }
+                    .disabled(parseNumber(text).map { !(20...700).contains($0) } ?? true)
+                }
+            }
+            .onAppear { if let g = profile.goalWeightKg { text = number(profile.weight.fromKg(g), digits: 1) } }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 420, height: 280)
+        #endif
+    }
 }
