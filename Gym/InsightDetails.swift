@@ -73,6 +73,7 @@ struct InsightDetailView: View {
     @State private var weighing = false
     @State private var picked: Date?                  // touch-and-drag on the chart
     @State var macro: Macro = .calories               // Calories & Macros: which one
+    @State private var listLimit = 60                 // rows in the raw-data list
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
@@ -99,7 +100,8 @@ struct InsightDetailView: View {
                 Text("Insights & Data").font(.title2.bold()).padding(.top, 6)
                 if [.weightTrend, .expenditure, .scaleWeight].contains(kind) { changes(all, unit, energy) }
                 explainers(all, unit, energy)
-                if kind == .scaleWeight { weighInList(unit) }
+                dataSources
+                if kind == .scaleWeight { weighInList(unit) } else if kind != .goal { dataList(all, unit, energy) }
                 if kind == .weightTrend {
                     NavigationLink { InsightDetailView(kind: .scaleWeight) } label: {
                         HStack {
@@ -116,6 +118,7 @@ struct InsightDetailView: View {
             .frame(maxWidth: 820, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .debugScrollAnchor()
         .pageBackground()
         .navigationTitle(kind.title)
         #if os(iOS)
@@ -534,6 +537,82 @@ struct InsightDetailView: View {
                 Text(text).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: Data sources and the raw numbers
+
+    @ViewBuilder private var dataSources: some View {
+        Text("Data Sources").font(.title2.bold()).padding(.top, 6)
+        VStack(spacing: 0) {
+            if [.expenditure, .energyBalance, .nutrition].contains(kind) {
+                NavigationLink { FoodLogView() } label: { sourceRow("cylinder.split.1x2", "Nutrition", "Your food log") }.buttonStyle(.plain)
+                Divider().padding(.leading, 58)
+            }
+            NavigationLink { WeightView() } label: { sourceRow("scalemass", "Scale Weight", "Weigh-ins, scales, measurements") }.buttonStyle(.plain)
+        }
+        .modifier(CardSurface())
+    }
+
+    private func sourceRow(_ icon: String, _ title: String, _ detail: String) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon).font(.title3).frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 13).contentShape(Rectangle())
+    }
+
+    /// Every value, newest first, by month: the number, the day, and how it moved from the day before.
+    @ViewBuilder private func dataList(_ all: [Point], _ unit: WeightUnit, _ energy: EnergyUnit) -> some View {
+        let u = isEnergy ? energy.rawValue : kind == .nutrition ? "g" : unit.rawValue
+        let digits = isEnergy || kind == .nutrition ? 0 : 1
+        let rows = Array(all.reversed().prefix(listLimit))
+        let prev = Dictionary(zip(all.dropFirst().map(\.day), all.dropLast().map(\.value)), uniquingKeysWith: { a, _ in a })
+        let months = Dictionary(grouping: rows) { String($0.day.prefix(7)) }.sorted { $0.key > $1.key }
+        ForEach(months, id: \.key) { _, ps in
+            VStack(alignment: .leading, spacing: 10) {
+                Text(date(fromKey: ps[0].day).formatted(.dateTime.month(.wide).year().locale(appLocale))).font(.title2.bold()).padding(.top, 6)
+                VStack(spacing: 0) {
+                    ForEach(ps) { p in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(number(p.value, digits: digits)) \(u)").font(.headline).monospacedDigit()
+                                Text(date(fromKey: p.day).formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            change(p, prev[p.day], u, digits)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 11)
+                        if p.id != ps.last?.id { Divider().padding(.leading, 16) }
+                    }
+                }
+                .modifier(CardSurface())
+            }
+        }
+        if all.count > listLimit {
+            Button("Show more") { listLimit += 90 }.buttonStyle(.bordered).buttonBorderShape(.capsule).frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder private func change(_ p: Point, _ before: Double?, _ u: String, _ digits: Int) -> some View {
+        if kind == .expenditure && p.flag {
+            Label("Holding", systemImage: "square").foregroundStyle(.secondary).labelStyle(TintIconLabel(color: color))
+        } else if kind == .nutrition, let t = p.extra {
+            let d = p.value - t
+            Text(abs(d) <= max(t * 0.1, 1) ? "On target" : "\(d > 0 ? "+" : "−")\(number(abs(d))) \(u) vs target")
+                .font(.callout).foregroundStyle(abs(d) <= max(t * 0.1, 1) ? palette.good : .secondary)
+        } else if let b = before {
+            let d = p.value - b
+            let step = digits == 0 ? 0.5 : 0.05
+            Label(abs(d) < step ? "No change" : "\(d > 0 ? "+" : "−")\(number(abs(d), digits: digits)) \(u)",
+                  systemImage: abs(d) < step ? "arrow.right" : d > 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
+                .font(.callout).foregroundStyle(.secondary).labelStyle(TintIconLabel(color: color))
         }
     }
 
