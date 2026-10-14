@@ -70,6 +70,9 @@ struct WeeklyReview: View {
                     LineMark(x: .value("Day", date(fromKey: p.day)), y: .value("kcal", p.kcal)).foregroundStyle(Color(hex: 0xFF8A5B))
                 }
                 .chartYScale(domain: .automatic(includesZero: false)).chartXAxis(.hidden)
+                .dayTip("Expenditure", days: exp.map(\.day)) { d in
+                    exp.filter { $0.day == d }.map { TipRow(label: "Estimate", value: energy.format($0.kcal), color: Color(hex: 0xFF8A5B)) }
+                }
                 .frame(height: 90)
                 Text("Expenditure, last 4 weeks. The band is how unsure the estimate still is; it narrows as you log.")
                     .font(.caption).foregroundStyle(.secondary)

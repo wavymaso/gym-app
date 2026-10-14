@@ -43,7 +43,14 @@ struct InsightsView: View {
                             }
                         }
                     }
-                    .numberYAxis().frame(height: 220)
+                    .numberYAxis()
+                    .dateAxis(days: d.logged.map(\.day))
+                    .dayTip(days: d.logged.map(\.day)) { day in
+                        guard let x = d.logged.first(where: { $0.day == day }) else { return [] }
+                        return [TipRow(label: "Eaten", value: energy.format(x.n.kcal), color: Macro.calories.color)]
+                            + (d.target(day).map { [TipRow(label: "Target", value: energy.format($0.kcal))] } ?? [])
+                    }
+                    .frame(height: 220)
                     legend([("Eaten", Macro.calories.color), ("Target", .primary.opacity(0.6))])
                 }
                 Card(title: "Expenditure and intake", systemImage: "flame") {
@@ -60,7 +67,13 @@ struct InsightsView: View {
                         }
                     }
                     .chartYScale(domain: .automatic(includesZero: false))
-                    .numberYAxis().frame(height: 200)
+                    .numberYAxis()
+                    .dateAxis(days: d.expenditure.map(\.day))
+                    .dayTip(days: d.expenditure.map(\.day)) { day in
+                        (d.expenditure.first { $0.day == day }.map { [TipRow(label: "Expenditure", value: energy.format($0.kcal), color: Macro.fat.color)] } ?? [])
+                        + (d.rollingIntake.first { $0.day == day }.map { [TipRow(label: "Intake (7-day)", value: energy.format($0.value), color: Macro.calories.color)] } ?? [])
+                    }
+                    .frame(height: 200)
                     legend([("Expenditure", Macro.fat.color), ("Intake, 7-day average", Macro.calories.color)])
                     Text("When intake sits below expenditure you lose weight, above it you gain. The gap is your daily deficit or surplus.")
                         .font(.callout).foregroundStyle(.secondary)
@@ -76,7 +89,14 @@ struct InsightsView: View {
                     }
                     .chartForegroundStyleScale(["Protein": Macro.protein.color, "Fat": Macro.fat.color, "Carbs": Macro.carbs.color])
                     .chartYAxisLabel("kcal from each")
-                    .numberYAxis().frame(height: 200)
+                    .numberYAxis()
+                    .dateAxis(days: d.logged.map(\.day))
+                    .dayTip(days: d.logged.map(\.day)) { day in
+                        guard let x = d.logged.first(where: { $0.day == day }) else { return [] }
+                        return [TipRow(label: "Calories", value: energy.format(x.n.kcal), color: Macro.calories.color)]
+                            + [Macro.protein, .fat, .carbs].map { TipRow(label: $0.label, value: "\(number($0.value(x.n.targets))) g", color: $0.color) }
+                    }
+                    .frame(height: 200)
                     if let a = d.avg, let t = d.avgTarget {
                         adaptiveStack {
                             ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
@@ -223,7 +243,13 @@ struct EnergyBalanceCard: View {
                     BarMark(x: .value("Day", date(fromKey: x.day), unit: .day), y: .value("kcal", x.balance))
                         .foregroundStyle(x.balance < 0 ? palette.good.opacity(0.85) : palette.warn.opacity(0.85))
                 }
-                .numberYAxis().frame(height: 140)
+                .numberYAxis()
+                .dateAxis(days: days.map(\.day))
+                    .dayTip(days: days.map(\.day)) { day in
+                    days.filter { $0.day == day }.map { TipRow(label: $0.balance < 0 ? "Deficit" : "Surplus", value: signedKcal($0.balance, energy),
+                                                               color: $0.balance < 0 ? palette.good : palette.warn) }
+                }
+                .frame(height: 140)
                 HStack {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(signed(unit, implied)).font(.number(18, weight: .semibold)).monospacedDigit()

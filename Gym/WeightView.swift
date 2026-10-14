@@ -137,7 +137,12 @@ struct WeightChart: View {
         }
         .chartYScale(domain: lo...hi)
         .numberYAxis(digits: hi - lo < 4 ? 1 : 0)
-        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 5)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.day().month(.abbreviated).locale(appLocale)) } }
+        .dayTip("Weight", days: series.map(\.day)) { day in
+            guard let p = series.first(where: { $0.day == day }) else { return [] }
+            return (p.logged ? [TipRow(label: "Scale", value: unit.format(p.scale), color: Color.primary.opacity(0.5))] : [])
+                + [TipRow(label: "Trend", value: unit.format(p.trend), color: palette.accent)]
+        }
+        .dateAxis(days: series.map(\.day))
         .appStyle()
     }
 }

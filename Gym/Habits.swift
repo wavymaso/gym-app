@@ -114,6 +114,9 @@ struct NutrientTimingCard: View {
                 }
                 .chartXAxis { AxisMarks(values: [0, 6, 12, 18, 23]) { v in AxisValueLabel { if let h = v.as(Int.self) { Text("\(h):00") } } } }
                 .numberYAxis()
+                .indexTip(count: 24, title: { h in String(format: "%02d:00–%02d:00", h, (h + 1) % 24) }) { h in
+                    [TipRow(label: "Average", value: "\(number(byHour[h] ?? 0)) kcal", color: Macro.calories.color)]
+                }
                 .frame(height: 140)
                 HStack {
                     stat(clock(avg(firsts)), "First bite")

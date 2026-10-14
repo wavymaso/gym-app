@@ -196,10 +196,12 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 9
+    static let version = 10
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("hand.point.up.left", "Touch any chart", "Hold and drag on any graph to see that day's values."),
+        ("chart.bar.xaxis", "Calories & Macros, Scale Weight", "New dashboard cards with full history screens; tap “Calories & macros history” under Nutrition too."),
         ("target", "Strategy has its own tab", "Countdown to check-in, your program and goal, goal history, and every coaching setting in one place."),
         ("person.crop.circle", "More, tidied up", "Top right of the Dashboard: your profile, then short groups of settings, each on its own page."),
         ("hand.point.up.left", "Touch the charts", "Drag on a detail chart to see that day's value."),

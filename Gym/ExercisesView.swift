@@ -85,6 +85,10 @@ struct ExerciseDetail: View {
                                 .foregroundStyle(Macro.calories.color)
                         }
                         .chartYScale(domain: .automatic(includesZero: false))
+                        .dateAxis(days: byDay.map(\.day))
+                        .dayTip("Best set", days: byDay.map(\.day)) { d in
+                            byDay.filter { $0.day == d }.map { TipRow(label: "Est. 1RM", value: unit.format($0.value), color: Macro.calories.color) }
+                        }
                         .frame(height: 220)
                         Text("The best set of each session, as the weight you could probably lift once.").font(.caption).foregroundStyle(.secondary)
                     }

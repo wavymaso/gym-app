@@ -7,7 +7,7 @@ import SwiftUI
 // legend, then "Insights & Data": changes over 3–90 days and what each number means.
 
 enum InsightKind: String, Identifiable, Hashable {
-    case weightTrend, scaleWeight, expenditure, goal, energyBalance
+    case weightTrend, scaleWeight, expenditure, goal, energyBalance, nutrition
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -16,6 +16,7 @@ enum InsightKind: String, Identifiable, Hashable {
         case .expenditure: return "Expenditure"
         case .goal: return "Goal Progress"
         case .energyBalance: return "Energy Balance"
+        case .nutrition: return "Calories & Macros"
         }
     }
 }
@@ -71,6 +72,7 @@ struct InsightDetailView: View {
     @State private var editing: WeightEntry?
     @State private var weighing = false
     @State private var picked: Date?                  // touch-and-drag on the chart
+    @State var macro: Macro = .calories               // Calories & Macros: which one
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
@@ -79,6 +81,10 @@ struct InsightDetailView: View {
         let shown = clip(all)
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if kind == .nutrition {
+                    Picker("", selection: $macro) { ForEach(Macro.allCases, id: \.self) { Text($0.label).tag($0) } }
+                        .pickerStyle(.segmented).labelsHidden()
+                }
                 if kind == .goal {
                     Picker("", selection: $goalOnTrend) {
                         Label("Scale Weight", systemImage: "chart.xyaxis.line").tag(false)
@@ -131,8 +137,11 @@ struct InsightDetailView: View {
         case .scaleWeight, .goal: return palette.good
         case .expenditure: return Color(hex: 0xFF8A5B)
         case .energyBalance: return palette.calories
+        case .nutrition: return macro.color
         }
     }
+
+    private var isEnergy: Bool { [.expenditure, .energyBalance].contains(kind) || (kind == .nutrition && macro == .calories) }
 
     // MARK: Data
 
@@ -152,6 +161,20 @@ struct InsightDetailView: View {
             let start = programs.first?.startDay ?? trend.first?.day ?? dayKey()
             return trend.filter { $0.day >= start && (goalOnTrend || $0.logged) }
                 .map { Point(day: $0.day, value: unit.fromKg(abs((goalOnTrend ? $0.trend : $0.scale) - goal))) }
+        case .nutrition:
+            let today = dayKey()
+            let entries = (try? ctx.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day < today }))) ?? []
+            let partial = ctx.partialDays
+            let byDay: [String: [FoodEntry]] = Dictionary(grouping: entries, by: \.day)
+            var out: [Point] = []
+            for (day, es) in byDay where !partial.contains(day) {
+                let n: Nutrients = es.reduce(Nutrients.zero) { $0 + $1.nutrients }
+                let v: Double = macro.value(n.targets)
+                let tv: Double? = ctx.dayTargets(on: day).map { macro.value($0) }
+                let conv: (Double) -> Double = { macro == .calories ? energy.fromKcal($0) : $0 }
+                out.append(Point(day: day, value: conv(v), extra: tv.map(conv)))
+            }
+            return out.sorted { $0.day < $1.day }
         case .energyBalance:
             let intake = ctx.dailyIntake()
             let exp = Dictionary(ctx.expenditureEstimates().map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
@@ -171,20 +194,23 @@ struct InsightDetailView: View {
     // MARK: Headline
 
     @ViewBuilder private func headline(_ pts: [Point], _ unit: WeightUnit, _ energy: EnergyUnit) -> some View {
-        let u = [.expenditure, .energyBalance].contains(kind) ? energy.rawValue : unit.rawValue
-        let digits = [.expenditure, .energyBalance].contains(kind) ? 0 : 1
+        let u = isEnergy ? energy.rawValue : kind == .nutrition ? "g" : unit.rawValue
+        let digits = isEnergy || kind == .nutrition ? 0 : 1
         HStack(alignment: .top) {
             if kind == .goal {
                 stat("Distance", pts.last.map { number($0.value, digits: 1) } ?? "–", u)
             } else {
                 let avg = pts.isEmpty ? nil : pts.map(\.value).reduce(0, +) / Double(pts.count)
                 stat(kind == .scaleWeight ? "Latest" : "Average", (kind == .scaleWeight ? pts.last?.value : avg).map { number($0, digits: digits) } ?? "–", u)
-                if kind != .energyBalance, let f = pts.first, let l = pts.last {
+                if kind == .nutrition {
+                    let withT = pts.compactMap(\.extra)
+                    stat("Target", withT.isEmpty ? "–" : number(withT.reduce(0, +) / Double(withT.count)), u)
+                } else if kind != .energyBalance, let f = pts.first, let l = pts.last {
                     stat("Difference", (l.value - f.value >= 0 ? "+" : "−") + number(abs(l.value - f.value), digits: digits), u)
                 }
             }
             Spacer()
-            if kind != .energyBalance && kind != .goal {
+            if kind != .energyBalance && kind != .goal && kind != .nutrition {
                 Button { withAnimation(.snappy) { zoomed.toggle() } } label: {
                     Image(systemName: zoomed ? "arrow.up.and.down.text.horizontal" : "arrow.down.and.line.horizontal.and.arrow.up")
                         .font(.headline).frame(width: 46, height: 46).modifier(GlassCapsule())
@@ -216,6 +242,27 @@ struct InsightDetailView: View {
             Text("Not enough data in this range yet.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if kind == .goal {
             goalChart(pts)
+        } else if kind == .nutrition {
+            let u = isEnergy ? energy.rawValue : "g"
+            Chart {
+                ForEach(pts) { p in
+                    BarMark(x: .value("Day", p.when, unit: grouping == .month ? .month : grouping == .week ? .weekOfYear : .day), y: .value("Eaten", p.value))
+                        .foregroundStyle(p.extra.map { abs(p.value - $0) / max($0, 1) <= 0.1 } == true ? color : color.opacity(0.55))
+                }
+                ForEach(pts.filter { $0.extra != nil }) { p in
+                    RectangleMark(x: .value("Day", p.when, unit: grouping == .month ? .month : grouping == .week ? .weekOfYear : .day),
+                                  y: .value("Target", p.extra!), width: .ratio(1), height: 2.5)
+                        .foregroundStyle(Color.primary.opacity(0.85))
+                }
+            }
+            .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine(stroke: StrokeStyle(dash: [4, 4])); AxisValueLabel() } }
+            .dateAxis(days: pts.map(\.day))
+            .dayTip(grouping == .day ? "Daily Total" : grouping == .week ? "Week Average" : "Month Average", days: pts.map(\.day)) { d in
+                pts.filter { $0.day == d }.flatMap { p in
+                    [TipRow(label: macro.label, value: "\(number(p.value)) \(u)", color: color)]
+                        + (p.extra.map { [TipRow(label: "Target", value: "\(number($0)) \(u)")] } ?? [])
+                }
+            }
         } else if kind == .energyBalance {
             Chart(pts) { p in
                 BarMark(x: .value("Day", p.when, unit: grouping == .month ? .month : grouping == .week ? .weekOfYear : .day), y: .value("Balance", p.value))
@@ -223,6 +270,11 @@ struct InsightDetailView: View {
                 RuleMark(y: .value("Zero", 0)).foregroundStyle(Color.secondary.opacity(0.4))
             }
             .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine(stroke: StrokeStyle(dash: [4, 4])); AxisValueLabel() } }
+            .dateAxis(days: pts.map(\.day))
+            .dayTip(grouping == .day ? "Daily Total" : grouping == .week ? "Week Average" : "Month Average", days: pts.map(\.day)) { d in
+                pts.filter { $0.day == d }.map { TipRow(label: $0.value < 0 ? "Deficit" : "Surplus", value: signedKcal(energy.toKcal($0.value), energy),
+                                                        color: $0.value < 0 ? palette.good : palette.warn) }
+            }
         } else {
             let values = pts.map(\.value) + pts.compactMap { kind == .weightTrend ? $0.extra : nil }
                 + (kind == .expenditure ? pts.flatMap { [$0.value - ($0.extra ?? 0), $0.value + ($0.extra ?? 0)] } : [])
@@ -256,6 +308,7 @@ struct InsightDetailView: View {
             }
             .chartYScale(domain: zoomed ? (lo - pad)...(hi + pad) : (min(0, lo))...(hi + pad))
             .chartPlotStyle { $0.clipped() }
+            .dateAxis(days: pts.map(\.day))
             .chartXSelection(value: $picked)
             .chartOverlay { proxy in
                 // "Daily total" bubble for the touched day
@@ -268,7 +321,7 @@ struct InsightDetailView: View {
                             Text(grouping == .day ? "Daily Total" : grouping == .week ? "Week Average" : "Month Average").font(.subheadline.weight(.semibold))
                             Text(p.when.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year().locale(appLocale))).font(.caption)
                             Divider()
-                            Text("\(kind.title): \(number(p.value, digits: [.expenditure, .energyBalance].contains(kind) ? 0 : 1)) \([.expenditure, .energyBalance].contains(kind) ? energy.rawValue : unit.rawValue)")
+                            Text("\(kind == .nutrition ? macro.label : kind.title): \(number(p.value, digits: isEnergy || kind == .nutrition ? 0 : 1)) \(isEnergy ? energy.rawValue : kind == .nutrition ? "g" : unit.rawValue)")
                                 .font(.caption.weight(.semibold)).monospacedDigit()
                         }
                         .padding(10).foregroundStyle(.black)
@@ -297,12 +350,21 @@ struct InsightDetailView: View {
         let names = bars.indices.map { $0 == bars.count - 1 ? "Now" : "Month \($0)" }
         let step = max(1, bars.count / 4)
         return Chart(Array(bars.enumerated()), id: \.offset) { i, b in
-            BarMark(x: .value("Month", names[i]), yStart: .value("From", b.from), yEnd: .value("To", max(b.to, b.from + 0.02)), width: .ratio(0.7))
+            BarMark(x: .value("Month", i), yStart: .value("From", b.from), yEnd: .value("To", max(b.to, b.from + 0.02)), width: .ratio(0.7))
                 .foregroundStyle(b.first ? (i == bars.count - 1 ? Color.secondary.opacity(0.5) : palette.good.opacity(0.85))
                                  : b.towards ? palette.good.mix(with: .black, by: 0.4) : palette.good.opacity(0.85))
         }
         .chartXAxis {
-            AxisMarks(values: names.enumerated().filter { $0.offset % step == 0 || $0.offset == names.count - 1 }.map(\.element)) { _ in AxisValueLabel() }
+            AxisMarks(values: names.indices.filter { $0 % step == 0 || $0 == names.count - 1 }) { v in
+                AxisValueLabel { if let i = v.as(Int.self), i < names.count { Text(names[i]) } }
+            }
+        }
+        .chartXScale(domain: -0.6...(Double(bars.count) - 0.4))
+        .indexTip(count: bars.count, title: { names[$0] }) { i in
+            let b = bars[i]
+            let u = profiles.first?.weight ?? .kg
+            return [TipRow(label: "Distance to goal", value: u.format(u.toKg(b.to)), color: palette.good)]
+                + (b.first ? [] : [TipRow(label: b.towards ? "Towards" : "Away", value: u.format(u.toKg(abs(b.to - b.from))))])
         }
         .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine(stroke: StrokeStyle(dash: [4, 4])); AxisValueLabel() } }
     }
@@ -344,6 +406,9 @@ struct InsightDetailView: View {
             case .goal:
                 legendItem("Away", palette.good.opacity(0.85), square: true)
                 legendItem("Towards", palette.good.mix(with: .black, by: 0.4), square: true)
+            case .nutrition:
+                legendItem("Eaten", color, square: true)
+                legendItem("Target", Color.primary.opacity(0.7), line: true)
             case .energyBalance:
                 legendItem("Deficit", palette.good, square: true)
                 legendItem("Surplus", palette.warn, square: true)
@@ -426,6 +491,20 @@ struct InsightDetailView: View {
                     if let t = trend.last, let w = weekly, let d = goalDate(trendKg: t.trend, goalKg: goal, weeklyKg: w) {
                         explainer(d.formatted(.dateTime.day().month(.abbreviated).locale(appLocale)), d.formatted(.dateTime.year().locale(appLocale)),
                                   "Estimated Arrival", "When you'd reach your goal if your weight keeps moving at its current rate.")
+                    }
+                }
+            case .nutrition:
+                let recent = all.filter { $0.day >= addDays(dayKey(), -30) }
+                let u = isEnergy ? energy.rawValue : "g"
+                if !recent.isEmpty {
+                    let avg = recent.map(\.value).reduce(0, +) / Double(recent.count)
+                    explainer(number(avg), "\(u) a day", "30-Day Average", "Your average \(macro.label.lowercased()) on logged days in the last month.")
+                    let hit = recent.filter { p in p.extra.map { abs(p.value - $0) / max($0, 1) <= 0.1 } ?? false }.count
+                    explainer("\(hit)/\(recent.count)", "days", "On Target", "Logged days within 10% of that day's target (darker bars).")
+                    let weekAvg = recent.filter { $0.day >= addDays(dayKey(), -7) }
+                    if !weekAvg.isEmpty {
+                        let w = weekAvg.map(\.value).reduce(0, +) / Double(weekAvg.count)
+                        explainer(number(w), "\(u) a day", "Last 7 Days", w >= avg ? "Above your monthly average." : "Below your monthly average.")
                     }
                 }
             case .energyBalance:

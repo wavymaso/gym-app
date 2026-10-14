@@ -204,11 +204,13 @@ struct DashboardView: View {
     @ViewBuilder private func section(_ sec: DashLayout.Section, _ eaten: Nutrients, _ t: Targets, _ set: TargetSet, _ p: Profile) -> some View {
         switch sec.kind {
         case .nutrition:
+            Button { detail = .nutrition } label: { Label("Calories & macros history", systemImage: "chart.bar.xaxis").font(.caption.weight(.semibold)) }
+                .buttonStyle(.borderless)
             NutritionSection(items: sec.items, remaining: sec.remaining, eaten: eaten, target: t, energy: p.energy,
                              waterMl: ctx.water(on: dayKey()).reduce(0) { $0 + $1.ml }, waterGoal: ctx.waterGoalMl, sex: p.sexValue, profile: p)
         case .insights where isPhone:
             Text(sec.kind.label).font(.title2.bold()).padding(.top, 6)
-            let small = sec.items.filter { ["expenditure", "weight", "energyBalance", "goal"].contains($0) }
+            let small = sec.items.filter { ["expenditure", "weight", "scale", "nutritionTrend", "energyBalance", "goal"].contains($0) }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(small, id: \.self) { id in sparkCard(id, set, p) }
             }
@@ -225,6 +227,7 @@ struct DashboardView: View {
         switch id {
         case "expenditure": expenditureCard(t, p)
         case "weight": weightCard(p)
+        case "scale", "nutritionTrend": sparkCard(id, t, p)
         case "goal": if let g = programs.first { goalCard(g, p) }
         case "week": WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
         case "training": TrainingCard()
@@ -270,6 +273,16 @@ struct DashboardView: View {
             let avg = diffs.isEmpty ? 0 : diffs.reduce(0, +) / Double(diffs.count)
             SparkCard(title: "Energy Balance", period: "Last 7 days", values: diffs.map(p.energy.fromKcal), color: palette.calories,
                       value: (avg > 0 ? "+" : "") + number(p.energy.fromKcal(avg)), unit: "\(p.energy.rawValue)/day") { detail = .energyBalance }
+        case "scale":
+            let byDay = Dictionary(weights.map { ($0.day, $0.trendKg) }, uniquingKeysWith: { a, _ in a })
+            let vals = week.compactMap { byDay[$0] }.map(p.weight.fromKg)
+            SparkCard(title: "Scale Weight", period: "Last 7 days", values: vals, color: palette.good,
+                      value: weights.first.map { number(p.weight.fromKg($0.kg), digits: 1) } ?? "–", unit: p.weight.rawValue) { detail = .scaleWeight }
+        case "nutritionTrend":
+            let intake = ctx.dailyIntake()
+            let vals = week.dropLast().compactMap { intake[$0] }.map(p.energy.fromKcal)
+            SparkCard(title: "Calories & Macros", period: "Last 7 days", values: vals, color: palette.calories,
+                      value: vals.isEmpty ? "–" : number(vals.reduce(0, +) / Double(vals.count)), unit: "\(p.energy.rawValue) avg") { detail = .nutrition }
         case "goal":
             let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
             let start = programs.first.map(\.startDay) ?? series.first?.day ?? dayKey()
@@ -721,6 +734,9 @@ struct Sparkline: View {
         }
         .chartXAxis(.hidden).chartYAxis(.hidden)
         .chartYScale(domain: (lo - max(0.5, (hi - lo) * 0.15))...(hi + max(0.5, (hi - lo) * 0.15)))
+        .indexTip(count: values.count, title: { i in i == values.count - 1 ? "Latest" : "\(values.count - 1 - i) days ago" }) { i in
+            [TipRow(label: "Value", value: number(values[i], digits: values[i] < 200 ? 1 : 0), color: color)]
+        }
         .frame(height: 44)
     }
 }

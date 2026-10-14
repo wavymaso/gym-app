@@ -151,6 +151,9 @@ struct SparkCard: View {
             }
             .chartXAxis(.hidden).chartYAxis(.hidden)
             .chartYScale(domain: (lo - pad)...(hi + pad))
+            .indexTip(count: values.count, title: { i in i == values.count - 1 ? "Latest" : "\(values.count - 1 - i) days ago" }) { i in
+                [TipRow(label: title, value: "\(number(values[i], digits: unit == "kg" || unit == "lb" ? 1 : 0)) \(unit)", color: color)]
+            }
             .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
         } else {
             Text("Not enough data yet").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)

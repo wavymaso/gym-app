@@ -605,6 +605,9 @@ struct StrengthCard: View {
                 }
                 .numberYAxis(digits: 1)
                 .chartYAxisLabel("Volume, t")
+                .dayTip("Week of", days: weeks, format: .dateTime.day().month(.abbreviated)) { w in
+                    [TipRow(label: "Volume", value: "\(number(unit.fromKg(volume[w] ?? 0) / 1000, digits: 1)) t", color: palette.accent)]
+                }
                 .frame(height: 130)
                 Divider()
                 ForEach(Array(top), id: \.key) { key, rows in
