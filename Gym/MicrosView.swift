@@ -21,10 +21,11 @@ struct NutrientPanel: View {
         )) {
             if open {
                 VStack(spacing: 9) {
-                    row("Fibre", n.fiber, Reference.fiber(kcal: max(n.kcal, 1)), "g", limit: false)
-                    row("Sugar", n.sugar, Reference.sugar(kcal: max(n.kcal, 1)), "g", limit: true)
-                    row("Saturated fat", n.satFat, Reference.satFat(kcal: max(n.kcal, 1)), "g", limit: true)
-                    row("Sodium", n.sodium, Reference.sodium, "mg", limit: true)
+                    let p = profiles.first, k = max(n.kcal, 1)
+                    row("Fibre", n.fiber, nutrientTarget("fiber", kcal: k, sex: sex, profile: p).value, "g", limit: false)
+                    row("Sugar", n.sugar, nutrientTarget("sugar", kcal: k, sex: sex, profile: p).value, "g", limit: true)
+                    row("Saturated fat", n.satFat, nutrientTarget("satFat", kcal: k, sex: sex, profile: p).value, "g", limit: true)
+                    row("Sodium", n.sodium, nutrientTarget("sodium", kcal: k, sex: sex, profile: p).value, "mg", limit: true)
                 }
                 Divider()
                 if withMicros == 0 {
@@ -32,7 +33,7 @@ struct NutrientPanel: View {
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
-                        ForEach(Micro.all) { m in tile(m, n.micros?[m.key], m.target(sex)) }
+                        ForEach(Micro.all) { m in tile(m, n.micros?[m.key], nutrientTarget(m.key, kcal: n.kcal, sex: sex, profile: profiles.first).value) }
                     }
                     Text("\(withMicros) of \(entries.count) foods have vitamin and mineral data, so real intake is likely higher.")
                         .font(.caption).foregroundStyle(.secondary)

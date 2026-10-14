@@ -178,7 +178,8 @@ extension Profile: Syncable {
          "energyUnit": energyUnit, "createdAt": t(createdAt), "goalWeightKg": n(goalWeightKg), "highDays": highDays,
          "highDayExtra": highDayExtra, "fastDays": fastDays, "fastKcal": fastKcal,
          "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
-         "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal]
+         "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
+         "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
@@ -188,6 +189,7 @@ extension Profile: Syncable {
         expManualKcal = d.num("expManualKcal"); expStartDay = d.str("expStartDay")
         bmrEquation = d["bmrEquation"] == nil ? "mifflin" : d.str("bmrEquation"); expStaticKcal = d.num("expStaticKcal")
         expAlgorithm = d.str("expAlgorithm"); stepInformed = d.bool("stepInformed"); predictiveGoal = d.bool("predictiveGoal")
+        nutrientGoals = d.str("nutrientGoals"); weeklyBudget = d.bool("weeklyBudget")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
 }

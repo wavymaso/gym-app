@@ -19,7 +19,8 @@ STORE_KEYS = {"alcampo": "alcampo", "auchan": "alcampo", "producto alcampo": "al
 MICROS = {"potassium": ("potassium_100g", 1e3), "calcium": ("calcium_100g", 1e3), "magnesium": ("magnesium_100g", 1e3),
           "iron": ("iron_100g", 1e3), "zinc": ("zinc_100g", 1e3), "vitC": ("vitamin-c_100g", 1e3), "vitD": ("vitamin-d_100g", 1e6),
           "vitA": ("vitamin-a_100g", 1e6), "vitE": ("vitamin-e_100g", 1e3), "vitK": ("vitamin-k_100g", 1e6),
-          "b12": ("vitamin-b12_100g", 1e6), "folate": ("vitamin-b9_100g", 1e6), "cholesterol": ("cholesterol_100g", 1e3)}
+          "b12": ("vitamin-b12_100g", 1e6), "folate": ("vitamin-b9_100g", 1e6), "cholesterol": ("cholesterol_100g", 1e3),
+          "caffeine": ("caffeine_100g", 1e3), "alcohol": ("alcohol_100g", 0.789)}      # alcohol: % vol → g per 100 ml
 
 def num(row, k):
     v = row.get(k) or ""

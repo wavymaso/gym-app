@@ -28,6 +28,8 @@ import SwiftData
     var expAlgorithm: String = ""             // "" = the default (see ExpenditureAlgorithm)
     var stepInformed: Bool = false
     var predictiveGoal: Bool = false
+    var nutrientGoals: String = ""           // your own targets: "fiber=35;sodium=1800;iron=10"
+    var weeklyBudget: Bool = false           // carry under/over-eating into the rest of the week
 
     init(sex: Sex, birthDate: Date, heightCm: Double, activity: Activity, weightUnit: WeightUnit, energyUnit: EnergyUnit) {
         self.sex = sex.rawValue; self.birthDate = birthDate; self.heightCm = heightCm; self.activity = activity.rawValue

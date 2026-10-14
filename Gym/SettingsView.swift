@@ -23,6 +23,7 @@ struct SettingsView: View {
                 Section("Feature settings") {
                     NavigationLink { WeightTrendSettingsView() } label: { Label("Weight trend", systemImage: "chart.line.uptrend.xyaxis") }
                     NavigationLink { ExpenditureSettingsView() } label: { Label("Expenditure", systemImage: "flame") }
+                    NavigationLink { NutrientTargetsView() } label: { Label("Nutrient targets", systemImage: "leaf") }
                 }
                 Section("Units") {
                     Picker("Weight", selection: binding(p, \.weightUnit)) {

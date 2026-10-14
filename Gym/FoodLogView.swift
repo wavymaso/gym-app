@@ -34,7 +34,7 @@ struct FoodLogView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 WeekStrip(day: $day)
-                DayLog(day: day, energy: energy, target: ctx.targets(on: day).map { t in profiles.first.map { $0.adjust(t.targets, on: day) } ?? t.targets },
+                DayLog(day: day, energy: energy, target: ctx.dayTargets(on: day),
                        style: $style) { sheet = $0 }
             }
             .padding(pagePadding)

@@ -217,6 +217,7 @@ struct NutritionSection: View {
     let waterMl: Double
     let waterGoal: Double
     let sex: Sex
+    var profile: Profile? = nil
 
     var body: some View {
         Card(title: "Nutrition", systemImage: "leaf") {
@@ -255,14 +256,14 @@ struct NutritionSection: View {
         case "protein": return (eaten.protein, target.protein, "g", false)
         case "fat": return (eaten.fat, target.fat, "g", false)
         case "carbs": return (eaten.carbs, target.carbs, "g", false)
-        case "fiber": return (eaten.fiber, Reference.fiber(kcal: target.kcal), "g", false)
-        case "sugar": return (eaten.sugar, Reference.sugar(kcal: target.kcal), "g", true)
-        case "satFat": return (eaten.satFat, Reference.satFat(kcal: target.kcal), "g", true)
-        case "sodium": return (eaten.sodium, Reference.sodium, "mg", true)
+        case "fiber", "sugar", "satFat", "sodium":
+            let t = nutrientTarget(id, kcal: target.kcal, sex: sex, profile: profile)
+            let v: Double? = ["fiber": eaten.fiber, "sugar": eaten.sugar, "satFat": eaten.satFat, "sodium": eaten.sodium][id] ?? nil
+            return (v, t.value, id == "sodium" ? "mg" : "g", t.limit)
         case "water": return (waterMl, waterGoal, "ml", false)
         default:
             guard let m = Micro.all.first(where: { $0.key == id }) else { return nil }
-            return (eaten.micros?[m.key], m.target(sex), m.unit, m.isLimit)
+            return (eaten.micros?[m.key], nutrientTarget(m.key, kcal: target.kcal, sex: sex, profile: profile).value, m.unit, m.isLimit)
         }
     }
 

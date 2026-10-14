@@ -292,6 +292,14 @@ struct DistributionCard: View {
                 }
             }
             Text("Tap a day to change it. Extra calories come as carbs; protein stays the same every day.").font(.caption).foregroundStyle(.secondary)
+            Divider()
+            Toggle(isOn: Binding(get: { profile.weeklyBudget }, set: { profile.weeklyBudget = $0; ctx.commit() })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Weekly budget").font(.subheadline.weight(.semibold))
+                    Text("Ate less (or more) earlier in the week? The difference is spread over the days left, up to 20% a day.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
     }
 

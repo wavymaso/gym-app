@@ -41,7 +41,7 @@ struct DashboardView: View {
                 if let t = target(on: dayKey()), let p = profile {
                     if ctx.dueCheckIn != nil { checkInBanner }
                     let todayN = loggedDays.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }
-                    let tt = p.adjust(t.targets, on: dayKey())
+                    let tt = ctx.dayTargets(on: dayKey()) ?? p.adjust(t.targets, on: dayKey())
                     heroWidgets(todayN, tt, p)
                     quickActions
                     ForEach(DashLayout.load(layoutJSON).sections) { sec in
@@ -178,7 +178,7 @@ struct DashboardView: View {
         switch sec.kind {
         case .nutrition:
             NutritionSection(items: sec.items, remaining: sec.remaining, eaten: eaten, target: t, energy: p.energy,
-                             waterMl: ctx.water(on: dayKey()).reduce(0) { $0 + $1.ml }, waterGoal: ctx.waterGoalMl, sex: p.sexValue)
+                             waterMl: ctx.water(on: dayKey()).reduce(0) { $0 + $1.ml }, waterGoal: ctx.waterGoalMl, sex: p.sexValue, profile: p)
         case .insights, .habits:
             Text(sec.kind.label).font(.title3.bold()).padding(.top, 6)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 320), spacing: 16, alignment: .top)], spacing: 16) {

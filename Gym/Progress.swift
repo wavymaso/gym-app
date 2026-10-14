@@ -191,3 +191,33 @@ func goalDate(trendKg: Double, goalKg: Double, weeklyKg: Double) -> Date? {
     guard weeks < 260 else { return nil }                       // more than five years: not a useful date
     return Calendar.current.date(byAdding: .day, value: Int((weeks * 7).rounded()), to: Date())
 }
+
+extension ModelContext {
+    /// A day's targets: the program's, after the weekly distribution and, if you've turned it on,
+    /// the weekly budget: what you ate under (or over) target earlier in the week is spread over
+    /// the days left, at most ±20% a day. Protein stays put; the difference is mostly carbs.
+    func dayTargets(on day: String) -> Targets? {
+        guard let set = targets(on: day) else { return nil }
+        let p = try? fetch(FetchDescriptor<Profile>()).first
+        var t = p?.adjust(set.targets, on: day) ?? set.targets
+        guard p?.weeklyBudget == true else { return t }
+        let n = dayNumber(day), monday = dayKey(number: n - ((n + 3) % 7 + 7) % 7)
+        let sunday = addDays(monday, 6)
+        let before = min(day, dayKey())
+        guard monday < before else { return t }
+        let partial = partialDays
+        let eaten = Dictionary(grouping: (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= monday && $0.day < before }))) ?? [],
+                               by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
+        var carry = 0.0
+        for d in days(from: monday, through: addDays(before, -1)) {
+            guard let k = eaten[d], !partial.contains(d), let base = targets(on: d) else { continue }   // unlogged days don't count
+            carry += (p?.adjust(base.targets, on: d) ?? base.targets).kcal - k
+        }
+        let left = Double(daysBetween(day, sunday) + 1)
+        let shift = max(-0.2 * t.kcal, min(0.2 * t.kcal, carry / left))
+        t.kcal += shift
+        t.carbs = max(0, t.carbs + shift * 0.6 / 4)
+        t.fat = max(0, t.fat + shift * 0.4 / 9)
+        return t
+    }
+}

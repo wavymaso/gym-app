@@ -12,12 +12,13 @@ struct Micro: Identifiable {
     let male: Double
     let female: Double
     var isLimit = false
+    var offFactor: Double? = nil  // overrides the g → mg/µg scale (alcohol is % vol on Open Food Facts)
     var id: String { key }
 
     func target(_ sex: Sex) -> Double { sex == .female ? female : male }
 
     /// Open Food Facts gives grams; ours are mg or µg.
-    var offScale: Double { unit == "mg" ? 1_000 : 1_000_000 }
+    var offScale: Double { offFactor ?? (unit == "mg" ? 1_000 : unit == "g" ? 1 : 1_000_000) }
 
     static let all: [Micro] = [
         Micro(key: "potassium", label: "Potassium", unit: "mg", usda: 1092, off: "potassium_100g", male: 3400, female: 2600),
@@ -33,6 +34,9 @@ struct Micro: Identifiable {
         Micro(key: "b12", label: "Vitamin B12", unit: "µg", usda: 1178, off: "vitamin-b12_100g", male: 2.4, female: 2.4),
         Micro(key: "folate", label: "Folate", unit: "µg", usda: 1177, off: "vitamin-b9_100g", male: 400, female: 400),
         Micro(key: "cholesterol", label: "Cholesterol", unit: "mg", usda: 1253, off: "cholesterol_100g", male: 300, female: 300, isLimit: true),
+        Micro(key: "caffeine", label: "Caffeine", unit: "mg", usda: 1057, off: "caffeine_100g", male: 400, female: 400, isLimit: true),
+        // Open Food Facts gives alcohol as % by volume: 1 % vol ≈ 0,789 g per 100 ml
+        Micro(key: "alcohol", label: "Alcohol", unit: "g", usda: 1018, off: "alcohol_100g", male: 20, female: 20, isLimit: true, offFactor: 0.789),
     ]
 
     static func fromUSDA(_ n: [Int: Double]) -> [String: Double]? {
@@ -56,4 +60,27 @@ enum Reference {
     static func satFat(kcal: Double) -> Double { kcal * 0.10 / 9 }
     /// Sodium: under 2000 mg (5 g of salt).
     static let sodium = 2000.0
+}
+
+extension Profile {
+    var customGoals: [String: Double] {
+        get { Dictionary(nutrientGoals.split(separator: ";").compactMap { kv -> (String, Double)? in
+            let p = kv.split(separator: "="); guard p.count == 2, let v = Double(p[1]) else { return nil }; return (String(p[0]), v)
+        }, uniquingKeysWith: { a, _ in a }) }
+        set { nutrientGoals = newValue.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ";") }
+    }
+}
+
+/// A nutrient's daily target (your own if you set one) and whether it's a limit.
+func nutrientTarget(_ key: String, kcal: Double, sex: Sex, profile: Profile?) -> (value: Double, limit: Bool) {
+    let own = profile?.customGoals[key]
+    switch key {
+    case "fiber": return (own ?? Reference.fiber(kcal: kcal), false)
+    case "sugar": return (own ?? Reference.sugar(kcal: kcal), true)
+    case "satFat": return (own ?? Reference.satFat(kcal: kcal), true)
+    case "sodium": return (own ?? Reference.sodium, true)
+    default:
+        let m = Micro.all.first { $0.key == key }
+        return (own ?? m?.target(sex) ?? 0, m?.isLimit ?? false)
+    }
 }

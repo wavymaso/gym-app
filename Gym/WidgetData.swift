@@ -27,7 +27,7 @@ enum WidgetData {
         guard let set = ctx.targets(on: dayKey()) else { return }
         let base = set.targets
         let profile: Profile? = (try? ctx.fetch(FetchDescriptor<Profile>()))?.first
-        let t = profile?.adjust(base, on: dayKey()) ?? base
+        let t = ctx.dayTargets(on: dayKey()) ?? profile?.adjust(base, on: dayKey()) ?? base
         let today = dayKey()
         let eaten = ctx.entries(on: today).reduce(Nutrients.zero) { $0 + $1.nutrients }
         let act = ctx.activity(on: today)
