@@ -64,6 +64,7 @@ struct SettingsView: View {
                 ActivitySection()
                 RemindersSection()
                 HealthSection()
+                BackupSection()
                 ExportSection()
                 Section {
                     Button("Import from MacroFactor…") { importing = true }

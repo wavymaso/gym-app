@@ -80,6 +80,7 @@ struct Root: View {
         .onChange(of: phase, initial: true) { _, p in
             if p != .active, ctx.hasChanges { ctx.commit() }       // nothing typed is lost when the app goes away
             if p == .background || p == .inactive {
+                Backup.daily(ctx)
                 Task { await Reminders.reschedule(ctx) }
                 WidgetData.write(ctx)
             }

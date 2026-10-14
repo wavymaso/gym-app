@@ -299,6 +299,7 @@
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Gym-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Gym-macOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Gym-iOS.entitlements";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Gym uses the camera to scan food barcodes.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym reads your weigh-ins from Apple Health so you don't have to type them.";
@@ -346,6 +347,7 @@
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Gym-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Gym-macOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Gym-iOS.entitlements";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Gym uses the camera to scan food barcodes.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym reads your weigh-ins from Apple Health so you don't have to type them.";
