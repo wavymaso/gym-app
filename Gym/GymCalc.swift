@@ -107,3 +107,55 @@ func clock(_ seconds: Int) -> String {
     let h = seconds / 3600, m = (seconds % 3600) / 60, s = seconds % 60
     return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
 }
+
+// MARK: - Auto-progression (double progression)
+
+/// What to aim for next time on one exercise, and why.
+struct Progression: Equatable {
+    var kg: Double
+    var reps: [Int]               // per working set
+    var reason: String
+}
+
+/// The smallest step that's easy to load for this kind of equipment.
+func weightStep(_ e: Equipment) -> Double {
+    switch e {
+    case .barbell: return 2.5
+    case .dumbbell, .kettlebell: return 2
+    case .machine, .cable: return 2.5
+    default: return 0
+    }
+}
+
+/// Double progression from last time's working sets:
+/// - every set reached the top of the range → add a step, back to the bottom of the range
+/// - most sets fell 2+ reps short of the bottom → drop ~10% (a reset)
+/// - otherwise → same weight, one more rep on the sets still below the top
+func nextTarget(previous: [LiftSet], repLow: Int, repHigh: Int, step: Double) -> Progression? {
+    let working = previous.filter { $0.kind.counts && $0.reps > 0 }
+    guard let top = working.map(\.kg).max(), top > 0 || step == 0 else { return nil }
+    let atTop = working.filter { $0.kg >= top - 0.001 }
+    let lo = max(1, repLow), hi = max(lo, repHigh)
+    if atTop.allSatisfy({ $0.reps >= hi }) && step > 0 {
+        return Progression(kg: top + step, reps: Array(repeating: lo, count: atTop.count),
+                           reason: "All sets hit \(hi) reps last time: up \(trimmed(step)) kg")
+    }
+    if Double(atTop.filter { $0.reps <= lo - 2 }.count) > Double(atTop.count) / 2, step > 0 {
+        let reset = max(step, ((top * 0.9) / step).rounded(.down) * step)
+        return Progression(kg: reset, reps: Array(repeating: lo, count: atTop.count),
+                           reason: "Short of \(lo) reps on most sets: reset to \(trimmed(reset)) kg and build back up")
+    }
+    return Progression(kg: top, reps: atTop.map { min(hi, max(lo, $0.reps + 1)) },
+                       reason: "Same weight, one more rep (aim for \(lo)–\(hi))")
+}
+
+/// Ramp-up sets before the first working set: empty bar, then about 50%, 70% and 85%, rounded to loadable weights.
+func warmUps(working kg: Double, bar: Double = 20, step: Double = 2.5) -> [(kg: Double, reps: Int)] {
+    guard kg > bar + step else { return kg > 0 ? [(max(bar, (kg * 0.5 / step).rounded() * step), 8)] : [] }
+    var out: [(Double, Int)] = [(bar, 10)]
+    for (f, r) in [(0.5, 5), (0.7, 3), (0.85, 1)] {
+        let w = (kg * f / step).rounded() * step
+        if w > (out.last?.0 ?? 0) + 0.001 && w < kg - 0.001 { out.append((w, r)) }
+    }
+    return out
+}

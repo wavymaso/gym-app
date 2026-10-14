@@ -33,7 +33,7 @@ struct ActiveWorkoutView: View {
                 header
                 ForEach(groups, id: \.key) { order, rows in
                     if let ex = ctx.exercise(rows[0].exerciseKey) {
-                        ExerciseBlock(exercise: ex, rows: rows, workoutKey: workout.key, unit: unit, records: records,
+                        ExerciseBlock(exercise: ex, rows: rows, workout: workout, unit: unit, records: records,
                                       onDone: { row in tick(row) },
                                       addSet: { addSet(to: rows) },
                                       remove: { removeExercise(order) })
@@ -145,7 +145,8 @@ struct ActiveWorkoutView: View {
 private struct ExerciseBlock: View {
     let exercise: Exercise
     let rows: [WorkoutSet]
-    let workoutKey: String
+    let workout: Workout
+    var workoutKey: String { workout.key }
     let unit: WeightUnit
     let records: [PersistentIdentifier: [String]]
     let onDone: (WorkoutSet) -> Void
@@ -176,9 +177,28 @@ private struct ExerciseBlock: View {
                         }
                 }
                 Menu {
+                    Button { ctx.addWarmUps(exerciseKey: exercise.key, order: rows[0].exerciseOrder, to: workout) } label: {
+                        Label("Add warm-up sets", systemImage: "flame")
+                    }
+                    .disabled(rows.contains { $0.kindValue == .warmup })
+                    Menu {
+                        ForEach(ctx.alternatives(to: exercise.key).prefix(12)) { alt in
+                            Button("\(alt.name) · \(alt.equipmentValue.label)") { ctx.swap(order: rows[0].exerciseOrder, in: workout, to: alt.key) }
+                        }
+                    } label: { Label("Swap for…", systemImage: "arrow.triangle.2.circlepath") }
+                    .disabled(rows.contains(where: \.done))
+                    Divider()
                     Button("Remove exercise", role: .destructive, action: remove)
                 } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
+            }
+            if let t = target, !rows.contains(where: \.done) {
+                Label {
+                    Text("\(t.kg > 0 ? "\(trimmed(unit.fromKg(t.kg))) \(unit.rawValue) × " : "")\(repsText(t.reps)) · \(t.reason)")
+                } icon: { Image(systemName: "arrow.up.right.circle.fill") }
+                .font(.caption.weight(.semibold)).foregroundStyle(palette.good)
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .background(palette.good.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
             }
             Grid(alignment: .leading, horizontalSpacing: isPhone ? 10 : 14, verticalSpacing: 8) {
                 GridRow {
@@ -238,6 +258,18 @@ private struct ExerciseBlock: View {
         .padding(16)
         .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+    }
+
+    /// Today's aim from last time (double progression in the routine's rep range).
+    private var target: Progression? {
+        let prev = ctx.previousSets(of: exercise.key, before: workoutKey).filter { $0.kindValue.counts }
+        guard !prev.isEmpty else { return nil }
+        let (lo, hi) = ctx.repRange(exercise.key, routineKey: workout.routineKey)
+        return nextTarget(previous: prev.map(\.lift), repLow: lo, repHigh: hi, step: weightStep(exercise.equipmentValue))
+    }
+
+    private func repsText(_ r: [Int]) -> String {
+        Set(r).count == 1 ? "\(r.count)×\(r[0])" : r.map(String.init).joined(separator: "/")
     }
 
     private func previousText(_ prev: [WorkoutSet], workingIndex: Int, row: WorkoutSet) -> String {
@@ -419,11 +451,13 @@ struct PlateCalculator: View {
     let kg: Double
     let unit: WeightUnit
     @AppStorage("barKg") private var bar: Double = 20
+    @AppStorage("platesAvailable") private var available = "25,20,15,10,5,2.5,1.25"
 
-    static let plates: [Double] = [25, 20, 15, 10, 5, 2.5, 1.25]
+    static let plates: [Double] = [25, 20, 15, 10, 5, 2.5, 2, 1.25, 1, 0.5]
+    private var have: [Double] { available.split(separator: ",").compactMap { Double($0) }.sorted(by: >) }
 
     var body: some View {
-        let side = Self.perSide(total: kg, bar: bar)
+        let side = Self.perSide(total: kg, bar: bar, plates: have)
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text("\(trimmed(unit.fromKg(kg))) \(unit.rawValue)").font(.number(26))
@@ -448,16 +482,32 @@ struct PlateCalculator: View {
                 Text("20 kg bar").tag(20.0); Text("15 kg bar").tag(15.0); Text("10 kg bar").tag(10.0)
             }
             .pickerStyle(.segmented).labelsHidden()
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Plates at your gym").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                HStack(spacing: 5) {
+                    ForEach(Self.plates, id: \.self) { p in
+                        let on = have.contains(p)
+                        Button(trimmed(p)) {
+                            var set = Set(have); if on { set.remove(p) } else { set.insert(p) }
+                            available = set.sorted(by: >).map { trimmed($0).replacingOccurrences(of: ",", with: ".") }.joined(separator: ",")
+                        }
+                        .font(.caption2.weight(.bold)).buttonStyle(.plain)
+                        .frame(minWidth: 24).padding(.vertical, 5)
+                        .background(on ? palette.accent : Color.raisedBackground, in: RoundedRectangle(cornerRadius: 6))
+                        .foregroundStyle(on ? .white : .secondary)
+                    }
+                }
+            }
         }
         .padding(18)
-        .frame(width: 320)
+        .frame(width: 340)
         .presentationCompactAdaptation(.popover)
     }
 
-    static func perSide(total: Double, bar: Double) -> (plates: [Double], left: Double) {
+    static func perSide(total: Double, bar: Double, plates: [Double] = [25, 20, 15, 10, 5, 2.5, 1.25]) -> (plates: [Double], left: Double) {
         var left = max(0, (total - bar) / 2)
         var out: [Double] = []
-        for p in plates { while left >= p - 0.001 { out.append(p); left -= p } }
+        for p in plates.sorted(by: >) { while left >= p - 0.001 { out.append(p); left -= p } }
         return (out, left)
     }
 

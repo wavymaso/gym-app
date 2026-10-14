@@ -135,19 +135,68 @@ extension ModelContext {
         if let r = routine {
             let rk = r.key
             let items = (try? fetch(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == rk }, sortBy: [SortDescriptor(\.order)]))) ?? []
-            for (i, item) in items.enumerated() { addExercise(item.exerciseKey, to: w, order: i, sets: item.sets, rest: item.restSeconds, reps: item.repLow) }
+            for (i, item) in items.enumerated() {
+                addExercise(item.exerciseKey, to: w, order: i, sets: item.sets, rest: item.restSeconds, reps: item.repLow, repHigh: item.repHigh)
+            }
         }
         commit()
         return w
     }
 
-    func addExercise(_ exerciseKey: String, to w: Workout, order: Int, sets n: Int = 3, rest: Int = 120, reps: Int = 0) {
+    func addExercise(_ exerciseKey: String, to w: Workout, order: Int, sets n: Int = 3, rest: Int = 120, reps: Int = 0, repHigh: Int = 0) {
         let prev = previousSets(of: exerciseKey, before: w.key).filter { $0.kindValue.counts }
+        // Auto-progression: last time's sets moved on by the double-progression rule.
+        let (lo, hi) = reps > 0 ? (reps, max(reps, repHigh)) : (8, 12)
+        let target = nextTarget(previous: prev.map(\.lift), repLow: lo, repHigh: hi, step: weightStep(exercise(exerciseKey)?.equipmentValue ?? .other))
         for i in 0..<n {
             let p = prev.indices.contains(i) ? prev[i] : prev.last
-            insert(WorkoutSet(workoutKey: w.key, exerciseKey: exerciseKey, exerciseOrder: order, setOrder: i, kg: p?.kg ?? 0,
-                              reps: p?.reps ?? reps, restSeconds: rest, day: w.day))
+            let kg = target?.kg ?? p?.kg ?? 0
+            let r = target.map { $0.reps.indices.contains(i) ? $0.reps[i] : ($0.reps.last ?? lo) } ?? p?.reps ?? reps
+            insert(WorkoutSet(workoutKey: w.key, exerciseKey: exerciseKey, exerciseOrder: order, setOrder: i, kg: kg,
+                              reps: r, restSeconds: rest, day: w.day))
         }
+    }
+
+    /// The rep range for an exercise in this workout: its routine's, or 8–12.
+    func repRange(_ exerciseKey: String, routineKey: String?) -> (Int, Int) {
+        guard let rk = routineKey,
+              let item = try? fetch(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == rk && $0.exerciseKey == exerciseKey })).first,
+              item.repLow > 0 else { return (8, 12) }
+        return (item.repLow, max(item.repLow, item.repHigh))
+    }
+
+    /// Warm-up sets before the first working set (ramped, rounded to loadable weights).
+    func addWarmUps(exerciseKey: String, order: Int, to w: Workout) {
+        let rows = sets(of: w.key).filter { $0.exerciseOrder == order }
+        guard let first = rows.filter({ $0.kindValue.counts }).min(by: { $0.setOrder < $1.setOrder }), first.kg > 0 else { return }
+        let eq = exercise(exerciseKey)?.equipmentValue ?? .other
+        let bar = eq == .barbell ? (UserDefaults.standard.object(forKey: "barKg") as? Double ?? 20) : 0
+        let ramp = warmUps(working: first.kg, bar: bar, step: max(weightStep(eq), 1))
+        let start = (rows.map(\.setOrder).min() ?? 0) - ramp.count
+        for (i, s) in ramp.enumerated() {
+            insert(WorkoutSet(workoutKey: w.key, exerciseKey: exerciseKey, exerciseOrder: order, setOrder: start + i, kind: .warmup,
+                              kg: s.kg, reps: s.reps, restSeconds: 60, day: w.day))
+        }
+        commit()
+    }
+
+    /// Swap an exercise for another (sets not yet done), with that exercise's own last weights.
+    func swap(order: Int, in w: Workout, to newKey: String) {
+        let rows = sets(of: w.key).filter { $0.exerciseOrder == order && !$0.done }
+        let prev = previousSets(of: newKey, before: w.key).filter { $0.kindValue.counts }
+        for (i, s) in rows.sorted(by: { $0.setOrder < $1.setOrder }).enumerated() {
+            s.exerciseKey = newKey
+            if let p = prev.indices.contains(i) ? prev[i] : prev.last { s.kg = p.kg; s.reps = p.reps } else { s.kg = 0 }
+        }
+        commit()
+    }
+
+    /// Exercises that work the same main muscle, the same equipment first.
+    func alternatives(to key: String) -> [Exercise] {
+        guard let e = exercise(key) else { return [] }
+        let m = e.muscle
+        let all = (try? fetch(FetchDescriptor<Exercise>(predicate: #Predicate { $0.muscle == m }))) ?? []
+        return all.filter { $0.key != key }.sorted { ($0.equipment == e.equipment ? 0 : 1, $0.name) < ($1.equipment == e.equipment ? 0 : 1, $1.name) }
     }
 
     /// Finish: keep only the sets you ticked.
