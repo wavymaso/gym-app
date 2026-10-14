@@ -197,7 +197,7 @@ struct DayLog: View {
                                        description: Text("Add a food (⌘N), a quick add, or copy another day."))
                     .padding(.top, 20)
             } else {
-                rows(entries, showTime: true)
+                timeline
             }
         } else {
             let imported = entries.filter { $0.foodKey == "import" }
@@ -213,6 +213,35 @@ struct DayLog: View {
     }
 
     // MARK: Pieces
+
+    /// The day by hour. Drag an entry onto another hour to move it there (minutes kept).
+    private var timeline: some View {
+        let cal = Calendar.current
+        let byHour = Dictionary(grouping: entries) { cal.component(.hour, from: $0.time) }
+        let lo = min(6, byHour.keys.min() ?? 6), hi = max(23, byHour.keys.max() ?? 23)
+        return VStack(spacing: 0) {
+            ForEach(lo...hi, id: \.self) { h in
+                HourRow(hour: h, items: byHour[h] ?? [], energy: energy, open: { open(.edit($0)) },
+                        add: { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) },
+                        drop: { ids in move(ids, to: h) })
+                if h < hi { Divider().opacity(0.5) }
+            }
+        }
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+    }
+
+    private func move(_ ids: [String], to hour: Int) -> Bool {
+        let cal = Calendar.current
+        let moving = entries.filter { ids.contains($0.syncID) }
+        guard !moving.isEmpty else { return false }
+        for e in moving {
+            let m = cal.component(.minute, from: e.time)
+            e.time = cal.date(bySettingHour: hour, minute: m, second: 0, of: date(fromKey: e.day)) ?? e.time
+        }
+        withAnimation(.snappy) { ctx.commit() }
+        return true
+    }
 
     private func summary(_ total: Nutrients) -> some View {
         Card(title: "") {
@@ -441,5 +470,49 @@ struct CopyDayView: View {
         #if os(macOS)
         .frame(width: 460, height: 520)
         #endif
+    }
+}
+
+/// One hour of the timeline: its entries, or a thin empty slot you can drop onto.
+struct HourRow: View {
+    let hour: Int
+    let items: [FoodEntry]
+    let energy: EnergyUnit
+    let open: (FoodEntry) -> Void
+    let add: () -> Void
+    let drop: ([String]) -> Bool
+    @State private var targeted = false
+
+    var body: some View {
+        let kcal = items.reduce(0) { $0 + $1.nutrients.kcal }
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(String(format: "%02d:00", hour)).font(.caption.weight(.semibold)).monospacedDigit()
+                    .foregroundStyle(items.isEmpty ? .tertiary : .secondary)
+                if !items.isEmpty { Text(number(energy.fromKcal(kcal))).font(.caption2).foregroundStyle(.secondary).monospacedDigit() }
+            }
+            .frame(width: 44, alignment: .leading)
+            .padding(.top, items.isEmpty ? 0 : 10)
+            if items.isEmpty {
+                Rectangle().fill(.clear).frame(height: 26).frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2, perform: add)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(items.sorted { $0.time < $1.time }) { e in
+                        EntryRow(entry: e, energy: energy, showTime: false)
+                            .contentShape(Rectangle())
+                            .onTapGesture { open(e) }
+                            .draggable(e.syncID) {
+                                Text(e.name).font(.callout.weight(.semibold)).padding(8)
+                                    .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+                            }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, items.isEmpty ? 4 : 2)
+        .background(targeted ? palette.accent.opacity(0.18) : .clear)
+        .dropDestination(for: String.self) { ids, _ in drop(ids) } isTargeted: { targeted = $0 }
     }
 }

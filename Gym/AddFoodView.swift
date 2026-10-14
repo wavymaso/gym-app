@@ -9,6 +9,7 @@ struct AddFoodView: View {
     }
 
     let mode: Mode
+    var initialQuery: String? = nil              // recipe import: search for the ingredient straight away
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @AppStorage("usdaKey") private var usdaKey = ""
@@ -90,6 +91,7 @@ struct AddFoodView: View {
         #endif
         .onAppear {
             focused = true
+            if let q = initialQuery, query.isEmpty { query = q }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "chooseFirst") { chosen = localMatches.first }   // testing only
             #endif
@@ -98,6 +100,22 @@ struct AddFoodView: View {
     }
 
     private var isPicking: Bool { if case .pick = mode { return true } else { return false } }
+
+    /// Smart history: the foods you most often have at this meal (last 60 days), most frequent first.
+    private var usual: (meal: Meal, foods: [Food]) {
+        var when = Date()
+        if case .log(let day, let at) = mode { when = at ?? defaultTime(for: day) }
+        let meal = Meal(time: when)
+        let from = addDays(dayKey(), -60)
+        let recent = (try? ctx.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= from && $0.foodKey != nil }))) ?? []
+        var score: [String: Double] = [:]
+        for e in recent where Meal(time: e.time) == meal {
+            guard let k = e.foodKey, k != "import" else { continue }
+            score[k, default: 0] += 1 + 30 / Double(max(1, daysBetween(e.day, dayKey())) + 30)   // recent days count a bit more
+        }
+        let byKey = Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+        return (meal, score.sorted { $0.value > $1.value }.prefix(8).compactMap { byKey[$0.key] })
+    }
 
     private var localMatches: [Food] {
         let words = FoodAPI.fold(query).split(separator: " ").map(String.init)
@@ -109,7 +127,10 @@ struct AddFoodView: View {
     }
 
     @ViewBuilder private var searchResults: some View {
-        if query.trimmingCharacters(in: .whitespaces).count < 2 {
+        if query.trimmingCharacters(in: .whitespaces).isEmpty, !isPicking, !usual.foods.isEmpty {
+            Section("Usual for \(usual.meal.label.lowercased())") { ForEach(usual.foods) { f in foodRow(f) } }
+            Section("Recent") { ForEach(foods.filter { $0.lastUsed != nil && !usual.foods.contains($0) }.prefix(15).map { $0 }) { f in foodRow(f) } }
+        } else if query.trimmingCharacters(in: .whitespaces).count < 2 {
             Text("Type at least two letters. Plain foods (rice, chicken breast) come from USDA, in English; supermarket products from Open Food Facts, in Spanish.")
                 .font(.callout).foregroundStyle(.secondary).listRowSeparator(.hidden)
         } else {
