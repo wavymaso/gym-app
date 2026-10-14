@@ -1,0 +1,280 @@
+import Foundation
+import SwiftData
+#if os(iOS)
+import HealthKit
+#endif
+
+// Water you drink, and steps / active energy from Apple Health (read on the iPhone,
+// synced to the Mac). Display only: your expenditure already comes from weight and intake.
+
+@Model final class WaterEntry {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
+    var day: String
+    var time: Date
+    var ml: Double
+
+    init(day: String, time: Date = Date(), ml: Double) { self.day = day; self.time = time; self.ml = ml }
+}
+
+/// One day's steps and active energy, as Apple Health counted them.
+@Model final class DailyActivity {
+    var syncID: String = ""
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
+    var day: String
+    var steps: Int
+    var activeKcal: Double
+
+    init(day: String, steps: Int, activeKcal: Double) { self.day = day; self.steps = steps; self.activeKcal = activeKcal }
+}
+
+extension WaterEntry: Syncable {
+    static var syncType: String { "water" }
+    func encode() -> [String: Any] { ["day": day, "time": time.timeIntervalSince1970, "ml": ml] }
+    func decode(_ d: [String: Any]) {
+        day = d["day"] as? String ?? ""
+        time = Date(timeIntervalSince1970: (d["time"] as? Double) ?? 0)
+        ml = (d["ml"] as? Double) ?? Double((d["ml"] as? Int) ?? 0)
+    }
+    static func blank() -> Self { Self(day: "", ml: 0) }
+}
+
+extension DailyActivity: Syncable {
+    static var syncType: String { "activity" }
+    var naturalID: String { "a:\(day)" }                     // one per day
+    func encode() -> [String: Any] { ["day": day, "steps": steps, "activeKcal": activeKcal] }
+    func decode(_ d: [String: Any]) {
+        day = d["day"] as? String ?? ""
+        steps = (d["steps"] as? Int) ?? Int((d["steps"] as? Double) ?? 0)
+        activeKcal = (d["activeKcal"] as? Double) ?? Double((d["activeKcal"] as? Int) ?? 0)
+    }
+    static func blank() -> Self { Self(day: "", steps: 0, activeKcal: 0) }
+}
+
+extension ModelContext {
+    func water(on day: String) -> [WaterEntry] {
+        (try? fetch(FetchDescriptor<WaterEntry>(predicate: #Predicate { $0.day == day }, sortBy: [SortDescriptor(\.time)]))) ?? []
+    }
+
+    func addWater(_ ml: Double, on day: String = dayKey()) {
+        insert(WaterEntry(day: day, time: day == dayKey() ? Date() : defaultTime(for: day), ml: ml))
+        commit()
+    }
+
+    /// Take back the last glass of the day.
+    func undoWater(on day: String = dayKey()) {
+        if let last = water(on: day).last { delete(last); commit() }
+    }
+
+    func activity(on day: String) -> DailyActivity? {
+        try? fetch(FetchDescriptor<DailyActivity>(predicate: #Predicate { $0.day == day })).first
+    }
+
+    /// Save a day's steps and active energy (only if they changed, so sync stays quiet).
+    func setActivity(day: String, steps: Int, activeKcal: Double) {
+        if let a = activity(on: day) {
+            guard a.steps != steps || abs(a.activeKcal - activeKcal) >= 1 else { return }
+            a.steps = steps; a.activeKcal = activeKcal
+        } else {
+            insert(DailyActivity(day: day, steps: steps, activeKcal: activeKcal))
+        }
+        commit()
+    }
+
+    /// The water goal: your own (Settings), or 35 ml per kg of your latest weigh-in, to the nearest 100 ml.
+    var waterGoalMl: Double {
+        let own = UserDefaults.standard.double(forKey: "waterGoalMl")
+        if own > 0 { return own }
+        let kg = (try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day, order: .reverse)])).first?.kg) ?? 75
+        return ((kg * 35) / 100).rounded() * 100
+    }
+}
+
+var stepGoal: Int {
+    let g = UserDefaults.standard.integer(forKey: "stepGoal")
+    return g > 0 ? g : 10_000
+}
+
+/// "3,9 L" or "750 ml".
+func litres(_ ml: Double) -> String { ml >= 1000 ? "\(number(ml / 1000, digits: ml.truncatingRemainder(dividingBy: 1000) == 0 ? 0 : 1)) L" : "\(number(ml)) ml" }
+
+#if os(iOS)
+/// Steps and active energy from Apple Health, for the last few days.
+enum HealthActivity {
+    static let store = HealthWeights.store
+    static let types: Set<HKObjectType> = [HKQuantityType(.stepCount), HKQuantityType(.activeEnergyBurned)]
+
+    static func requestAccess() async -> Bool {
+        guard HKHealthStore.isHealthDataAvailable() else { return false }
+        do { try await store.requestAuthorization(toShare: [], read: types); return true } catch { return false }
+    }
+
+    /// Today and the two days before (a late sync from a watch can change yesterday).
+    @MainActor static func refresh(into ctx: ModelContext) async {
+        guard UserDefaults.standard.bool(forKey: "healthSteps"), HKHealthStore.isHealthDataAvailable() else { return }
+        for back in 0..<3 {
+            let day = addDays(dayKey(), -back)
+            let start = date(fromKey: day), end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+            let steps = await sum(.stepCount, .count(), start, end)
+            let kcal = await sum(.activeEnergyBurned, .kilocalorie(), start, end)
+            if steps > 0 || kcal > 0 { ctx.setActivity(day: day, steps: Int(steps), activeKcal: kcal) }
+        }
+    }
+
+    private static func sum(_ id: HKQuantityTypeIdentifier, _ unit: HKUnit, _ start: Date, _ end: Date) async -> Double {
+        let type = HKQuantityType(id)
+        let predicate = HKSamplePredicate.quantitySample(type: type, predicate: HKQuery.predicateForSamples(withStart: start, end: end))
+        let query = HKStatisticsQueryDescriptor(predicate: predicate, options: .cumulativeSum)
+        return (try? await query.result(for: store))?.sumQuantity()?.doubleValue(for: unit) ?? 0
+    }
+}
+#endif
+
+import SwiftUI
+
+/// Dashboard: water with quick adds, and steps from Apple Health.
+struct ActivityCard: View {
+    @Environment(\.modelContext) private var ctx
+    @Query private var water: [WaterEntry]
+    @Query private var activity: [DailyActivity]
+    @AppStorage("healthSteps") private var stepsOn = false
+    @State private var custom = false
+
+    init() {
+        let today = dayKey()
+        _water = Query(filter: #Predicate<WaterEntry> { $0.day == today })
+        _activity = Query(filter: #Predicate<DailyActivity> { $0.day == today })
+    }
+
+    var body: some View {
+        let drunk = water.reduce(0) { $0 + $1.ml }, goal = ctx.waterGoalMl
+        let waterColor = Color(hex: 0x3BB2F6)
+        Card(title: "Water & activity", systemImage: "drop.fill") {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(spacing: 10) {
+                    ZStack {
+                        Ring(progress: goal > 0 ? drunk / goal : 0, color: waterColor, lineWidth: 9)
+                        VStack(spacing: -1) {
+                            Text(litres(drunk)).font(.number(17)).monospacedDigit().minimumScaleFactor(0.7)
+                            Text("of \(litres(goal))").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        .padding(10)
+                    }
+                    .frame(width: 92, height: 92)
+                    HStack(spacing: 6) {
+                        waterButton(250, waterColor)
+                        waterButton(500, waterColor)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 10) {
+                    let a = activity.first
+                    ZStack {
+                        Ring(progress: Double(a?.steps ?? 0) / Double(stepGoal), color: palette.good, lineWidth: 9)
+                        VStack(spacing: -1) {
+                            Text(a.map { number(Double($0.steps)) } ?? "–").font(.number(17)).monospacedDigit().minimumScaleFactor(0.7)
+                            Text("steps").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        .padding(10)
+                    }
+                    .frame(width: 92, height: 92)
+                    if let a {
+                        Text("\(number(a.activeKcal)) active kcal").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    } else {
+                        Text(isPhone ? (stepsOn ? "No steps yet" : "Turn on in Settings") : "From your iPhone")
+                            .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .sheet(isPresented: $custom) { WaterAmountSheet() }
+    }
+
+    private func waterButton(_ ml: Double, _ color: Color) -> some View {
+        Button { withAnimation { ctx.addWater(ml) } } label: {
+            Text("+\(number(ml))").font(.caption.weight(.bold)).monospacedDigit()
+                .padding(.horizontal, 9).padding(.vertical, 6)
+                .background(color.opacity(0.16), in: Capsule()).foregroundStyle(color)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button("Other amount…") { custom = true }
+            Button("Undo last", role: .destructive) { ctx.undoWater() }.disabled(water.isEmpty)
+        }
+    }
+}
+
+/// Any amount of water.
+struct WaterAmountSheet: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    @State private var ml = 330.0
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Stepper(value: $ml, in: 50...2000, step: 50) {
+                    Text("\(number(ml)) ml").font(.number(22)).monospacedDigit()
+                }
+                HStack {
+                    ForEach([150.0, 330, 750, 1000], id: \.self) { v in
+                        Button(litres(v)) { ml = v }.buttonStyle(.bordered)
+                    }
+                }
+            }
+            .themedForm()
+            .navigationTitle("Add water")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Add") { ctx.addWater(ml); dismiss() } }
+            }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 380, height: 240)
+        #else
+        .presentationDetents([.medium])
+        #endif
+    }
+}
+
+/// Settings: water and step goals, and steps from Apple Health on the iPhone.
+struct ActivitySection: View {
+    @Environment(\.modelContext) private var ctx
+    @AppStorage("waterGoalMl") private var waterGoal: Double = 0
+    @AppStorage("stepGoal") private var steps: Int = 10_000
+    @AppStorage("healthSteps") private var stepsOn = false
+    @State private var message: String?
+
+    var body: some View {
+        Section {
+            Toggle("Automatic water goal", isOn: Binding(get: { waterGoal == 0 }, set: { waterGoal = $0 ? 0 : ctx.waterGoalMl }))
+            if waterGoal > 0 {
+                Stepper(value: $waterGoal, in: 1000...6000, step: 100) { LabeledContent("Water goal", value: litres(waterGoal)) }
+            } else {
+                LabeledContent("Water goal", value: litres(ctx.waterGoalMl))
+            }
+            Stepper(value: $steps, in: 2000...30000, step: 500) { LabeledContent("Step goal", value: number(Double(steps))) }
+            #if os(iOS)
+            Toggle("Steps & active energy from Apple Health", isOn: $stepsOn)
+                .onChange(of: stepsOn) { _, v in
+                    guard v else { return }
+                    Task {
+                        if await HealthActivity.requestAccess() {
+                            await HealthActivity.refresh(into: ctx)
+                            message = nil
+                        } else {
+                            message = "Health access wasn't allowed. You can change it in the Health app → Sharing → Apps."
+                        }
+                    }
+                }
+            if let message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            #endif
+        } header: {
+            Text("Water & activity")
+        } footer: {
+            Text("The automatic water goal is 35 ml per kg of body weight. Steps are shown for motivation only; your expenditure already comes from your weight and what you eat.")
+        }
+    }
+}

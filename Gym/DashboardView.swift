@@ -43,6 +43,7 @@ struct DashboardView: View {
                     TodayRings(eaten: today, target: t.targets, energy: p.energy)
                     quickActions
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 280), spacing: 16, alignment: .top)], spacing: 16) {
+                        ActivityCard()
                         WeekNutritionCard(entries: weekEntries, target: target(on:), energy: p.energy)
                         TrainingCard()
                         weightCard(p)

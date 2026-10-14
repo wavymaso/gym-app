@@ -37,7 +37,8 @@ extension Syncable {
 
 /// Every kind of record that syncs, in the order they're applied.
 let syncTypes: [any Syncable.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self, Food.self, RecipeIngredient.self,
-                                      FoodEntry.self, Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self]
+                                      FoodEntry.self, Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self,
+                                      WaterEntry.self, DailyActivity.self]
 
 extension Notification.Name {
     static let gymDidCommit = Notification.Name("gymDidCommit")

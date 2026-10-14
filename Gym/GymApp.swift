@@ -80,7 +80,10 @@ struct Root: View {
         .onChange(of: phase, initial: true) { _, p in
             if p != .active, ctx.hasChanges { ctx.commit() }       // nothing typed is lost when the app goes away
             #if os(iOS)
-            if p == .active { SyncClient.shared.context = ctx; SyncClient.shared.start() } else if p == .background { SyncClient.shared.pause() }
+            if p == .active {
+                SyncClient.shared.context = ctx; SyncClient.shared.start()
+                Task { await HealthActivity.refresh(into: ctx) }
+            } else if p == .background { SyncClient.shared.pause() }
             #endif
         }
         #if os(iOS)
