@@ -181,6 +181,7 @@ struct DayLog: View {
     var body: some View {
         let total = entries.reduce(Nutrients.zero) { $0 + $1.nutrients }
         summary(total)
+            .sensoryFeedback(.success, trigger: entries.count) { old, new in new > old }
         Picker("View", selection: $style.animation(.snappy)) {
             Text("Meals").tag(FoodLogView.LogStyle.meals)
             Text("Timeline").tag(FoodLogView.LogStyle.timeline)
@@ -217,6 +218,7 @@ struct DayLog: View {
                         VStack(spacing: 0) {
                             let left = t.kcal - total.kcal
                             Text(number(energy.fromKcal(abs(left)))).font(.number(22)).monospacedDigit().minimumScaleFactor(0.6)
+                                .contentTransition(.numericText(value: left)).animation(.snappy, value: left)
                             Text(left >= 0 ? "left" : "over").font(.caption2.weight(.semibold)).foregroundStyle(left >= 0 ? Color.secondary : palette.warn)
                         }
                         .padding(12)

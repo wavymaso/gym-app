@@ -189,6 +189,7 @@ struct ActivityCard: View {
             }
         }
         .sheet(isPresented: $custom) { WaterAmountSheet() }
+        .sensoryFeedback(.impact(weight: .light), trigger: water.count) { old, new in new > old }
     }
 
     private func waterButton(_ ml: Double, _ color: Color) -> some View {

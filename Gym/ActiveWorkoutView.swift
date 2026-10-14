@@ -51,6 +51,7 @@ struct ActiveWorkoutView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color.pageBackground)
+        .sensoryFeedback(.success, trigger: sets.filter(\.done).count) { old, new in new > old }
         .safeAreaInset(edge: .bottom) {
             if let restEnds {
                 RestBar(ends: restEnds, total: restTotal) { e in withAnimation(.snappy) { self.restEnds = e } }
@@ -321,6 +322,7 @@ struct RestBar: View {
         NSSound(named: "Glass")?.play()
         #else
         AudioServicesPlaySystemSound(1005)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
     }
 }

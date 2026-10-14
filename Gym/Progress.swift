@@ -27,8 +27,13 @@ extension ModelContext {
 
     /// Daily expenditure estimates from the start through `day`.
     func expenditureEstimates(through day: String = dayKey()) -> [ExpenditurePoint] {
+        // Several screens ask on every redraw; work it out once per change to your data.
+        let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)|\(day)"
+        if let hit = expenditureCache[key] { return hit }
         guard let s = expenditureStart, s.day <= day else { return [] }
-        return expenditureSeries(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues)
+        let r = expenditureSeries(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues)
+        expenditureCache = [key: r]
+        return r
     }
 
     /// Log (or replace) the weight for a day.
@@ -119,3 +124,7 @@ struct ExpenditureSummary {
         return "From your own intake and weight trend."
     }
 }
+
+/// Goes up whenever saved data changes (commit or sync), so caches know to start again.
+var dataVersion = 0
+private var expenditureCache: [String: [ExpenditurePoint]] = [:]

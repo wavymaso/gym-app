@@ -57,6 +57,7 @@ extension ModelContext {
             if let s = m as? any Syncable, !s.syncID.isEmpty { insert(Tombstone(type: type(of: s).syncType, syncID: s.syncID, deletedAt: now)) }
         }
         try? save()
+        dataVersion += 1
         NotificationCenter.default.post(name: .gymDidCommit, object: nil)
     }
 
@@ -127,6 +128,7 @@ extension ModelContext {
             .sorted { ($0.startDay, $0.modifiedAt) > ($1.startDay, $1.modifiedAt) }
         for p in active.dropFirst() { p.isActive = false }
         try? save()
+        dataVersion += 1
     }
 
     /// Everything that syncs, gone (the phone's first connection takes the Mac's data instead).

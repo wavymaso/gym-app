@@ -152,28 +152,47 @@ func weeklyTrendChange(_ series: [(day: String, scale: Double, trend: Double, lo
 
 // MARK: - Day arithmetic (on "yyyy-MM-dd" keys)
 
-private let utc: Calendar = {
-    var c = Calendar(identifier: .gregorian)
-    c.timeZone = TimeZone(identifier: "UTC")!
-    return c
-}()
+// Day keys ("2026-10-14") as plain numbers: days since 1970-01-01 (Hinnant's civil
+// calendar algorithm). No DateFormatter, so long series stay fast.
 
-private let keyFormatter: DateFormatter = {
-    let f = DateFormatter()
-    f.calendar = utc; f.timeZone = utc.timeZone
-    f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"
-    return f
-}()
-
-func addDays(_ day: String, _ n: Int) -> String {
-    keyFormatter.string(from: utc.date(byAdding: .day, value: n, to: keyFormatter.date(from: day)!)!)
+/// "2026-10-14" → days since 1970-01-01.
+func dayNumber(_ key: String) -> Int {
+    var y = 0, m = 0, d = 0, field = 0
+    for c in key.utf8 {
+        if c == 45 { field += 1; continue }                    // "-"
+        let v = Int(c) - 48
+        guard v >= 0 && v <= 9 else { continue }
+        switch field { case 0: y = y * 10 + v; case 1: m = m * 10 + v; default: d = d * 10 + v }
+    }
+    let yy = m <= 2 ? y - 1 : y
+    let era = (yy >= 0 ? yy : yy - 399) / 400
+    let yoe = yy - era * 400
+    let doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+    return era * 146097 + doe - 719468
 }
 
-func daysBetween(_ a: String, _ b: String) -> Int {
-    utc.dateComponents([.day], from: keyFormatter.date(from: a)!, to: keyFormatter.date(from: b)!).day!
+/// Days since 1970-01-01 → "2026-10-14".
+func dayKey(number z0: Int) -> String {
+    let z = z0 + 719468
+    let era = (z >= 0 ? z : z - 146096) / 146097
+    let doe = z - era * 146097
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+    let mp = (5 * doy + 2) / 153
+    let d = doy - (153 * mp + 2) / 5 + 1
+    let m = mp + (mp < 10 ? 3 : -9)
+    let y = yoe + era * 400 + (m <= 2 ? 1 : 0)
+    func two(_ v: Int) -> String { v < 10 ? "0\(v)" : "\(v)" }
+    return "\(y)-\(two(m))-\(two(d))"
 }
+
+func addDays(_ day: String, _ n: Int) -> String { dayKey(number: dayNumber(day) + n) }
+
+func daysBetween(_ a: String, _ b: String) -> Int { dayNumber(b) - dayNumber(a) }
 
 func days(from a: String, through b: String) -> [String] {
     guard a <= b else { return [] }
-    return (0...daysBetween(a, b)).map { addDays(a, $0) }
+    let start = dayNumber(a)
+    return (start...dayNumber(b)).map { dayKey(number: $0) }
 }
