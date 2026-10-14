@@ -71,11 +71,13 @@ struct FoodLogger: View {
                     switch tab {
                     case .scan: scanPanel
                     case .search:
-                        AddFoodView(mode: .log(day: day, time: when), embedded: .search, choose: { chosen = $0 }, chooseMeal: add)
+                        AddFoodView(mode: .log(day: day, time: when), embedded: .search, choose: { chosen = $0 }, chooseMeal: add,
+                                    quickAdd: { f, a, u in add(f, a, u) }, logFoods: logAll, cartCount: cart.count)
                     case .ai: AIPanel(startCamera: startCamera && tab == start, describe: describe, add: addPlate)
                     case .quickAdd: QuickAddPanel { name, n in add(quick: n, name: name) }
                     case .library:
-                        AddFoodView(mode: .log(day: day, time: when), embedded: .library, choose: { chosen = $0 }, chooseMeal: add)
+                        AddFoodView(mode: .log(day: day, time: when), embedded: .library, choose: { chosen = $0 }, chooseMeal: add,
+                                    quickAdd: { f, a, u in add(f, a, u) }, logFoods: logAll, cartCount: cart.count)
                     }
                 }
                 .frame(maxHeight: .infinity)

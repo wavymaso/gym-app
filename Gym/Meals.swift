@@ -114,3 +114,61 @@ extension ModelContext {
         return max(0, missing)
     }
 }
+
+/// A food's emoji from its name (Spanish or English); a plate when nothing fits.
+func foodEmoji(_ e: FoodEntry) -> String { e.isQuickAdd ? "⚡️" : foodEmoji(name: e.name, brand: e.brand) }
+
+func foodEmoji(name: String, brand: String?) -> String {
+    let n = FoodAPI.fold(name + " " + (brand ?? ""))
+    let table: [(String, [String])] = [
+        ("☕️", ["cafe", "coffee", "espresso", "cortado", "capuccino", "cappuccino", "latte"]),
+        ("🥤", ["batido", "shake", "whey", "protein drink", "proteina liquida"]),
+        ("🥛", ["leche", "milk", "kefir", "laban"]),
+        ("🥣", ["avena", "oat", "cereal", "muesli", "granola", "copos"]),
+        ("🍦", ["helado", "ice cream"]),
+        ("🥄", ["yogur", "yogurt", "skyr", "queso fresco batido", "labneh"]),
+        ("🧀", ["queso", "cheese", "mozzarella", "parmesano", "cheddar"]),
+        ("🥚", ["huevo", "egg", "tortilla de patata", "omelet", "omelette"]),
+        ("🍗", ["pollo", "chicken", "pavo", "turkey", "shawarma"]),
+        ("🥩", ["ternera", "beef", "steak", "filete", "carne", "lomo", "cerdo", "pork", "cordero", "lamb"]),
+        ("🥓", ["bacon", "beicon", "panceta"]),
+        ("🍖", ["jamon", "ham", "chorizo", "salchichon", "fuet", "salami"]),
+        ("🌭", ["salchicha", "sausage", "hot dog"]),
+        ("🍔", ["hamburguesa", "burger"]),
+        ("🐟", ["atun", "tuna", "salmon", "merluza", "bacalao", "pescado", "fish", "sardina", "boqueron"]),
+        ("🦐", ["gamba", "langostino", "shrimp", "prawn", "marisco"]),
+        ("🥘", ["paella", "kabsa", "mandi", "biryani", "machboos"]),
+        ("🍚", ["arroz", "rice"]),
+        ("🍝", ["pasta", "espagueti", "spaghetti", "macarron", "macaroni", "noodle", "fideo", "lasana"]),
+        ("🍕", ["pizza"]),
+        ("🥪", ["sandwich", "bocadillo", "wrap", "kebab"]),
+        ("🍞", ["pan ", "bread", "tostada", "toast", "baguette", "khubz", "pita"]),
+        ("🥐", ["croissant", "bolleria", "magdalena", "muffin"]),
+        ("🍫", ["chocolate", "cacao", "nutella"]),
+        ("🍪", ["galleta", "cookie", "biscuit", "tortita", "rice cake"]),
+        ("🍰", ["tarta", "cake", "bizcocho", "pastel", "kunafa", "baklava"]),
+        ("🥔", ["patata", "potato", "papas", "fries"]),
+        ("🥗", ["ensalada", "salad", "lechuga", "lettuce", "fattoush", "tabbouleh"]),
+        ("🥦", ["brocoli", "broccoli", "verdura", "vegetable", "espinaca", "spinach"]),
+        ("🍅", ["tomate", "tomato", "gazpacho", "salmorejo"]),
+        ("🥑", ["aguacate", "avocado", "guacamole"]),
+        ("🫘", ["lenteja", "lentil", "garbanzo", "chickpea", "alubia", "bean", "hummus", "falafel", "foul"]),
+        ("🍌", ["platano", "banana"]),
+        ("🍎", ["manzana", "apple"]),
+        ("🍊", ["naranja", "orange", "mandarina"]),
+        ("🍓", ["fresa", "strawberr", "arandano", "blueberr", "frambuesa"]),
+        ("🍇", ["uva", "grape"]),
+        ("🌴", ["datil", "date ", "dates", "tamr"]),
+        ("🥜", ["almendra", "almond", "nuez", "nut", "cacahuete", "peanut", "anacardo", "pistacho"]),
+        ("🫒", ["aceite", "olive", "oliva", "aceituna"]),
+        ("🍯", ["miel", "honey", "mermelada", "jam"]),
+        ("🧃", ["zumo", "juice"]),
+        ("🥫", ["salsa", "sauce", "ketchup", "mayonesa", "mayo", "alioli"]),
+        ("🍺", ["cerveza", "beer"]),
+        ("🍷", ["vino", "wine"]),
+        ("💧", ["agua", "water"]),
+        ("🥤", ["refresco", "cola", "soda", "red bull", "monster", "bebida"]),
+    ]
+    for (emoji, words) in table where words.contains(where: { n.contains($0) }) { return emoji }
+    return "🍽️"
+}

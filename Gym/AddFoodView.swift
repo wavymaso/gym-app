@@ -15,6 +15,9 @@ struct AddFoodView: View {
     var embedded: Embedded? = nil
     var choose: ((Food) -> Void)? = nil
     var chooseMeal: ((SavedMeal) -> Void)? = nil
+    var quickAdd: ((Food, Double, String) -> Void)? = nil       // the round + : straight into the cart
+    var logFoods: (() -> Void)? = nil
+    var cartCount = 0
     var startScanning = false                    // the + button's "Scan barcode"
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
@@ -64,7 +67,7 @@ struct AddFoodView: View {
     private var panel: some View {
         VStack(spacing: 0) {
             VStack(spacing: 10) {
-                if embedded != .library {
+                if embedded == nil {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                         TextField("Search foods, brands or a barcode", text: $query)
@@ -86,7 +89,7 @@ struct AddFoodView: View {
                     }
                     .pickerStyle(.segmented).labelsHidden()
                 }
-                if tab == .search && LocalFoods.shared.available {
+                if tab == .search && LocalFoods.shared.available && (embedded == nil || !query.trimmingCharacters(in: .whitespaces).isEmpty) {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(LocalFoods.Scope.allCases) { s in
@@ -118,7 +121,40 @@ struct AddFoodView: View {
             #if os(macOS)
             .listStyle(.inset)
             .themedList()
+            #else
+            .listStyle(.plain).scrollContentBackground(.hidden)
             #endif
+        }
+        .safeAreaInset(edge: .bottom) {
+            if embedded != nil {
+                HStack(spacing: 10) {
+                    if embedded == .search {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass").font(.headline)
+                            TextField("Search for a food", text: $query)
+                                .textFieldStyle(.plain).focused($focused)
+                                #if os(iOS)
+                                .submitLabel(.search).autocorrectionDisabled()
+                                #endif
+                            if !query.isEmpty {
+                                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 18).frame(height: 54)
+                        .modifier(GlassCapsule())
+                    } else { Spacer() }
+                    if cartCount > 0, let logFoods {
+                        Button(action: logFoods) {
+                            Text("Log Foods").font(.headline).padding(.horizontal, 20).frame(height: 54)
+                                .background(.white, in: Capsule()).foregroundStyle(.black)
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .padding(.horizontal, 14).padding(.bottom, 6)
+                .animation(.snappy, value: cartCount)
+            }
         }
     }
 
@@ -211,9 +247,9 @@ struct AddFoodView: View {
     @ViewBuilder private var searchResults: some View {
         if query.trimmingCharacters(in: .whitespaces).isEmpty, !isPicking, !usual.foods.isEmpty || foods.contains(where: { $0.lastUsed != nil }) {
             if !usual.foods.isEmpty {
-                Section("Usual for \(usual.meal.label.lowercased())") { ForEach(usual.foods) { f in foodRow(f) } }
+                Section { ForEach(usual.foods) { f in foodRow(f) } } header: { sectionTitle(picksTitle) }
             }
-            Section("Recent") { ForEach(foods.filter { $0.lastUsed != nil && !usual.foods.contains($0) }.prefix(25).map { $0 }) { f in foodRow(f) } }
+            Section { ForEach(foods.filter { $0.lastUsed != nil && !usual.foods.contains($0) }.prefix(25).map { $0 }) { f in foodRow(f) } } header: { sectionTitle("Latest") }
         } else if query.trimmingCharacters(in: .whitespaces).count < 2 {
             Text("Type at least two letters. Plain foods (rice, chicken breast) come from USDA, in English; supermarket products from Open Food Facts, in Spanish.")
                 .font(.callout).foregroundStyle(.secondary).listRowSeparator(.hidden)
@@ -272,21 +308,60 @@ struct AddFoodView: View {
         }
     }
 
+    /// "12 PM Picks": what you usually have around now.
+    private var picksTitle: String {
+        var when = Date()
+        if case .log(let day, let at) = mode { when = at ?? defaultTime(for: day) }
+        return "\(when.formatted(.dateTime.hour().locale(appLocale))) Picks"
+    }
+
+    private func sectionTitle(_ t: String) -> some View {
+        Text(t).font(.title3.weight(.semibold)).foregroundStyle(.primary).textCase(nil)
+    }
+
     private func foodRow(_ f: Food) -> some View {
-        Button { pick(f) } label: {
-            FoodRowLabel(name: f.name, brand: f.brand, source: f.source, per100: f.per100, unit: f.baseUnit, favorite: f.isFavorite)
+        Group {
+            if embedded != nil {
+                let (a, u) = f.suggestedAmount
+                MFFoodRow(name: f.name, brand: f.brand, n: f.nutrients(a, unit: u), amount: amountText(a, u, f), favorite: f.isFavorite,
+                          open: { pick(f) }, plus: quickAdd.map { q in { q(f, a, u) } })
+            } else {
+                Button { pick(f) } label: {
+                    FoodRowLabel(name: f.name, brand: f.brand, source: f.source, per100: f.per100, unit: f.baseUnit, favorite: f.isFavorite)
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .buttonStyle(.plain)
+    }
+
+    private func amountText(_ a: Double, _ u: String, _ f: Food) -> String {
+        let n = number(a, digits: a == a.rounded() ? 0 : 1)
+        if ["g", "ml", "oz"].contains(u) { return "\(n) \(u)" }
+        return "\(a == 1 ? "" : "\(n) × ")\(u)"
     }
 
     private func resultRow(_ r: FoodResult) -> some View {
-        Button { Task { await open(r) } } label: {
-            HStack {
-                FoodRowLabel(name: r.name, brand: r.brand, source: r.source, per100: r.per100, unit: r.isLiquid ? "ml" : "g", favorite: false)
-                if opening == r.key { ProgressView().controlSize(.small) }
+        Group {
+            if embedded != nil {
+                let g = r.servings.first?.grams ?? 100
+                MFFoodRow(name: r.name, brand: r.brand, n: r.per100.scaled(g / 100),
+                          amount: r.servings.first.map { $0.name } ?? "100 \(r.isLiquid ? "ml" : "g")", favorite: false,
+                          busy: opening == r.key, open: { Task { await open(r) } },
+                          plus: quickAdd.map { q in {
+                              let f = ctx.food(for: r)
+                              let (a, u) = f.suggestedAmount
+                              q(f, a, u)
+                          } })
+            } else {
+                Button { Task { await open(r) } } label: {
+                    HStack {
+                        FoodRowLabel(name: r.name, brand: r.brand, source: r.source, per100: r.per100, unit: r.isLiquid ? "ml" : "g", favorite: false)
+                        if opening == r.key { ProgressView().controlSize(.small) }
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
-        .buttonStyle(.plain)
     }
 
     /// Products: fetch the full record first, for its serving size.
@@ -557,5 +632,60 @@ struct EntryEditor: View {
         if let k = entry.foodKey, let f = ctx.food(key: k) { return f }
         let per100 = entry.grams > 0 ? entry.nutrients.scaled(100 / entry.grams) : entry.nutrients
         return Food(key: entry.foodKey ?? "deleted", name: entry.name, brand: entry.brand, source: "custom", per100: per100)
+    }
+}
+
+/// A food in the logger, MacroFactor-style: emoji, name, "325🔥 6P 1F 71C • 250 g", and a round +.
+struct MFFoodRow: View {
+    let name: String
+    let brand: String?
+    let n: Nutrients
+    let amount: String
+    let favorite: Bool
+    var busy = false
+    let open: () -> Void
+    let plus: (() -> Void)?
+    @State private var added = false
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Button(action: open) {
+                HStack(spacing: 14) {
+                    Text(foodEmoji(name: name, brand: brand)).font(.system(size: 30)).frame(width: 46)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 5) {
+                            Text(brand.map { "\(name) · \($0)" } ?? name).font(.body).lineLimit(2).multilineTextAlignment(.leading)
+                            if favorite { Image(systemName: "star.fill").font(.caption2).foregroundStyle(palette.fat) }
+                            if n.looksWrong { Image(systemName: "exclamationmark.triangle.fill").font(.caption2).foregroundStyle(palette.warn) }
+                        }
+                        (Text("\(number(n.kcal))") + Text(Image(systemName: "flame.fill")).font(.caption2)
+                         + Text("  \(number(n.protein))P  \(number(n.fat))F  \(number(n.carbs))C  •  \(amount)"))
+                            .font(.subheadline).foregroundStyle(.secondary).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if busy { ProgressView().controlSize(.small) }
+            if let plus {
+                Button {
+                    plus()
+                    withAnimation(.snappy) { added = true }
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    #endif
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { withAnimation { added = false } }
+                } label: {
+                    Image(systemName: added ? "checkmark" : "plus").font(.headline)
+                        .frame(width: 40, height: 40)
+                        .background(added ? palette.good : Color.raisedBackground, in: Circle())
+                        .foregroundStyle(added ? .white : .primary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 6)
+        .listRowBackground(Color.clear)
     }
 }
