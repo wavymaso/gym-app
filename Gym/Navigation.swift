@@ -227,10 +227,13 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 3
+    static let version = 4
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("camera.fill", "Log a meal with a photo", "Snap your plate (or just describe it): the model on your Mac names the foods and portions, nutrition comes from USDA, barcodes and your own foods. + → Photo."),
+        ("ruler", "Measurements & progress photos", "On the Weight page: waist, arms and more, a tape body-fat estimate, and side-by-side photos."),
+        ("mic.fill", "Siri & Shortcuts", "“Log water in Gym”, “How many calories do I have left in Gym”, weigh in, quick add. Put one on the Action button."),
         ("plus.circle.fill", "The + button", "Log food, scan a barcode or label, quick add, weigh in, water or train, from anywhere."),
         ("slider.horizontal.3", "Your dashboard", "Customize it: move sections, pick nutrients, consumed or remaining. Swipe the top widgets."),
         ("chart.line.uptrend.xyaxis", "Smarter numbers", "Weight trend V2 and expenditure V2: more accurate and quicker to react (Settings → Feature settings)."),

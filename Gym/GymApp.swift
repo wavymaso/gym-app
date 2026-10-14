@@ -3,19 +3,7 @@ import SwiftUI
 
 @main
 struct GymApp: App {
-    let container: ModelContainer = {
-        let schema = Schema(allModels)
-        #if DEBUG
-        // Testing only: -inMemory starts with no data (and saves nothing).
-        let inMemory = UserDefaults.standard.bool(forKey: "inMemory")
-        #else
-        let inMemory = false
-        #endif
-        let c = try! ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory))
-        c.mainContext.autosaveEnabled = false        // every save goes through commit(), which stamps changes for sync
-        c.mainContext.backfillSyncIDs()              // records from before sync existed
-        return c
-    }()
+    let container = Store.container                  // shared with Siri and Shortcuts (Intents.swift)
 
     var body: some Scene {
         WindowGroup {
@@ -192,7 +180,8 @@ struct MainView: View {
             }
             Button("") { weighing = true }.keyboardShortcut("w", modifiers: [.command, .shift]).opacity(0)
         }
-        .onAppear { showWhatsNew() }
+        .onAppear { showWhatsNew(); handlePending() }
+        .onReceive(NotificationCenter.default.publisher(for: .gymOpenAction)) { _ in handlePending() }
         #else
         TabView(selection: $tab) {
             NavigationStack { page(.dashboard) }.tag(PhoneTab.dashboard).toolbar(.hidden, for: .tabBar)
@@ -208,15 +197,31 @@ struct MainView: View {
         .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { tab = .training }) }
         .sheet(item: $quick) { quickSheet($0) }
         .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
+        .onReceive(NotificationCenter.default.publisher(for: .gymOpenAction)) { _ in handlePending() }
         .onAppear {
             if let p = page, p != .dashboard { open(p) }
             showWhatsNew()
+            handlePending()
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "plus") { plus = true }      // testing only
             if let q = UserDefaults.standard.string(forKey: "quick") { quick = QuickSheet(rawValue: q) }   // -quick photo
             #endif
         }
         #endif
+    }
+
+    /// Siri or a shortcut asked for something that needs the app open.
+    private func handlePending() {
+        switch PendingAction.take() {
+        case "photo": quick = .photo
+        case "train":
+            #if os(iOS)
+            tab = .training
+            #else
+            page = .workouts
+            #endif
+        default: break
+        }
     }
 
     /// Once per update (not in testing runs).
