@@ -80,8 +80,7 @@ struct WeightView: View {
             .buttonStyle(.borderedProminent).controlSize(.large)
         }
         .padding(18)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface(cornerRadius: 20))
         .sheet(isPresented: $weighing) { WeighInSheet() }
     }
 

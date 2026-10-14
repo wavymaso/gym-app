@@ -116,8 +116,7 @@ struct PhotoLogView: View {
                                           : "e.g. cooked in olive oil, I ate half, it's chicken not tofu",
                               text: $details, axis: .vertical)
                         .lineLimit(2...5).focused($typing)
-                        .padding(12).background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(palette.stroke))
+                        .padding(12).modifier(CardSurface(cornerRadius: 14))
                 }
                 Button { Task { await analyse() } } label: {
                     Label(jpeg == nil ? "Find foods" : "Analyse meal", systemImage: "sparkles")
@@ -165,8 +164,7 @@ struct PhotoLogView: View {
                 #endif
             }
             .padding(22).frame(maxWidth: .infinity)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+            .modifier(CardSurface(cornerRadius: 18))
         }
     }
 
@@ -291,8 +289,7 @@ struct PhotoLogView: View {
             Spacer()
         }
         .padding(14)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface(cornerRadius: 18))
     }
 
     private func macro(_ l: String, _ g: Double, _ c: Color) -> some View {
@@ -377,8 +374,7 @@ struct PlateRow: View {
             }
         }
         .padding(14)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface(cornerRadius: 18))
         .opacity(item.included ? 1 : 0.6)
     }
 

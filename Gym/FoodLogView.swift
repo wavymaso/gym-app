@@ -33,6 +33,7 @@ struct FoodLogView: View {
         let energy = profiles.first?.energy ?? .kcal
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if isPhone { header }
                 WeekStrip(day: $day)
                 DayLog(day: day, energy: energy, target: ctx.dayTargets(on: day),
                        style: $style) { sheet = $0 }
@@ -45,8 +46,8 @@ struct FoodLogView: View {
         .pageBackground()
         .navigationTitle("Food log")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .toolbar(.hidden, for: .navigationBar)
+        #else
         .toolbar {
             ToolbarItemGroup {
                 Menu {
@@ -58,6 +59,7 @@ struct FoodLogView: View {
                     .keyboardShortcut("n")
             }
         }
+        #endif
         .sheet(item: $sheet) { s in
             switch s {
             case .add(let t): FoodLogger(day: day, time: t)
@@ -67,6 +69,30 @@ struct FoodLogView: View {
                 if e.isQuickAdd { QuickAddView(day: day, entry: e) } else { EntryEditor(entry: e) }
             }
         }
+    }
+}
+
+extension FoodLogView {
+    /// The phone's page header: FOOD LOG, and the day's actions as round buttons.
+    var header: some View {
+        HStack(alignment: .center) {
+            Text("FOOD LOG").font(.pageTitle(30)).lineLimit(1).minimumScaleFactor(0.6)
+                .foregroundStyle(GlowStyle.on || palette.glass
+                                 ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
+                                 : AnyShapeStyle(.primary))
+            Spacer()
+            Menu {
+                Button("Copy yesterday", systemImage: "doc.on.doc") { _ = ctx.copyEntries(from: addDays(day, -1), to: day) }
+                Button("Copy from a day…", systemImage: "calendar") { sheet = .copy }
+            } label: { roundIcon("doc.on.doc") }
+            .menuStyle(.button).buttonStyle(.plain)
+            Button { sheet = .add(nil) } label: { roundIcon("plus") }.buttonStyle(.plain)
+        }
+        .padding(.top, 8)
+    }
+
+    func roundIcon(_ name: String) -> some View {
+        Image(systemName: name).font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
     }
 }
 
@@ -91,7 +117,7 @@ struct WeekStrip: View {
         let kcal = Dictionary(grouping: entries, by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
         VStack(spacing: 10) {
             HStack {
-                Text(title).font(.number(isPhone ? 24 : 26)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer()
                 if day != dayKey() {
                     Button("Today") { withAnimation { day = dayKey() } }.buttonStyle(.bordered).controlSize(.small)
@@ -107,17 +133,18 @@ struct WeekStrip: View {
                     Button { withAnimation(.snappy) { day = d } } label: {
                         VStack(spacing: 6) {
                             Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
-                                .font(.caption2.weight(.semibold)).foregroundStyle(d == day ? .white.opacity(0.85) : .secondary)
+                                .font(.caption2.weight(.semibold)).foregroundStyle(d == day ? .primary : .secondary)
                             ZStack {
-                                Ring(progress: t > 0 ? (kcal[d] ?? 0) / t : 0, color: d == day ? .white : Macro.calories.color, lineWidth: 3.5)
+                                Ring(progress: t > 0 ? (kcal[d] ?? 0) / t : 0, color: Macro.calories.color, lineWidth: 3.5)
                                 Text(date(fromKey: d).formatted(.dateTime.day().locale(appLocale)))
                                     .font(.caption.weight(.bold)).monospacedDigit()
-                                    .foregroundStyle(d == day ? .white : (d == dayKey() ? palette.accent : .primary))
+                                    .foregroundStyle(d == dayKey() && d != day ? palette.accent : .primary)
                             }
                             .frame(width: 34, height: 34)
                         }
                         .frame(maxWidth: .infinity).padding(.vertical, 8)
-                        .background(d == day ? palette.accent : .clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(d == day ? Color.primary.opacity(0.85) : .clear, lineWidth: 2))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -125,8 +152,7 @@ struct WeekStrip: View {
                 }
             }
             .padding(6)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+            .modifier(CardSurface(cornerRadius: 18))
             .capType()
         }
     }
@@ -240,8 +266,7 @@ struct DayLog: View {
                 if h != hours.last { Divider().opacity(0.5) }
             }
         }
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface())
     }
 
     private func move(_ ids: [String], to hour: Int) -> Bool {
@@ -256,37 +281,9 @@ struct DayLog: View {
         return true
     }
 
+    /// MacroFactor's day summary: four columns, consumed or remaining (tap to switch), thin bars.
     private func summary(_ total: Nutrients) -> some View {
-        Card(title: "") {
-            if let t = target {
-                HStack(spacing: 18) {
-                    ZStack {
-                        Ring(progress: t.kcal > 0 ? total.kcal / t.kcal : 0, color: Macro.calories.color, lineWidth: 10)
-                        VStack(spacing: 0) {
-                            let left = t.kcal - total.kcal
-                            Text(number(energy.fromKcal(abs(left)))).font(.number(22)).monospacedDigit().minimumScaleFactor(0.6)
-                                .contentTransition(.numericText(value: left)).animation(.snappy, value: left)
-                            Text(left >= 0 ? "left" : "over").font(.caption2.weight(.semibold)).foregroundStyle(left >= 0 ? Color.secondary : palette.warn)
-                        }
-                        .padding(12)
-                    }
-                    .frame(width: 104, height: 104)
-                    VStack(spacing: 10) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(number(energy.fromKcal(total.kcal))).font(.number(20)).monospacedDigit()
-                            Text("/ \(energy.format(t.kcal))").font(.callout).foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                        ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
-                            CompactMacroBar(macro: m, eaten: m.value(total.targets), target: m.value(t))
-                        }
-                    }
-                }
-            } else {
-                Text("\(energy.format(total.kcal)) eaten").font(.number(22))
-            }
-        }
-        .capType()
+        DaySummary(total: total, target: target, energy: energy)
     }
 
     private func section(title: String, icon: String, color: Color, items: [FoodEntry], meal: Meal?) -> some View {
@@ -330,8 +327,7 @@ struct DayLog: View {
                 rows(items, showTime: false, framed: false)
             }
         }
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface())
     }
 
     @ViewBuilder private func rows(_ list: [FoodEntry], showTime: Bool, framed: Bool = true) -> some View {
@@ -364,9 +360,7 @@ struct DayLog: View {
             }
         }
         if framed {
-            content
-                .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+            content.modifier(CardSurface())
         } else {
             content
         }
@@ -529,5 +523,60 @@ struct HourRow: View {
         .padding(.horizontal, 12).padding(.vertical, items.isEmpty ? 4 : 2)
         .background(targeted ? palette.accent.opacity(0.18) : .clear)
         .dropDestination(for: String.self) { ids, _ in drop(ids) } isTargeted: { targeted = $0 }
+    }
+}
+
+/// Calories, protein, fat, carbs for the day: big numbers, "of target", a thin bar. Tap to flip
+/// between what you've eaten and what's left (shared with the dashboard's weekly grid).
+struct DaySummary: View {
+    let total: Nutrients
+    let target: Targets?
+    let energy: EnergyUnit
+    @AppStorage("weekGridRemaining") private var remaining = false
+
+    var body: some View {
+        Button { withAnimation(.snappy) { remaining.toggle() } } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(remaining ? "Remaining" : "Consumed").font(.caption.weight(.bold)).textCase(.uppercase).tracking(0.6)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: "arrow.left.arrow.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
+                }
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(Macro.allCases, id: \.self) { m in column(m) }
+                }
+            }
+            .padding(16)
+            .modifier(CardSurface())
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .capType()
+    }
+
+    private func column(_ m: Macro) -> some View {
+        let eaten = m.value(total.targets), goal = target.map { m.value($0) } ?? 0
+        let shown = remaining ? goal - eaten : eaten
+        let conv: (Double) -> Double = { m == .calories ? energy.fromKcal($0) : $0 }
+        let frac = goal > 0 ? eaten / goal : 0
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 2) {
+                Text(number(conv(abs(shown)))).font(.number(m == .calories ? 22 : 20, weight: .semibold)).monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                    .contentTransition(.numericText()).foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
+                if m != .calories { Text(m.short).font(.subheadline.weight(.semibold)).foregroundStyle(m.color) }
+            }
+            Text(remaining && shown < 0 ? "over" : "of \(number(conv(goal)))").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(m.color.opacity(0.18))
+                    Capsule().fill(frac > 1.05 ? palette.warn : m.color).frame(width: g.size.width * min(frac, 1))
+                        .shadow(color: GlowStyle.on ? m.color.opacity(0.7) : .clear, radius: 4)
+                }
+            }
+            .frame(height: 5)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

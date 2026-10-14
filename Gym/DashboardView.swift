@@ -437,8 +437,7 @@ struct QuickAction: View {
                 Text(title).font(.caption.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity).padding(.vertical, 12)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+            .modifier(CardSurface(cornerRadius: 18))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

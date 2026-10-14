@@ -103,8 +103,7 @@ struct ActiveWorkoutView: View {
             }
         }
         .padding(16)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface(cornerRadius: 20))
     }
 
     private func stat(_ value: String, _ label: String, color: Color) -> some View {
@@ -289,9 +288,8 @@ private struct ExerciseBlock: View {
             .buttonStyle(.plain)
         }
         .padding(16)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(rows[0].group > 0 ? supersetColor.opacity(0.7) : palette.stroke,
-                                                                                  lineWidth: rows[0].group > 0 ? 2 : 1))
+        .modifier(CardSurface())
+        .overlay { if rows[0].group > 0 { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(supersetColor.opacity(0.7), lineWidth: 2) } }
     }
 
     private var supersetColor: Color { [Macro.fat.color, Macro.carbs.color, Color(hex: 0xA78BFA), Macro.protein.color][(max(rows[0].group, 1) - 1) % 4] }
@@ -328,7 +326,10 @@ struct DecimalField: View {
             .multilineTextAlignment(.trailing).monospacedDigit().focused($focused)
             #if os(iOS)
             .keyboardType(.decimalPad)
-            .textFieldStyle(.roundedBorder)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 8).frame(height: 34)
+            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(focused ? palette.accent : .clear, lineWidth: 1.5))
             #endif
             .onAppear(perform: load)
             .onChange(of: value) { _, _ in if !focused { load() } }
