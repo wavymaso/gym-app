@@ -79,6 +79,7 @@ struct Root: View {
         }
         .onChange(of: phase, initial: true) { _, p in
             if p != .active, ctx.hasChanges { ctx.commit() }       // nothing typed is lost when the app goes away
+            if p == .background || p == .inactive { Task { await Reminders.reschedule(ctx) } }
             #if os(iOS)
             if p == .active {
                 SyncClient.shared.context = ctx; SyncClient.shared.start()
