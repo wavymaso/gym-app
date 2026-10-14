@@ -128,14 +128,37 @@ enum ProteinLevel: String, CaseIterable, Identifiable {
 /// Energy in a kg of body weight change (mostly fat, some lean and water).
 let kcalPerKg = 7700.0
 
-/// Resting energy (Mifflin–St Jeor).
-func bmr(sex: Sex, weightKg: Double, heightCm: Double, age: Int) -> Double {
-    10 * weightKg + 6.25 * heightCm - 5 * Double(age) + (sex == .male ? 5 : -161)
+/// Ways to estimate resting energy before there's any data.
+enum BMREquation: String, CaseIterable, Identifiable {
+    case mifflin, katch, harris
+    var id: String { rawValue }
+    var label: String { ["Mifflin–St Jeor", "Katch–McArdle", "Harris–Benedict (revised)"][Self.allCases.firstIndex(of: self)!] }
+    var detail: String {
+        ["The most accurate general formula. Recommended.",
+         "Uses your lean mass, so it needs a body fat %. Best if you're quite lean or very muscular.",
+         "The classic formula, revised in 1984. Tends to run a little high."][Self.allCases.firstIndex(of: self)!]
+    }
+    static var current: BMREquation { BMREquation(rawValue: UserDefaults.standard.string(forKey: "bmrEquation") ?? "") ?? .mifflin }
+}
+
+/// Resting energy (Mifflin–St Jeor by default).
+func bmr(sex: Sex, weightKg: Double, heightCm: Double, age: Int, equation: BMREquation = .mifflin, bodyFat: Double? = nil) -> Double {
+    switch equation {
+    case .mifflin:
+        return 10 * weightKg + 6.25 * heightCm - 5 * Double(age) + (sex == .male ? 5 : -161)
+    case .katch:
+        guard let bf = bodyFat, bf > 2, bf < 70 else { return bmr(sex: sex, weightKg: weightKg, heightCm: heightCm, age: age) }
+        return 370 + 21.6 * weightKg * (1 - bf / 100)
+    case .harris:
+        return sex == .male ? 88.362 + 13.397 * weightKg + 4.799 * heightCm - 5.677 * Double(age)
+                            : 447.593 + 9.247 * weightKg + 3.098 * heightCm - 4.330 * Double(age)
+    }
 }
 
 /// The starting estimate of what you burn in a day, before there's any logged data.
-func startingExpenditure(sex: Sex, weightKg: Double, heightCm: Double, age: Int, activity: Activity) -> Double {
-    roundTo(bmr(sex: sex, weightKg: weightKg, heightCm: heightCm, age: age) * activity.factor, 10)
+func startingExpenditure(sex: Sex, weightKg: Double, heightCm: Double, age: Int, activity: Activity,
+                         equation: BMREquation = .mifflin, bodyFat: Double? = nil) -> Double {
+    roundTo(bmr(sex: sex, weightKg: weightKg, heightCm: heightCm, age: age, equation: equation, bodyFat: bodyFat) * activity.factor, 10)
 }
 
 /// Kilograms per week for a goal and rate (% of body weight), signed: negative = losing.

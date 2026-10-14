@@ -7,6 +7,9 @@ struct SettingsView: View {
     @State private var confirmReset = false
     @AppStorage("usdaKey") private var usdaKey = ""
     @State private var importing = false
+    #if DEBUG
+    @State private var debugSub = UserDefaults.standard.string(forKey: "settingsPage")      // testing only: -settingsPage expenditure
+    #endif
 
     var body: some View {
         Form {
@@ -17,6 +20,10 @@ struct SettingsView: View {
                 MacSyncSection()
                 #endif
                 AppearanceSection()
+                Section("Feature settings") {
+                    NavigationLink { WeightTrendSettingsView() } label: { Label("Weight trend", systemImage: "chart.line.uptrend.xyaxis") }
+                    NavigationLink { ExpenditureSettingsView() } label: { Label("Expenditure", systemImage: "flame") }
+                }
                 Section("Units") {
                     Picker("Weight", selection: binding(p, \.weightUnit)) {
                         Text("Kilograms (kg)").tag("kg")
@@ -72,6 +79,11 @@ struct SettingsView: View {
         }
         .themedForm()
         .navigationTitle("Settings")
+        #if DEBUG
+        .navigationDestination(isPresented: Binding(get: { debugSub != nil }, set: { if !$0 { debugSub = nil } })) {
+            if debugSub == "expenditure" { ExpenditureSettingsView() } else { WeightTrendSettingsView() }
+        }
+        #endif
         .sheet(isPresented: $importing) { ImportView() }
         .confirmationDialog("Delete all your data and start again?", isPresented: $confirmReset) {
             Button("Delete everything", role: .destructive, action: reset)

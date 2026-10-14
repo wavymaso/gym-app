@@ -20,6 +20,14 @@ import SwiftData
     var highDayExtra: Double = 0              // kcal added on those days (taken evenly from the others)
     var fastDays: String = ""                 // weekdays with a fixed low target (fasting days)
     var fastKcal: Double = 600
+    // Expenditure settings (FeatureSettings.swift)
+    var expManualKcal: Double = 0             // > 0: your own starting estimate instead of the formula
+    var expStartDay: String = ""              // "" = from your first program
+    var bmrEquation: String = "mifflin"
+    var expStaticKcal: Double = 0             // > 0: a fixed expenditure ("static" mode)
+    var expAlgorithm: String = ""             // "" = the default (see ExpenditureAlgorithm)
+    var stepInformed: Bool = false
+    var predictiveGoal: Bool = false
 
     init(sex: Sex, birthDate: Date, heightCm: Double, activity: Activity, weightUnit: WeightUnit, energyUnit: EnergyUnit) {
         self.sex = sex.rawValue; self.birthDate = birthDate; self.heightCm = heightCm; self.activity = activity.rawValue

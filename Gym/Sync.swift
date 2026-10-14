@@ -176,13 +176,18 @@ extension Profile: Syncable {
     func encode() -> [String: Any] {
         ["sex": sex, "birthDate": t(birthDate), "heightCm": heightCm, "activity": activity, "weightUnit": weightUnit,
          "energyUnit": energyUnit, "createdAt": t(createdAt), "goalWeightKg": n(goalWeightKg), "highDays": highDays,
-         "highDayExtra": highDayExtra, "fastDays": fastDays, "fastKcal": fastKcal]
+         "highDayExtra": highDayExtra, "fastDays": fastDays, "fastKcal": fastKcal,
+         "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
+         "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
         weightUnit = d.str("weightUnit"); energyUnit = d.str("energyUnit"); createdAt = d.date("createdAt")
         goalWeightKg = d.optNum("goalWeightKg"); highDays = d.str("highDays"); highDayExtra = d.num("highDayExtra")
         fastDays = d.str("fastDays"); fastKcal = d["fastKcal"] == nil ? 600 : d.num("fastKcal")
+        expManualKcal = d.num("expManualKcal"); expStartDay = d.str("expStartDay")
+        bmrEquation = d["bmrEquation"] == nil ? "mifflin" : d.str("bmrEquation"); expStaticKcal = d.num("expStaticKcal")
+        expAlgorithm = d.str("expAlgorithm"); stepInformed = d.bool("stepInformed"); predictiveGoal = d.bool("predictiveGoal")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
 }

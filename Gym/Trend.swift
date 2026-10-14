@@ -19,8 +19,57 @@ struct DayValue: Equatable {
     var value: Double
 }
 
-/// Every day from the first weigh-in to `through` (or the last weigh-in): interpolated scale weight and trend.
+/// Which trend to show: V1 (exponential moving average, past only) or V2 (robust two-sided smoothing).
+enum TrendAlgorithm: String, CaseIterable, Identifiable {
+    case v1, v2
+    var id: String { rawValue }
+    static var current: TrendAlgorithm { TrendAlgorithm(rawValue: UserDefaults.standard.string(forKey: "trendAlgorithm") ?? "") ?? .v2 }   // V2 by default: better on every test (Tests/trendv2)
+}
+
+/// Every day from the first weigh-in to `through`: interpolated scale weight and trend, with the chosen algorithm.
 func trendSeries(_ weights: [DayValue], through end: String? = nil) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
+    let v1 = trendSeriesV1(weights, through: end)
+    return TrendAlgorithm.current == .v2 ? robustTrend(v1) : v1
+}
+
+/// Weight trend V2: for each day, a straight line fitted to the weigh-ins around it (±10 days, nearer days
+/// counting more, filled-in days counting little), refitted twice with outliers (a salty dinner, a big
+/// weekend) weighted down. Because it also looks at later days, past values get revised as new
+/// weigh-ins arrive, and the latest value lags less behind a real change than a moving average does.
+func robustTrend(_ s: [(day: String, scale: Double, trend: Double, logged: Bool)], halfWidth h: Int = 10) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
+    let n = s.count
+    guard n >= 5 else { return s }
+    var robust = [Double](repeating: 1, count: n)
+    var fit = s.map(\.scale)
+    for _ in 0..<3 {
+        for i in 0..<n {
+            var sw = 0.0, sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0
+            for j in max(0, i - h)...min(n - 1, i + h) {
+                let d = Double(abs(j - i)) / Double(h + 1)
+                let w = pow(1 - d * d * d, 3) * robust[j] * (s[j].logged ? 1 : 0.25)
+                guard w > 0 else { continue }
+                let x = Double(j - i)
+                sw += w; sx += w * x; sy += w * s[j].scale; sxx += w * x * x; sxy += w * x * s[j].scale
+            }
+            guard sw > 0 else { continue }
+            let den = sw * sxx - sx * sx
+            // the line's value at day i (x = 0); flat average if the points can't define a slope
+            fit[i] = abs(den) > 1e-9 ? (sy * sxx - sx * sxy) / den : sy / sw
+        }
+        // Bisquare weights from the residuals of the real weigh-ins
+        let res = (0..<n).filter { s[$0].logged }.map { abs(s[$0].scale - fit[$0]) }.sorted()
+        guard !res.isEmpty else { break }
+        let mad = max(res[res.count / 2], 0.05)
+        for j in 0..<n {
+            let u = abs(s[j].scale - fit[j]) / (6 * mad)
+            robust[j] = u < 1 ? pow(1 - u * u, 2) : 0
+        }
+    }
+    return (0..<n).map { (day: s[$0].day, scale: s[$0].scale, trend: fit[$0], logged: s[$0].logged) }
+}
+
+/// Weight trend V1: missing days on a straight line between weigh-ins, then an exponential moving average.
+func trendSeriesV1(_ weights: [DayValue], through end: String? = nil) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
     let sorted = weights.sorted { $0.day < $1.day }
     guard let first = sorted.first else { return [] }
     let byDay = Dictionary(sorted.map { ($0.day, $0.value) }, uniquingKeysWith: { _, b in b })
@@ -196,3 +245,103 @@ func days(from a: String, through b: String) -> [String] {
     let start = dayNumber(a)
     return (start...dayNumber(b)).map { dayKey(number: $0) }
 }
+
+// MARK: - Expenditure V2: a joint model of body mass, expenditure and water
+
+/// Which expenditure engine to use.
+enum ExpenditureAlgorithm: String, CaseIterable, Identifiable {
+    case joint, standard, responsive, stable
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .joint: return "Expenditure V2 (joint model)"
+        case .standard: return "Expenditure V1"
+        case .responsive: return "V1, responsive"
+        case .stable: return "V1, stable"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .joint: return "Tracks your true weight, expenditure and water weight together, day by day. Reacts sooner to real changes, shrugs off water swings and patchy logging."
+        case .standard: return "Weight change over 3 weeks against average intake, smoothed."
+        case .responsive: return "V1 over 2 weeks: follows changes faster, moves around more."
+        case .stable: return "V1 over 4 weeks: steadier, slower to follow changes."
+        }
+    }
+    var v1Settings: ExpenditureSettings {
+        var s = ExpenditureSettings()
+        switch self {
+        case .responsive: s.window = 14; s.dailyDrift = 35
+        case .stable: s.window = 28; s.dailyDrift = 18
+        default: break
+        }
+        return s
+    }
+}
+
+struct JointSettings {
+    var startUncertainty = 350.0     // kcal (sd) of the starting estimate
+    var expenditureDrift = 26.0      // kcal (sd) a day: how fast true expenditure can wander (tuned, Tests/expsim)
+    var massNoise = 0.01             // kg (sd) a day of unexplained true-mass change
+    var unloggedMass = 0.09          // kg (sd) a day extra when nothing was logged (intake unknown)
+    var waterPersistence = 0.7       // water weight carries over this much day to day
+    var waterSD = 0.6                // kg: typical size of water swings
+    var scaleNoise = 0.15            // kg: scale and timing noise on top
+    var outlierZ = 2.5               // surprises bigger than this many sd count less
+}
+
+/// Expenditure V2. `nudges` move the estimate on given days (the step and goal modifiers).
+func jointExpenditure(start: String, end: String, initial: Double, intake: [String: Double], weights: [DayValue],
+                      nudges: [String: Double] = [:], settings s: JointSettings = JointSettings()) -> [ExpenditurePoint] {
+    let all = days(from: start, through: end)
+    guard !all.isEmpty else { return [] }
+    let index = Dictionary(uniqueKeysWithValues: all.enumerated().map { ($0.element, $0.offset) })
+    var eaten = [Double?](repeating: nil, count: all.count), weighed = [Double?](repeating: nil, count: all.count)
+    for (d, k) in intake { if let i = index[d] { eaten[i] = k } }
+    for w in weights { if let i = index[w.day] { weighed[i] = w.value } }
+    // Start the mass at the first weigh-in within a week of the start (or the nearest one before).
+    let firstWeight = weighed.prefix(8).compactMap { $0 }.first ?? weights.filter { $0.day <= start }.last?.value ?? weights.first?.value
+    guard let m0 = firstWeight else { return all.map { ExpenditurePoint(day: $0, kcal: initial, paused: true, confidence: 0) } }
+
+    // State x = [mass, expenditure, water]; P its covariance.
+    var x = [m0, initial, 0.0]
+    var P = [[0.5, 0, 0], [0, s.startUncertainty * s.startUncertainty, 0], [0, 0, s.waterSD * s.waterSD]]
+    let r = kcalPerKg, phi = s.waterPersistence
+    let qWater = pow(s.waterSD, 2) * (1 - phi * phi)
+    var out: [ExpenditurePoint] = []
+    for i in 0..<all.count {
+        if i > 0 {
+            // Predict: mass changes by what you ate minus what you burnt; unlogged days add uncertainty.
+            let I = eaten[i - 1]
+            let F = [[1, I == nil ? 0 : -1 / r, 0], [0, 1, 0], [0, 0, phi]]   // unknown intake: assumed to match expenditure
+            x = [x[0] + ((I ?? x[1]) - x[1]) / r, x[1] + (nudges[all[i]] ?? 0), phi * x[2]]
+            let mq = pow(s.massNoise, 2) + (I == nil ? pow(s.unloggedMass, 2) : 0)
+            P = add(mul(mul(F, P), transpose(F)), [[mq, 0, 0], [0, pow(s.expenditureDrift, 2), 0], [0, 0, qWater]])
+        }
+        if let y = weighed[i] {
+            // Update with the weigh-in: y = mass + water + noise. Big surprises count less.
+            let innov = y - (x[0] + x[2])
+            var R = s.scaleNoise * s.scaleNoise
+            let S0 = P[0][0] + 2 * P[0][2] + P[2][2] + R
+            let z = abs(innov) / S0.squareRoot()
+            if z > s.outlierZ { R *= pow(z / s.outlierZ, 2) }
+            let S = P[0][0] + 2 * P[0][2] + P[2][2] + R
+            let K = (0..<3).map { (P[$0][0] + P[$0][2]) / S }
+            for k in 0..<3 { x[k] += K[k] * innov }
+            let H = [1.0, 0, 1]
+            let HP = (0..<3).map { c in (0..<3).reduce(0.0) { $0 + H[$1] * P[$1][c] } }
+            for a in 0..<3 { for b in 0..<3 { P[a][b] -= K[a] * HP[b] } }
+        }
+        let lo = max(0, i - 6)
+        let logged7 = (lo...i).filter { eaten[$0] != nil }.count
+        let confidence = max(0, min(1, 1 - P[1][1] / (s.startUncertainty * s.startUncertainty)))
+        out.append(ExpenditurePoint(day: all[i], kcal: x[1], paused: i > 6 && logged7 < 3, confidence: confidence))
+    }
+    return out
+}
+
+private func mul(_ a: [[Double]], _ b: [[Double]]) -> [[Double]] {
+    (0..<a.count).map { i in (0..<b[0].count).map { j in (0..<b.count).reduce(0.0) { $0 + a[i][$1] * b[$1][j] } } }
+}
+private func add(_ a: [[Double]], _ b: [[Double]]) -> [[Double]] { zip(a, b).map { zip($0, $1).map(+) } }
+private func transpose(_ a: [[Double]]) -> [[Double]] { (0..<a[0].count).map { j in a.map { $0[j] } } }
