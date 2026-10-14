@@ -134,11 +134,20 @@ import SwiftData
     // MARK: Photo logging (the model runs on the Mac)
 
     func photo(images: [Data], text: String) async throws -> [AIItem] {
-        let body: [String: Any] = ["text": text, "images": images.map { $0.base64EncodedString() }]
+        PhotoAI.parse(try await photoRaw(images: images, text: text, recipe: false))
+    }
+
+    /// The model's raw answer (a meal, or a recipe with name and servings).
+    func photoRaw(images: [Data], text: String, recipe: Bool) async throws -> String {
+        let body: [String: Any] = ["text": text, "images": images.map { $0.base64EncodedString() }, "mode": recipe ? "recipe" : "meal"]
         let (data, _) = try await request(base: address, code: code, path: "/gym/photo", body: body, timeout: 240)
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
-        return (json["items"] as? [[String: Any]] ?? []).compactMap(AIItem.init)
+        if let raw = json["raw"] as? String { return raw }
+        // An older Mac app: items only.
+        let items = json["items"] ?? []
+        return String(decoding: (try? JSONSerialization.data(withJSONObject: ["items": items])) ?? Data(), as: UTF8.self)
     }
+
 
     // MARK: HTTP
 

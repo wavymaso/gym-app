@@ -134,7 +134,8 @@ final class LocalFoods {
         }
         // Every word; then without one of them; then the first two; then the first alone.
         // Never without the first word: it's the food ("mushroom sauteed" must not become a sauteed chicken wing).
-        let ws = Array(words.prefix(5))
+        let ws = Array(words.filter { !["raw", "uncooked", "crudo", "crudos", "cruda"].contains($0) }.prefix(5))
+        guard !ws.isEmpty else { return [] }
         var tries = [ws]
         if ws.count >= 2 { tries += ws.indices.dropFirst().map { i in ws.enumerated().filter { $0.offset != i }.map(\.element) } }
         if ws.count >= 4 { tries.append(Array(ws.prefix(2))) }
@@ -146,7 +147,15 @@ final class LocalFoods {
         for group in groups {
             var best: [(food: FoodResult, typical: Double?, score: Double)] = []
             for t in group {
-                let found = genericRows(sql(limit), bind: [t.map(term).joined(separator: " AND "), ws[0]])
+                let raw = words.contains { ["raw", "uncooked", "dry", "dried", "crudo", "crudos", "cruda", "seco"].contains($0) } ? "1" : "0"
+                // Processed versions ("breaded", "noodles") only win when you asked for them.
+                let processed = ["breaded", "noodles", "tenders", "nuggets", "patties", "sticks", "cakes", "chips", "flour", "bran",
+                                 "crackers", "puffed", "frozen", "canned", "baby", "sandwich", "salad", "soup", "pudding"]
+                let found = genericRows(sql(limit * 3), bind: [t.map(term).joined(separator: " AND "), ws[0], raw]).map { r -> (food: FoodResult, typical: Double?, score: Double) in
+                    let n = r.food.name.lowercased()
+                    let extra = processed.filter { n.contains($0) && !words.contains($0) }.count
+                    return (r.food, r.typical, r.score + Double(extra) * 3)
+                }.sorted { $0.score < $1.score }.prefix(limit).map { $0 }
                 if let top = found.first, best.isEmpty || top.score < best[0].score { best = found }
             }
             if !best.isEmpty { return best.map { ($0.food, $0.typical) } }
@@ -168,6 +177,8 @@ final class LocalFoods {
                bm25(generic_fts) + length(g.name) / 60.0 - (CASE g.kind WHEN 'dish' THEN 0.6 ELSE 0 END)
                  - (CASE WHEN g.name LIKE '%NFS%' OR g.name LIKE '%NS as to%' THEN 1.5 ELSE 0 END)
                  - (CASE WHEN g.name LIKE ?2 || '%' THEN 2.5 ELSE 0 END)
+                 + (CASE WHEN ?3 = '1' AND g.kind = 'dish' THEN 2.5 ELSE 0 END)
+                 - (CASE WHEN ?3 = '1' AND (g.name LIKE '%raw%' OR g.name LIKE '%uncooked%' OR g.name LIKE '%dry%') THEN 2 ELSE 0 END)
                  + (CASE WHEN g.name LIKE '%as ingredient%' OR g.name LIKE '%glutinous%' OR g.name LIKE '%baby%'
                            OR g.name LIKE '%infant%' OR g.name LIKE '%dehydrated%' THEN 3 ELSE 0 END) AS score
         FROM generic_fts JOIN generic g ON g.fdc = generic_fts.rowid

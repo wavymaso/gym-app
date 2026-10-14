@@ -117,6 +117,31 @@ enum PhotoAI {
         return p
     }
 
+    static func recipePrompt(text: String, hasImage: Bool) -> String {
+        """
+        You turn a recipe into a list of ingredients with weights. \(hasImage ? "The photos show a recipe (cookbook page, screenshot or the dish)." : "Below is a recipe, often an Instagram or TikTok caption.")
+        Rules:
+        - Every ingredient that is eaten, with its amount in grams (ml for liquids) for the WHOLE recipe. Convert cups, spoons, pieces and "1 can" to grams (1 tbsp oil 13 g, 1 egg 50 g, 1 cup cooked rice 160 g, 1 scoop whey 30 g).
+        - Skip salt, pepper, water and spices under 5 g. Raw/dry weight when the recipe gives raw amounts.
+        - "servings": how many portions it makes (from the text; else your best guess).
+        - "name": a short name for the dish, in the recipe's language.
+        - For each ingredient: name (as written), name_es (Spanish), search (1–3 English words, USDA-style, food first), grams, and nutrition PER 100 g (kcal_100g, protein_100g, fat_100g, carbs_100g, fiber_100g), confidence 0–1.
+        Reply with JSON only: {"name":"","servings":0,"items":[{"name":"","name_es":"","search":"","grams":0,"kcal_100g":0,"protein_100g":0,"fat_100g":0,"carbs_100g":0,"fiber_100g":0,"liquid":false,"packaged":false,"brand":"","confidence":0.0}]}
+
+        Recipe:
+        \(text)
+        """
+    }
+
+    static var recipeSchema: [String: Any] {
+        var s = schema
+        var props = s["properties"] as? [String: Any] ?? [:]
+        props["name"] = ["type": "string"]; props["servings"] = ["type": "number"]
+        s["properties"] = props
+        s["required"] = ["name", "servings", "items"]
+        return s
+    }
+
     static let schema: [String: Any] = [
         "type": "object",
         "properties": [
@@ -137,9 +162,14 @@ enum PhotoAI {
 
     /// The model on this Mac, through Ollama.
     static func askLocal(images: [Data], text: String) async throws -> [AIItem] {
-        var message: [String: Any] = ["role": "user", "content": prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]
+        parse(try await askLocalRaw(images: images, text: text, recipe: false))
+    }
+
+    static func askLocalRaw(images: [Data], text: String, recipe: Bool) async throws -> String {
+        let p = recipe ? recipePrompt(text: text, hasImage: !images.isEmpty) : prompt(text: text, hasImage: !images.isEmpty, photos: images.count)
+        var message: [String: Any] = ["role": "user", "content": p]
         if !images.isEmpty { message["images"] = images.map { $0.base64EncodedString() } }
-        let body: [String: Any] = ["model": localModel, "messages": [message], "stream": false, "format": schema,
+        let body: [String: Any] = ["model": localModel, "messages": [message], "stream": false, "format": recipe ? recipeSchema : schema,
                                    "options": ["temperature": 0.1, "num_ctx": 8192, "num_predict": 1500], "keep_alive": "15m"]
         var r = URLRequest(url: URL(string: "\(ollama)/api/chat")!, timeoutInterval: 240)
         r.httpMethod = "POST"; r.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -154,18 +184,22 @@ enum PhotoAI {
             if e.contains("not found") { throw Failure(message: "The Mac doesn't have the photo model yet (\(localModel)).") }
             throw Failure(message: "The photo model on the Mac failed. \(e)")
         }
-        return parse((json["message"] as? [String: Any])?["content"] as? String ?? "")
+        return (json["message"] as? [String: Any])?["content"] as? String ?? ""
     }
 
     /// Google Gemini (free tier with your own key). Busy or out of free quota: try once more,
     /// then the next model (each has its own free quota).
     static func askGemini(images: [Data], text: String) async throws -> [AIItem] {
+        parse(try await askGeminiRaw(images: images, text: text, recipe: false))
+    }
+
+    static func askGeminiRaw(images: [Data], text: String, recipe: Bool) async throws -> String {
         guard !geminiKey.isEmpty else { throw Failure(message: "Add a free Gemini key in Settings → Photo logging.") }
         let models = Array(NSOrderedSet(array: [geminiModel, "gemini-2.5-flash", "gemini-flash-lite-latest"])) as? [String] ?? [geminiModel]
         var last: Failure?
         for (n, model) in models.enumerated() {
             for attempt in 0..<(n == 0 ? 2 : 1) {
-                do { return try await askGemini(model: model, images: images, text: text) } catch let f as GeminiFailure {
+                do { return try await askGemini(model: model, images: images, text: text, recipe: recipe) } catch let f as GeminiFailure {
                     last = Failure(message: f.message)
                     if !f.tryAnother { throw Failure(message: f.message) }
                     if f.status == 503 && attempt == 0 && n == 0 { try? await Task.sleep(nanoseconds: 2_000_000_000) } else { break }
@@ -177,8 +211,9 @@ enum PhotoAI {
 
     private struct GeminiFailure: Error { let status: Int; let message: String; var tryAnother: Bool { [404, 429, 500, 503].contains(status) } }
 
-    private static func askGemini(model: String, images: [Data], text: String) async throws -> [AIItem] {
-        var parts: [[String: Any]] = [["text": prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]]
+    private static func askGemini(model: String, images: [Data], text: String, recipe: Bool) async throws -> String {
+        var parts: [[String: Any]] = [["text": recipe ? recipePrompt(text: text, hasImage: !images.isEmpty)
+                                                      : prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]]
         for image in images { parts.append(["inline_data": ["mime_type": "image/jpeg", "data": image.base64EncodedString()]]) }
         let body: [String: Any] = ["contents": [["parts": parts]],
                                    "generationConfig": ["temperature": 0.1, "responseMimeType": "application/json"]]
@@ -203,7 +238,7 @@ enum PhotoAI {
             }
         }
         let out = (((json["candidates"] as? [[String: Any]])?.first?["content"] as? [String: Any])?["parts"] as? [[String: Any]]) ?? []
-        return parse(out.compactMap { $0["text"] as? String }.joined())
+        return out.compactMap { $0["text"] as? String }.joined()
     }
 
     /// The model's answer → items (tolerates ```json fences or a bare list).
@@ -234,16 +269,32 @@ enum PhotoAI {
 
     /// Ask whichever engine is set and reachable. Returns the items and who answered.
     @MainActor static func analyse(images: [Data], text: String) async throws -> (items: [AIItem], by: String) {
+        let (raw, by) = try await analyseRaw(images: images, text: text, recipe: false)
+        return (parse(raw), by)
+    }
+
+    /// A recipe from a caption, pasted text or cookbook photos: its name, servings and ingredients.
+    @MainActor static func recipe(images: [Data], text: String) async throws -> (name: String, servings: Double?, items: [AIItem], by: String) {
+        let (raw, by) = try await analyseRaw(images: images, text: text, recipe: true)
+        let items = parse(raw)
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.hasPrefix("```") { t = t.components(separatedBy: "\n").dropFirst().joined(separator: "\n").replacingOccurrences(of: "```", with: "") }
+        let json = (try? JSONSerialization.jsonObject(with: Data(t.utf8))) as? [String: Any] ?? [:]
+        let servings = (json["servings"] as? Double) ?? (json["servings"] as? Int).map(Double.init)
+        return ((json["name"] as? String) ?? "", servings.flatMap { $0 > 0 ? $0 : nil }, items, by)
+    }
+
+    @MainActor static func analyseRaw(images: [Data], text: String, recipe: Bool) async throws -> (String, String) {
         var errors: [String] = []
         let e = engine
         if e != .gemini {
             do {
                 #if os(macOS)
-                return (try await askLocal(images: images, text: text), "this Mac")
+                return (try await askLocalRaw(images: images, text: text, recipe: recipe), "this Mac")
                 #else
                 let client = SyncClient.shared
                 if client.connected {
-                    return (try await client.photo(images: images, text: text), client.macName)
+                    return (try await client.photoRaw(images: images, text: text, recipe: recipe), client.macName)
                 }
                 errors.append("This iPhone isn't connected to your Mac (Settings → Mac sync).")
                 #endif
@@ -259,7 +310,7 @@ enum PhotoAI {
         }
         if e != .mac {
             if e == .gemini || !geminiKey.isEmpty {
-                do { return (try await askGemini(images: images, text: text), "Gemini") } catch { errors.append(error.localizedDescription) }
+                do { return (try await askGeminiRaw(images: images, text: text, recipe: recipe), "Gemini") } catch { errors.append(error.localizedDescription) }
             } else {
                 errors.append("No Gemini key for when the Mac can't be reached (Settings → Photo logging).")
             }

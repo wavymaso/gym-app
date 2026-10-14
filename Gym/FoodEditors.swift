@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftData
 import SwiftUI
 
@@ -248,49 +249,92 @@ struct RecipeView: View {
     }
 
     /// Paste a recipe link: fills in the name, servings and ingredients to match.
+    @State private var pasted = ""
+    @State private var photos: [Data] = []
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var aiNote: String?
+
     private var linkSheet: some View {
         NavigationStack {
             Form {
-                TextField("Recipe link", text: $link, prompt: Text("https://…"))
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never).keyboardType(.URL)
-                    #endif
+                Section {
+                    TextField("Link", text: $link, prompt: Text("Recipe site, Instagram, TikTok, YouTube…"))
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never).keyboardType(.URL)
+                        #endif
+                } footer: {
+                    Text("Recipe sites are read exactly. For a post, its caption is read and the AI works out the ingredients and grams.")
+                }
+                Section("Or paste the recipe or caption") {
+                    TextField("200 g chicken, 100 g rice, 1 tbsp olive oil… serves 2", text: $pasted, axis: .vertical).lineLimit(3...8)
+                }
+                Section {
+                    PhotosPicker(selection: $photoItems, maxSelectionCount: 3, matching: .images) {
+                        Label(photos.isEmpty ? "Photos of a cookbook page or screenshot" : "\(photos.count) photo\(photos.count == 1 ? "" : "s") added", systemImage: "book.pages")
+                    }
+                }
                 if let importError { Text(importError).foregroundStyle(palette.warn) }
-                Text("Works with most recipe sites (they publish the recipe in a standard format).").font(.callout).foregroundStyle(.secondary)
             }
             .themedForm()
             .navigationTitle("Import a recipe")
+            .onChange(of: photoItems) { _, items in
+                Task {
+                    var out: [Data] = []
+                    for i in items { if let d = try? await i.loadTransferable(type: Data.self), let p = PhotoAI.prepare(d, maxPixels: 1400) { out.append(p.jpeg) } }
+                    photos = out
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { importing = false } }
                 ToolbarItem(placement: .confirmationAction) {
                     if loadingLink { ProgressView() } else {
-                        Button("Import") {
-                            loadingLink = true; importError = nil
-                            Task {
-                                do {
-                                    let r = try await RecipeImport.fetch(link)
-                                    if name.trimmingCharacters(in: .whitespaces).isEmpty { name = r.name }
-                                    if let s = r.servings { servings = number(s) }
-                                    pending = r.lines
-                                    importing = false
-                                } catch RecipeImport.Failure.noRecipe {
-                                    importError = "No recipe found on that page."
-                                } catch {
-                                    importError = "Couldn't open that link."
-                                }
-                                loadingLink = false
-                            }
-                        }
-                        .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
+                        Button("Import") { Task { await runImport() } }
+                            .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty && pasted.trimmingCharacters(in: .whitespaces).count < 10 && photos.isEmpty)
                     }
                 }
             }
         }
         .appStyle()
         #if os(macOS)
-        .frame(width: 440, height: 240)
+        .frame(width: 480, height: 520)
         #endif
+    }
+
+    /// A recipe site's own data when there is some; otherwise the AI reads the caption, text or photos,
+    /// and each ingredient is matched like a photo log (your foods, then USDA, then its estimate).
+    private func runImport() async {
+        loadingLink = true; importError = nil
+        defer { loadingLink = false }
+        let l = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !l.isEmpty, pasted.isEmpty, photos.isEmpty, let r = try? await RecipeImport.fetch(l) {
+            if name.trimmingCharacters(in: .whitespaces).isEmpty { name = r.name }
+            if let s = r.servings { servings = number(s) }
+            pending = r.lines
+            importing = false
+            return
+        }
+        var text = pasted
+        if text.trimmingCharacters(in: .whitespaces).isEmpty, !l.isEmpty {
+            guard let c = await RecipeImport.caption(l) else {
+                importError = "Couldn't read that post (it may be private). Copy its caption and paste it below instead."
+                return
+            }
+            text = c
+        }
+        do {
+            let r = try await PhotoAI.recipe(images: photos, text: text)
+            guard !r.items.isEmpty else { importError = "No ingredients found in that."; return }
+            if name.trimmingCharacters(in: .whitespaces).isEmpty { name = r.name }
+            if let s = r.servings { servings = number(s) }
+            for (food, grams) in ctx.foods(for: ctx.plate(from: r.items)) {
+                items.append(Item(foodKey: food.key, name: food.name, grams: grams, per100: food.per100))
+            }
+            aiNote = "\(r.items.count) ingredients worked out by \(r.by). Check the amounts: tap one to change it."
+            importing = false
+        } catch {
+            importError = error.localizedDescription
+        }
     }
 
     var body: some View {
@@ -301,7 +345,8 @@ struct RecipeView: View {
                 Section {
                     TextField("Recipe name", text: $name)
                     NumberRow(label: "Makes", text: $servings, unit: "servings")
-                    if recipe == nil { Button { importing = true } label: { Label("Import from a link…", systemImage: "link") } }
+                    if recipe == nil { Button { importing = true } label: { Label("Import from a link, post, text or photo…", systemImage: "link") } }
+                    if let aiNote { Label(aiNote, systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
                 }
                 if !pending.isEmpty {
                     Section {

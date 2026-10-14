@@ -120,8 +120,8 @@ let syncPort: UInt16 = 8010
             let text = body["text"] as? String ?? ""
             Task { @MainActor in
                 do {
-                    let items = try await PhotoAI.askLocal(images: images, text: text)
-                    self.send(c, 200, ["items": items.map(\.dict)])
+                    let raw = try await PhotoAI.askLocalRaw(images: images, text: text, recipe: body["mode"] as? String == "recipe")
+                    self.send(c, 200, ["raw": raw, "items": PhotoAI.parse(raw).map(\.dict)])
                 } catch {
                     self.send(c, 502, ["error": error.localizedDescription])
                 }

@@ -37,6 +37,32 @@ enum RecipeImport {
         return recipe
     }
 
+    /// A post's text (Instagram, TikTok, YouTube, a blog without recipe data): its caption from the
+    /// preview tags, which these sites give to link previews without logging in.
+    static func caption(_ link: String) async -> String? {
+        var s = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !s.contains("://") { s = "https://" + s }
+        guard let url = URL(string: s) else { return nil }
+        var r = URLRequest(url: url, timeoutInterval: 20)
+        // Link-preview robots get the caption in the page head.
+        r.setValue("facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)", forHTTPHeaderField: "User-Agent")
+        guard let (data, _) = try? await URLSession.shared.data(for: r) else { return nil }
+        let html = String(decoding: data, as: UTF8.self)
+        var best = ""
+        for key in ["og:description", "description", "twitter:description", "og:title"] {
+            for pattern in ["<meta[^>]+(?:property|name)=\"\(key)\"[^>]+content=\"([^\"]*)\"", "<meta[^>]+content=\"([^\"]*)\"[^>]+(?:property|name)=\"\(key)\""] {
+                if let m = html.range(of: pattern, options: .regularExpression) {
+                    let tag = String(html[m])
+                    if let c = tag.range(of: "content=\"([^\"]*)\"", options: .regularExpression) {
+                        let v = decode(String(tag[c]).dropFirst(9).dropLast().description)
+                        if v.count > best.count { best = v }
+                    }
+                }
+            }
+        }
+        return best.count >= 40 ? best : nil
+    }
+
     /// The first schema.org Recipe in the page's JSON-LD blocks.
     static func parse(html: String) -> ImportedRecipe? {
         guard let re = try? NSRegularExpression(pattern: #"<script[^>]*application/ld\+json[^>]*>(.*?)</script>"#,
