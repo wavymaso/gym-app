@@ -130,6 +130,11 @@ struct EditGoalFlow: View {
                             Text(rateName).font(.headline).padding(.horizontal, 14).padding(.vertical, 8)
                                 .background(palette.good.opacity(0.18), in: RoundedRectangle(cornerRadius: 8))
                             Slider(value: $rate, in: rateRange, step: 0.01).tint(palette.good)
+                            if goal == .lose, (ctx.activeProgram?.mode ?? "coached") == "coached",
+                               let floor = ctx.bodyInfo(guardrails: true)?.floorKcal, budget.kcal <= floor + 5 {
+                                Label("At this rate the budget hits your calorie floor (\(energy.format(floor))), so it can't go lower. Pick a slower rate, or change the floor in Strategy.",
+                                      systemImage: "shield.lefthalf.filled").font(.caption).foregroundStyle(palette.warn)
+                            }
                             rateRow(perWeek: true)
                             rateRow(perWeek: false)
                         }

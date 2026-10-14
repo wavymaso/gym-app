@@ -86,7 +86,6 @@ struct ProgramEditor: View {
     // MARK: The chosen day
 
     private var editor: some View {
-        let maxKcal = roundTo(kg * 40, 10)
         let protKg = t.protein / kg
         let rest = max(t.kcal - t.protein * 4, 0)
         let carbShare = rest > 0 ? t.carbs * 4 / rest : 0.5
@@ -94,21 +93,30 @@ struct ProgramEditor: View {
             HStack {
                 Text(locked ? "Every day" : weekdayName(day)).font(.title2.bold())
                 Spacer()
-                Button("Reset All Days") { let base = plan[day] ?? t; for d in order { plan[d] = base } }
+                Button("Reset All Days") {
+                    // Every day the same: the week's calories split evenly, this day's protein and carb/fat split.
+                    let avg = roundTo(weekTotal / 7, 1), base = plan[day] ?? t
+                    let rest = max(base.kcal - base.protein * 4, 1), share = base.carbs * 4 / rest
+                    for d in order { var x = base; x.kcal = avg; x.protein = min(base.protein, avg / 4); split(&x, share); plan[d] = x }
+                }
                     .buttonStyle(.bordered).buttonBorderShape(.capsule)
                 Button { locked.toggle() } label: { Image(systemName: locked ? "lock.fill" : "lock.open").frame(width: 30, height: 30) }
                     .buttonStyle(.bordered).buttonBorderShape(.circle)
                     .help(locked ? "Every day changes together. Unlock to set days separately." : "Each day on its own")
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text("Calorie target: between 0 and \(number(energy.fromKcal(maxKcal))) \(energy.rawValue)").font(.subheadline)
+                Text(locked ? "Calories: \(number(energy.fromKcal(weekTotal / 7))) a day on average"
+                            : "Calories for \(weekdayName(day)): the other days adjust to keep the week the same").font(.subheadline)
+                Text("Week: \(number(energy.fromKcal(weekTotal))) \(energy.rawValue), set by your goal").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     TextField("", value: Binding(get: { energy.fromKcal(t.kcal) }, set: { set(kcal: energy.toKcal($0)) }), format: .number.precision(.fractionLength(0)).grouping(.never).locale(appLocale))
                         #if os(iOS)
                         .keyboardType(.numberPad)
                         #endif
                         .font(.title3).monospacedDigit()
+                        .disabled(locked)
                     Text(energy.rawValue).foregroundStyle(.secondary)
+                    if locked { Image(systemName: "lock.fill").foregroundStyle(.secondary) }
                 }
                 .padding(.horizontal, 14).frame(height: 52)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.2)))
@@ -156,13 +164,24 @@ struct ProgramEditor: View {
         }
     }
 
+    /// One day's calories, the week's total unchanged: the difference is spread over the other six days.
     private func set(kcal: Double) {
-        apply { x in
+        guard !locked else { return }
+        let old = t.kcal
+        let new = min(max(0, kcal), weekTotal)
+        let others = order.filter { $0 != day }
+        let delta = (new - old) / Double(others.count)
+        for d in [day] + others {
+            var x = plan[d] ?? t
             let rest = max(x.kcal - x.protein * 4, 1), share = x.carbs * 4 / rest
-            x.kcal = max(0, kcal)
+            x.kcal = d == day ? new : max(0, x.kcal - delta)
+            x.protein = min(x.protein, x.kcal / 4)
             split(&x, share)
+            plan[d] = x
         }
     }
+
+    private var weekTotal: Double { order.compactMap { plan[$0]?.kcal }.reduce(0, +) }
 
     private func set(protein: Double) {
         apply { x in
