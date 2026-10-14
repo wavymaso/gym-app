@@ -22,4 +22,18 @@ let shake = db.product(barcode: "8432022001734")
 check("barcode lookup (your protein shake)", shake?.name.contains("Batido") == true, shake?.name ?? "nil")
 let t = Date(); for _ in 0..<20 { _ = db.search("pan") }
 check("fast: 20 searches", Date().timeIntervalSince(t) < 2, Date().timeIntervalSince(t))
+
+func chk(_ ok: Bool, _ n: String) { check(n, ok) }
+// Typos, Spanish names for USDA foods, Arabic letters
+let typo = db.search("platno")
+chk(!typo.isEmpty && db.lastCorrection == "platano", "platno → platano (\(db.lastCorrection ?? "-"), \(typo.count))")
+_ = db.search("pechga pavo")
+chk(db.lastCorrection?.contains("pechuga") == true, "pechga → pechuga (\(db.lastCorrection ?? "-"))")
+_ = db.search("yogur griego")
+chk(db.lastCorrection == nil, "no correction when it's spelt right")
+chk(db.generic("pollo plancha").first.map { $0.food.name.lowercased().contains("chicken") } == true, "Spanish finds USDA: pollo plancha (\(db.generic("pollo plancha").first?.food.name ?? "-"))")
+chk(db.generic("lentejas").first.map { $0.food.name.lowercased().contains("lentil") } == true, "lentejas → lentils")
+chk(LocalFoods.words("قهوة عربيّة") == ["قهوه", "عربيه"], "Arabic folded (\(LocalFoods.words("قهوة عربيّة")))")
+chk(editDistance("pechga", "pechuga") == 1 && editDistance("griejo", "griego") == 1 && editDistance("ab", "ba") == 1, "edit distance")
+chk(Nutrients(kcal: 100, protein: 20, fat: 9, carbs: 10).looksWrong && !Nutrients(kcal: 165, protein: 31, fat: 3.6, carbs: 0).looksWrong, "Atwater check")
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED"); exit(fails == 0 ? 0 : 1)

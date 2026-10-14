@@ -15,5 +15,6 @@ for f in FoodData_Central_sr_legacy_food_csv_2018-04 FoodData_Central_survey_foo
   [ -d "$U/x/$f" ] || { curl -sL -o "$U/$f.zip" "https://fdc.nal.usda.gov/fdc-datasets/$f.zip"; mkdir -p "$U/x/$f"; ditto -x -k "$U/$f.zip" "$U/x/$f"; }
 done
 python3 tools/build-generic-db.py "$U/x" "$W/foods.sqlite"
+python3 tools/build-search-extras.py "$W/foods.sqlite"     # Spanish names for USDA, Arabic folding, typo vocabulary
 cp "$W/foods.sqlite" Gym/foods.sqlite
 echo "Gym/foods.sqlite updated: $(sqlite3 Gym/foods.sqlite 'select count(*) from food') products"

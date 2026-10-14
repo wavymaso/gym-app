@@ -73,6 +73,10 @@ struct FoodDetailView: View {
         let kcal = max(n.kcal, 0.001)
         let share: [Macro: Double] = [.protein: n.protein * 4 / kcal, .fat: n.fat * 9 / kcal, .carbs: n.carbs * 4 / kcal]
         return VStack(alignment: .leading, spacing: 14) {
+            if food.per100.looksWrong {
+                Label("Calories and macros don't add up (\(number(food.per100.kcal)) kcal vs \(number(food.per100.protein * 4 + food.per100.carbs * 4 + food.per100.fat * 9)) from macros per 100 g). The entry may be wrong: check the packet.",
+                      systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(palette.warn)
+            }
             HStack {
                 if let b = food.brand { Text(b).font(.subheadline).foregroundStyle(.secondary) }
                 Spacer()

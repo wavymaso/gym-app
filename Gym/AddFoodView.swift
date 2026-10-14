@@ -32,6 +32,7 @@ struct AddFoodView: View {
     @State private var generic: [FoodResult] = []
     @State private var products: [FoodResult] = []
     @State private var local: [FoodResult] = []                  // the offline database (LocalFoods)
+    @State private var correction: String?                        // "Showing results for …" after a typo
     @AppStorage("foodScope") private var scope: LocalFoods.Scope = .all
     @State private var genericError: String?
     @State private var productError: String?
@@ -217,6 +218,9 @@ struct AddFoodView: View {
             Text("Type at least two letters. Plain foods (rice, chicken breast) come from USDA, in English; supermarket products from Open Food Facts, in Spanish.")
                 .font(.callout).foregroundStyle(.secondary).listRowSeparator(.hidden)
         } else {
+            if let correction {
+                Label("Showing results for “\(correction)”", systemImage: "wand.and.stars").font(.callout).foregroundStyle(.secondary)
+            }
             if !localMatches.isEmpty {
                 Section("Your foods") { ForEach(localMatches) { f in foodRow(f) } }
             }
@@ -306,6 +310,7 @@ struct AddFoodView: View {
             local = LocalFoods.shared.product(barcode: q).map { [$0] } ?? []
         } else {
             local = LocalFoods.shared.search(q, scope: scope)
+            correction = LocalFoods.shared.lastCorrection
         }
         try? await Task.sleep(nanoseconds: 450_000_000)            // wait until you stop typing
         guard !Task.isCancelled else { return }
@@ -353,6 +358,10 @@ struct FoodRowLabel: View {
                 HStack(spacing: 5) {
                     Text(name).font(.body.weight(.medium)).lineLimit(1)
                     if favorite { Image(systemName: "star.fill").font(.caption).foregroundStyle(Macro.fat.color) }
+                    if per100.looksWrong {
+                        Image(systemName: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(palette.warn)
+                            .help("Its calories don't match its protein, carbs and fat: the label may be wrong")
+                    }
                 }
                 Text([brand, sourceLabel].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
             }

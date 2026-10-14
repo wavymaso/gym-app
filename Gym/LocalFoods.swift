@@ -34,9 +34,65 @@ final class LocalFoods {
     var available: Bool { db != nil && count > 0 }
 
     /// Products matching every word (prefixes count: "yog gri" finds "yogur griego").
+    /// Set when the last search only found something after fixing a typo ("platno" → "platano").
+    private(set) var lastCorrection: String?
+
     func search(_ query: String, scope: Scope = .all, limit: Int = 40) -> [FoodResult] {
-        let words = query.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).filter { $0.count >= 1 }
+        lastCorrection = nil
+        let words = Self.words(query)
         guard db != nil, !words.isEmpty else { return [] }
+        let found = search(words: words, scope: scope, limit: limit)
+        if found.count >= 3 { return found }
+        guard let fixed = corrected(words) else { return found }
+        let more = search(words: fixed, scope: scope, limit: limit)
+        if !more.isEmpty { lastCorrection = fixed.joined(separator: " ") }
+        return found + more.filter { m in !found.contains { $0.key == m.key } }
+    }
+
+    /// Lower-case words, Arabic letters folded (أ إ آ → ا, ة → ه, ى → ي, no vowel marks).
+    static func words(_ q: String) -> [String] {
+        var s = q.lowercased()
+        s = s.replacingOccurrences(of: "[\u{064B}-\u{0652}\u{0670}\u{0640}]", with: "", options: .regularExpression)
+        for (a, b) in [("أ", "ا"), ("إ", "ا"), ("آ", "ا"), ("ٱ", "ا"), ("ة", "ه"), ("ى", "ي"), ("ؤ", "و"), ("ئ", "ي")] { s = s.replacingOccurrences(of: a, with: b) }
+        return s.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }
+    }
+
+    /// Typos fixed against the words in the database: a word that starts no known word becomes the
+    /// most common word within 1 edit (2 for longer words). nil if nothing needed fixing.
+    func corrected(_ words: [String]) -> [String]? {
+        guard hasVocab else { return nil }
+        var changed = false
+        let out = words.map { w -> String in
+            let f = FoodAPI.fold(w)
+            guard f.count >= 4, f.unicodeScalars.allSatisfy({ $0.isASCII }) else { return w }
+            if scalar("SELECT 1 FROM vocab WHERE term >= '\(f)' AND term < '\(f){' LIMIT 1") != nil { return w }
+            let maxD = f.count <= 5 ? 1 : 2
+            var best: (String, Int, Int)?
+            for (term, n) in vocabRows(first: f.first!, minLen: f.count - maxD, maxLen: f.count + maxD) {
+                let d = editDistance(f, term)
+                if d <= maxD, best == nil || d < best!.1 || (d == best!.1 && n > best!.2) { best = (term, d, n) }
+            }
+            if let b = best { changed = true; return b.0 }
+            return w
+        }
+        return changed ? out : nil
+    }
+
+    private lazy var hasVocab: Bool = scalar("SELECT count(*) FROM sqlite_master WHERE name='vocab'") == "1"
+
+    private func vocabRows(first: Character, minLen: Int, maxLen: Int) -> [(String, Int)] {
+        lock.lock(); defer { lock.unlock() }
+        var st: OpaquePointer?
+        let next = String(UnicodeScalar(first.unicodeScalars.first!.value + 1)!)
+        let sql = "SELECT term, n FROM vocab WHERE term >= '\(first)' AND term < '\(next)' AND length(term) BETWEEN \(minLen) AND \(maxLen)"
+        guard sqlite3_prepare_v2(db, sql, -1, &st, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(st) }
+        var out: [(String, Int)] = []
+        while sqlite3_step(st) == SQLITE_ROW { if let t = sqlite3_column_text(st, 0) { out.append((String(cString: t), Int(sqlite3_column_int(st, 1)))) } }
+        return out
+    }
+
+    private func search(words: [String], scope: Scope, limit: Int) -> [FoodResult] {
         let match = words.map { "\"\($0.replacingOccurrences(of: "\"", with: ""))\"*" }.joined(separator: " AND ")
         let filter: String
         switch scope {
@@ -49,7 +105,7 @@ final class LocalFoods {
         let sql = """
             SELECT \(columns) FROM food_fts JOIN food f ON f.rowid = food_fts.rowid
             WHERE food_fts MATCH ?1 \(filter)
-            ORDER BY bm25(food_fts, 10.0, 10.0, 4.0)
+            ORDER BY bm25(food_fts, 10.0, 10.0, 4.0, 10.0)
                      - (CASE WHEN f.stores LIKE '%alcampo%' OR f.stores LIKE '%costco%' THEN 2.0 ELSE 0 END)
                      - min(f.scans, 1000) / 200.0
             LIMIT \(limit)
@@ -66,6 +122,13 @@ final class LocalFoods {
         let words = Array(NSOrderedSet(array: query.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { $0.count >= 2 && !stop.contains($0) }.map(Self.singular))) as? [String] ?? []
         guard db != nil, !words.isEmpty, hasGeneric else { return [] }
+        let first = genericSearch(words, limit: limit)
+        if !first.isEmpty { return first }
+        if let fixed = corrected(words) { return genericSearch(fixed, limit: limit) }
+        return []
+    }
+
+    private func genericSearch(_ words: [String], limit: Int) -> [(food: FoodResult, typical: Double?)] {
         func term(_ w: String) -> String {      // egg, eggs; tomato, tomatoes; toast, toasted; bake, baked
             "(" + [w, w + "s", w + "es", w + "ed", w + "d"].map { "\"\($0)\"" }.joined(separator: " OR ") + ")"
         }
@@ -201,4 +264,21 @@ final class LocalFoods {
         defer { sqlite3_finalize(st) }
         return sqlite3_step(st) == SQLITE_ROW ? sqlite3_column_text(st, 0).map { String(cString: $0) } : nil
     }
+}
+
+/// Damerau–Levenshtein distance (optimal string alignment): swapped neighbours count as one edit.
+func editDistance(_ a: String, _ b: String) -> Int {
+    let x = Array(a), y = Array(b)
+    if x.isEmpty { return y.count }; if y.isEmpty { return x.count }
+    var d = Array(repeating: Array(repeating: 0, count: y.count + 1), count: x.count + 1)
+    for i in 0...x.count { d[i][0] = i }
+    for j in 0...y.count { d[0][j] = j }
+    for i in 1...x.count {
+        for j in 1...y.count {
+            let c = x[i - 1] == y[j - 1] ? 0 : 1
+            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c)
+            if i > 1, j > 1, x[i - 1] == y[j - 2], x[i - 2] == y[j - 1] { d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1) }
+        }
+    }
+    return d[x.count][y.count]
 }

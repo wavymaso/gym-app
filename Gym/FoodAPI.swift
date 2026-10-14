@@ -211,3 +211,12 @@ enum FoodAPI {
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
     }
 }
+
+extension Nutrients {
+    /// Calories that don't match the macros (4/4/9, plus alcohol): a likely database error.
+    var looksWrong: Bool {
+        let est = protein * 4 + carbs * 4 + fat * 9 + (micros?["alcohol"] ?? 0) * 7
+        guard kcal > 25 || est > 25 else { return false }
+        return abs(est - kcal) / max(kcal, est) > 0.2
+    }
+}
