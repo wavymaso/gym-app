@@ -12,6 +12,7 @@ struct DashboardView: View {
     @Query(filter: #Predicate<Program> { $0.isActive }) private var programs: [Program]
     @Query private var weekEntries: [FoodEntry]
     @Query private var loggedDays: [FoodEntry]
+    @AppStorage("dashCards") private var layout = DashCard.defaultLayout
     @State private var sheet: DashSheet? = {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "checkIn") { return .checkIn }       // testing only
@@ -20,7 +21,7 @@ struct DashboardView: View {
     }()
 
     enum DashSheet: String, Identifiable {
-        case addFood, quickAdd, weighIn, checkIn
+        case addFood, quickAdd, weighIn, checkIn, layout
         var id: String { rawValue }
     }
 
@@ -43,14 +44,20 @@ struct DashboardView: View {
                     TodayRings(eaten: today, target: p.adjust(t.targets, on: dayKey()), energy: p.energy)
                     quickActions
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 280), spacing: 16, alignment: .top)], spacing: 16) {
-                        HabitCard()
-                        ActivityCard()
-                        WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
-                        TrainingCard()
-                        weightCard(p)
-                        expenditureCard(t, p)
-                        if let g = programs.first { goalCard(g, p) }
+                        ForEach(DashCard.shown(layout)) { c in
+                            switch c {
+                            case .habits: HabitCard()
+                            case .activity: ActivityCard()
+                            case .week: WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
+                            case .training: TrainingCard()
+                            case .weight: weightCard(p)
+                            case .expenditure: expenditureCard(t, p)
+                            case .goal: if let g = programs.first { goalCard(g, p) }
+                            }
+                        }
                     }
+                    Button { sheet = .layout } label: { Label("Edit dashboard", systemImage: "slider.horizontal.3").font(.callout) }
+                        .buttonStyle(.borderless).frame(maxWidth: .infinity)
                 }
             }
             .padding(pagePadding)
@@ -69,6 +76,7 @@ struct DashboardView: View {
             case .quickAdd: QuickAddView(day: dayKey(), entry: nil)
             case .weighIn: WeighInSheet()
             case .checkIn: CheckInView()
+            case .layout: DashboardLayoutSheet()
             }
         }
     }
@@ -571,5 +579,91 @@ struct Sparkline: View {
         .chartXAxis(.hidden).chartYAxis(.hidden)
         .chartYScale(domain: (lo - max(0.5, (hi - lo) * 0.15))...(hi + max(0.5, (hi - lo) * 0.15)))
         .frame(height: 44)
+    }
+}
+
+/// The dashboard's cards below the rings, in your order; "-" in front hides one.
+enum DashCard: String, CaseIterable, Identifiable {
+    case habits, activity, week, training, weight, expenditure, goal
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .habits: return "Habit score"
+        case .activity: return "Water & activity"
+        case .week: return "Last 7 days"
+        case .training: return "Training this week"
+        case .weight: return "Trend weight"
+        case .expenditure: return "Expenditure"
+        case .goal: return "Goal"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .habits: return "checkmark.seal"
+        case .activity: return "drop.fill"
+        case .week: return "chart.bar"
+        case .training: return "dumbbell"
+        case .weight: return "scalemass"
+        case .expenditure: return "flame"
+        case .goal: return "target"
+        }
+    }
+
+    static let defaultLayout = allCases.map(\.rawValue).joined(separator: ",")
+
+    /// Every card in saved order (new ones at the end), with whether it's shown.
+    static func parse(_ s: String) -> [(card: DashCard, on: Bool)] {
+        var out: [(DashCard, Bool)] = s.split(separator: ",").compactMap { t in
+            let hidden = t.hasPrefix("-")
+            return DashCard(rawValue: String(hidden ? t.dropFirst() : t)).map { ($0, !hidden) }
+        }
+        for c in allCases where !out.contains(where: { $0.0 == c }) { out.append((c, true)) }
+        return out
+    }
+
+    static func shown(_ s: String) -> [DashCard] { parse(s).filter(\.on).map(\.card) }
+
+    static func serialise(_ items: [(card: DashCard, on: Bool)]) -> String {
+        items.map { ($0.on ? "" : "-") + $0.card.rawValue }.joined(separator: ",")
+    }
+}
+
+/// Show, hide and reorder the dashboard cards.
+struct DashboardLayoutSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("dashCards") private var layout = DashCard.defaultLayout
+    @State private var items: [Item] = []
+
+    struct Item: Identifiable { let card: DashCard; var on: Bool; var id: String { card.rawValue } }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach($items) { $it in
+                        Toggle(isOn: $it.on) { Label(it.card.label, systemImage: it.card.icon) }
+                    }
+                    .onMove { items.move(fromOffsets: $0, toOffset: $1) }
+                } footer: {
+                    Text("Drag to reorder\(isPhone ? " (tap Edit first)" : ""). The rings and quick buttons always stay at the top.")
+                }
+                Section { Button("Reset to default") { items = DashCard.parse(DashCard.defaultLayout).map { Item(card: $0.card, on: $0.on) } } }
+            }
+            .themedList()
+            .navigationTitle("Dashboard")
+            .toolbar {
+                #if os(iOS)
+                ToolbarItem(placement: .topBarLeading) { EditButton() }
+                #endif
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { layout = DashCard.serialise(items.map { ($0.card, $0.on) }); dismiss() }
+                }
+            }
+            .onAppear { items = DashCard.parse(layout).map { Item(card: $0.card, on: $0.on) } }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 380, height: 460)
+        #endif
     }
 }
