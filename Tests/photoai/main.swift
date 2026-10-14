@@ -71,6 +71,21 @@ ctx.log(plate: ctx.plate(from: [big], foods: local), day: "2026-10-14", time: Da
 check(ctx.entries(on: "2026-10-14").count == 1, "logged")
 UserDefaults.standard.removeObject(forKey: "photoPortionBias")
 
+// 4b. Measurements and progress photos sync (photo bytes intact)
+let src = ModelContext(try! ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+let dst = ModelContext(try! ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+src.saveMeasurements([.waist: 84.2, .neck: 38], day: "2026-10-14")
+let bytes = Data((0..<5000).map { UInt8($0 % 251) })
+src.insert(ProgressPhoto(day: "2026-10-14", pose: "side", jpeg: bytes)); src.commit()
+let (recs, dels) = src.syncChanges(since: Date(timeIntervalSince1970: 0))
+dst.applySync(records: recs, deleted: dels)
+let got = (try? dst.fetch(FetchDescriptor<Measurement>())) ?? []
+check(got.count == 2 && got.contains { $0.site == "waist" && $0.cm == 84.2 }, "measurements synced")
+check(((try? dst.fetch(FetchDescriptor<ProgressPhoto>())) ?? []).first?.jpeg == bytes, "photo synced byte for byte")
+src.saveMeasurements([.waist: 83.9], day: "2026-10-14")
+check(((try? src.fetch(FetchDescriptor<Measurement>())) ?? []).count == 2, "same day re-measured replaces, not duplicates")
+check(abs((navyBodyFat(sex: .male, heightCm: 180, waist: 84, neck: 38, hips: nil) ?? 0) - 15.3) < 1, "Navy body fat ~15% (\(navyBodyFat(sex: .male, heightCm: 180, waist: 84, neck: 38, hips: nil) ?? 0))")
+
 // 5. Real photos
 let photos = CommandLine.arguments.dropFirst()
 if let m = ProcessInfo.processInfo.environment["MODEL"] { UserDefaults.standard.set(m, forKey: "localVisionModel") }

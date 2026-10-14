@@ -34,6 +34,7 @@ struct WeightView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                BodySection()
                 if !entries.isEmpty {
                     Card(title: "Weigh-ins", systemImage: "list.bullet") {
                         ForEach(entries.prefix(60)) { e in

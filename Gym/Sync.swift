@@ -38,7 +38,7 @@ extension Syncable {
 /// Every kind of record that syncs, in the order they're applied.
 let syncTypes: [any Syncable.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self, Food.self, RecipeIngredient.self,
                                       FoodEntry.self, Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self,
-                                      WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self]
+                                      WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self, Measurement.self, ProgressPhoto.self]
 
 extension Notification.Name {
     static let gymDidCommit = Notification.Name("gymDidCommit")
@@ -345,6 +345,24 @@ extension SavedMeal: Syncable {
         lastUsed = d.optDate("lastUsed"); createdAt = d.date("createdAt")
     }
     static func blank() -> Self { Self(name: "", items: []) }
+}
+
+extension Measurement: Syncable {
+    static var syncType: String { "measurement" }
+    var naturalID: String { "measure:\(day):\(site)" }           // one per site per day
+    func encode() -> [String: Any] { ["day": day, "site": site, "cm": cm] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); site = d.str("site"); cm = d.num("cm") }
+    static func blank() -> Self { Self(day: "", site: .waist, cm: 0) }
+}
+
+extension ProgressPhoto: Syncable {
+    static var syncType: String { "progressPhoto" }
+    func encode() -> [String: Any] { ["day": day, "pose": pose, "jpeg": jpeg.base64EncodedString(), "createdAt": createdAt.timeIntervalSince1970] }
+    func decode(_ d: [String: Any]) {
+        day = d.str("day"); pose = d.str("pose"); createdAt = d.date("createdAt")
+        if let data = Data(base64Encoded: d.str("jpeg")), !data.isEmpty { jpeg = data }
+    }
+    static func blank() -> Self { Self(day: "", pose: "front", jpeg: Data()) }
 }
 
 extension DayNote: Syncable {
