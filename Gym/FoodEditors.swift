@@ -116,6 +116,7 @@ struct QuickAddView: View {
 /// A food from its label: per 100 g, or per serving.
 struct CustomFoodView: View {
     let food: Food?
+    var prefill: LabelValues? = nil          // from a scanned nutrition label
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
@@ -186,6 +187,11 @@ struct CustomFoodView: View {
     }
 
     private func load() {
+        if food == nil, let p = prefill {
+            kcal = text(p.kcal); protein = text(p.protein); fat = text(p.fat); carbs = text(p.carbs)
+            fiber = text(p.fiber); sugar = text(p.sugar); satFat = text(p.satFat); sodium = text(p.sodiumMg)
+            if let g = p.servingGrams { servingGrams = text(g) }
+        }
         guard let f = food else { return }
         name = f.name; brand = f.brand ?? ""; barcode = f.barcode ?? ""; liquid = f.isLiquid
         if let s = f.servings.first { servingName = s.name; servingGrams = text(s.grams) }

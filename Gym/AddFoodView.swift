@@ -31,6 +31,7 @@ struct AddFoodView: View {
     @State private var chosen: Food?
     @State private var opening: String?
     @State private var newFood = false
+    @State private var scanningLabel = false
     @State private var newRecipe = false
     @State private var scanning = false
     @FocusState private var focused: Bool
@@ -72,6 +73,7 @@ struct AddFoodView: View {
                     ToolbarItem {
                         Menu {
                             Button("New food…") { newFood = true }
+                            Button("Scan a nutrition label…") { scanningLabel = true }
                             Button("New recipe…") { newRecipe = true }
                         } label: { Label("New", systemImage: "square.and.pencil") }
                     }
@@ -81,6 +83,7 @@ struct AddFoodView: View {
             .sheet(isPresented: $scanning) { BarcodeScanner { code in tab = .search; query = code } }
             #endif
             .sheet(isPresented: $newFood) { CustomFoodView(food: nil) }
+            .sheet(isPresented: $scanningLabel) { LabelScanView() }
             .sheet(isPresented: $newRecipe) { RecipeView(recipe: nil) }
             .sheet(item: $editingFood) { CustomFoodView(food: $0) }
             .sheet(item: $editingRecipe) { RecipeView(recipe: $0) }
