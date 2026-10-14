@@ -91,6 +91,13 @@ struct PhotoLogView: View {
             #endif
             if start == .describe { typing = true }
             if start == .library { showLibrary = true }
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "photoDemo") {        // testing only: a canned answer, no camera or model
+                camera = false
+                let items = PhotoAI.parse(#"{"items":[{"name":"Seafood paella","name_es":"Paella de marisco","search":"paella seafood","grams":420,"kcal_100g":160,"protein_100g":9,"fat_100g":6,"carbs_100g":18,"confidence":0.8},{"name":"Lemon","name_es":"Limón","search":"lemon","grams":20,"kcal_100g":29,"protein_100g":1,"fat_100g":0,"carbs_100g":9,"confidence":0.9},{"name":"Alioli","name_es":"Alioli","search":"aioli","grams":25,"kcal_100g":700,"protein_100g":1,"fat_100g":77,"carbs_100g":1,"confidence":0.4}]}"#)
+                plate = ctx.plate(from: items); seenBy = "Marcel's MacBook Pro"; stage = .plate
+            }
+            #endif
         }
     }
 
@@ -139,17 +146,17 @@ struct PhotoLogView: View {
             }
         } else {
             VStack(spacing: 12) {
-                Image(systemName: "camera.macro").font(.system(size: 40)).foregroundStyle(palette.accent)
+                Image(systemName: "fork.knife.circle").font(.system(size: 40)).foregroundStyle(palette.accent)
                 HStack(spacing: 10) {
                     #if os(iOS)
-                    Button { camera = true } label: { Label("Take photo", systemImage: "camera.fill").frame(maxWidth: .infinity) }
+                    Button { camera = true } label: { Label("Camera", systemImage: "camera.fill").lineLimit(1).frame(maxWidth: .infinity) }
                         .buttonStyle(.bordered).controlSize(.large)
                     #else
                     Button { importing = true } label: { Label("Choose file…", systemImage: "folder").frame(maxWidth: .infinity) }
                         .buttonStyle(.bordered).controlSize(.large)
                     #endif
                     PhotosPicker(selection: $libraryItem, matching: .images) {
-                        Label("Photos", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity)
+                        Label("Photos", systemImage: "photo.on.rectangle").lineLimit(1).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered).controlSize(.large)
                 }

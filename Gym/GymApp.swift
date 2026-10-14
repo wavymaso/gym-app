@@ -213,6 +213,7 @@ struct MainView: View {
             showWhatsNew()
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "plus") { plus = true }      // testing only
+            if let q = UserDefaults.standard.string(forKey: "quick") { quick = QuickSheet(rawValue: q) }   // -quick photo
             #endif
         }
         #endif
