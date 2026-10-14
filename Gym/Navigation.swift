@@ -37,7 +37,7 @@ struct QuickActionsSheet: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.pageBackground)
+        .pageBackground()
         #if os(iOS)
         .presentationDetents([.height(isPhone ? 380 : 340)])
         .presentationDragIndicator(.visible)
@@ -104,8 +104,12 @@ struct PhoneTabBar: View {
         }
         .padding(.top, 8).padding(.horizontal, 6)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
+        .padding(.bottom, palette.glass ? 6 : 0)
+        .background {
+            if palette.glass { Color.clear.modifier(GlassCapsule()).padding(.horizontal, 10) }
+            else { Rectangle().fill(.bar).ignoresSafeArea() }
+        }
+        .overlay(alignment: .top) { if !palette.glass { Divider() } }
     }
 
     private func item(_ t: PhoneTab, _ title: String, _ icon: String) -> some View {
@@ -137,7 +141,7 @@ struct MorePage: View {
             }
             .padding(pagePadding)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         .toolbar(.hidden, for: .navigationBar)
     }
 
@@ -227,10 +231,13 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 4
+    static let version = 5
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("square.stack.3d.up.fill", "A new way to log food", "One sheet: Scan · Search · AI · Quick Add · Library. Add foods to a cart, then Log Foods. The food screen shows its impact on today's targets and has a number pad with units."),
+        ("chart.bar.xaxis", "Dashboard, MacroFactor style", "Swipe the top card for the weekly nutrition grid. Insight cards with sparklines, and Search for a food right above the tab bar."),
+        ("sparkles", "Glass and Maximal", "Settings → Appearance: a Liquid Glass theme, and a Maximal style with glow."),
         ("camera.fill", "Log a meal with a photo", "Snap your plate (or just describe it): the model on your Mac names the foods and portions, nutrition comes from USDA, barcodes and your own foods. + → Photo."),
         ("ruler", "Measurements & progress photos", "On the Weight page: waist, arms and more, a tape body-fat estimate, and side-by-side photos."),
         ("mic.fill", "Siri & Shortcuts", "“Log water in Gym”, “How many calories do I have left in Gym”, weigh in, quick add. Put one on the Action button."),
@@ -263,7 +270,7 @@ struct WhatsNewSheet: View {
                 .buttonStyle(.borderedProminent).controlSize(.large).padding(.bottom, 20)
         }
         .padding(.horizontal, 24)
-        .background(Color.pageBackground)
+        .pageBackground()
         #if os(macOS)
         .frame(width: 460, height: 560)
         #endif

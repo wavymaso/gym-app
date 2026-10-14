@@ -22,13 +22,15 @@ struct GymApp: App {
 /// Applies the chosen theme; changing it redraws everything in the new colours.
 struct ThemedRoot: View {
     @AppStorage("theme") private var theme: AppTheme = .midnight
+    @AppStorage("styleLevel") private var style: StyleLevel = .standard
     @Environment(\.colorScheme) private var systemScheme
 
     var body: some View {
         let p = theme.palette(systemDark: systemScheme == .dark)
         palette = p
         return Root()
-            .id(p.name)
+            .background { if p.glass { GlassBackdrop() } }
+            .id(p.name + style.rawValue)
             .environment(\.locale, appLocale)
             .tint(p.accent)
             .preferredColorScheme(theme.scheme)
@@ -169,7 +171,7 @@ struct MainView: View {
                 }
         }
         .environment(\.openPage, { page = $0 })
-        .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { page = .workouts }) }
+        .sheet(isPresented: $plus) { ShortcutsSheet(choose: { quick = $0 }, train: { page = .workouts }) }
         .sheet(item: $quick) { quickSheet($0) }
         .sheet(isPresented: $weighing) { WeighInSheet() }
         .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
@@ -192,9 +194,16 @@ struct MainView: View {
             }
             .tag(PhoneTab.more).toolbar(.hidden, for: .tabBar)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { PhoneTabBar(tab: $tab) { plus = true } }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                if tab == .dashboard || tab == .food {
+                    FoodSearchBar(search: { quick = .food }, scan: { quick = .scan })
+                }
+                PhoneTabBar(tab: $tab) { plus = true }
+            }
+        }
         .environment(\.openPage, { open($0) })
-        .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { tab = .training }) }
+        .sheet(isPresented: $plus) { ShortcutsSheet(choose: { quick = $0 }, train: { tab = .training }) }
         .sheet(item: $quick) { quickSheet($0) }
         .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
         .onReceive(NotificationCenter.default.publisher(for: .gymOpenAction)) { _ in handlePending() }

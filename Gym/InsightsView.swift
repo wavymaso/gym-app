@@ -104,7 +104,7 @@ struct InsightsView: View {
             .frame(maxWidth: .infinity)
         }
         .debugScrollAnchor()
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle("Insights")
         .appStyle()
     }

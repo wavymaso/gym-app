@@ -128,7 +128,7 @@ struct LabelScanView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity)
-            .background(Color.pageBackground)
+            .pageBackground()
             .navigationTitle("Scan a label")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onChange(of: item) { _, it in

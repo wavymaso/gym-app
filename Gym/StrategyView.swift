@@ -98,7 +98,7 @@ struct StrategyView: View {
             .frame(maxWidth: 700, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle("Strategy")
         .sheet(isPresented: $editing) { GoalEditor() }
         .sheet(isPresented: $checkingIn) { CheckInView() }

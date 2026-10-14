@@ -112,6 +112,7 @@ struct SettingsView: View {
 /// Pick a theme: a small preview of each.
 struct AppearanceSection: View {
     @AppStorage("theme") private var theme: AppTheme = .midnight
+    @AppStorage("styleLevel") private var style: StyleLevel = .standard
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -123,6 +124,10 @@ struct AppearanceSection: View {
             }
             .padding(.vertical, 6)
             Text(theme.detail).font(.callout).foregroundStyle(.secondary)
+            Picker("Style", selection: $style) { ForEach(StyleLevel.allCases) { Text($0.label).tag($0) } }
+                .pickerStyle(.segmented)
+            Text(style == .maximal ? "Glowing rings, bars and charts, gradient card edges." : "Clean and calm.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -131,6 +136,11 @@ struct AppearanceSection: View {
         return VStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous).fill(p.background)
+                if p.glass {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(colors: [p.calories.opacity(0.7), p.protein.opacity(0.45), p.carbs.opacity(0.5)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
                 if t == .system {      // half and half
                     RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.daylight.background)
                         .mask(HStack(spacing: 0) { Color.clear; Color.black })

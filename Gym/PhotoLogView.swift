@@ -43,7 +43,7 @@ struct PhotoLogView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.pageBackground)
+            .pageBackground()
             .navigationTitle(start == .describe && jpeg == nil ? "Describe a meal" : "Photo log")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

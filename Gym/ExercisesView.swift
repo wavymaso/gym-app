@@ -104,7 +104,7 @@ struct ExerciseDetail: View {
             .frame(maxWidth: 860, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle(exercise.name)
         .appStyle()
     }

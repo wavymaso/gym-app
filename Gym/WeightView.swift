@@ -53,7 +53,7 @@ struct WeightView: View {
             .frame(maxWidth: 820, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle("Weight")
     }
 

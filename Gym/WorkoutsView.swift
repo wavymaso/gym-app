@@ -83,7 +83,7 @@ struct WorkoutsView: View {
             .frame(maxWidth: .infinity)
         }
         .debugScrollAnchor()
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle("Workouts")
         .sheet(item: $editingRoutine) { RoutineEditor(routine: $0) }
         .sheet(isPresented: $newRoutine) { RoutineEditor(routine: nil) }
@@ -207,7 +207,7 @@ struct WorkoutSummary: View {
                 }
                 .padding(pagePadding)
             }
-            .background(Color.pageBackground)
+            .pageBackground()
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .appStyle()

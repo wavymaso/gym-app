@@ -13,6 +13,7 @@ struct DashboardView: View {
     @Query private var weekEntries: [FoodEntry]
     @Query private var loggedDays: [FoodEntry]
     @AppStorage("dashLayout") private var layoutJSON = ""
+    @State private var heroPage = UserDefaults.standard.integer(forKey: "heroPage")      // testing: -heroPage 1
     @State private var sheet: DashSheet? = {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "checkIn") { return .checkIn }       // testing only
@@ -43,7 +44,7 @@ struct DashboardView: View {
                     let todayN = loggedDays.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }
                     let tt = ctx.dayTargets(on: dayKey()) ?? p.adjust(t.targets, on: dayKey())
                     heroWidgets(todayN, tt, p)
-                    quickActions
+                    if !isPhone { quickActions }
                     ForEach(DashLayout.load(layoutJSON).sections) { sec in
                         if !sec.items.isEmpty { section(sec, todayN, tt, t, p) }
                     }
@@ -56,7 +57,7 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity)
         }
         .debugScrollAnchor()
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle("Dashboard")
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
@@ -75,11 +76,14 @@ struct DashboardView: View {
     // MARK: Top
 
     private var header: some View {
-        HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)).uppercased())
-                    .font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(.secondary)
-                Text(greeting).font(.number(isPhone ? 30 : 34)).lineLimit(1).minimumScaleFactor(0.6)
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("DASHBOARD").font(.pageTitle(isPhone ? 30 : 34)).lineLimit(1).minimumScaleFactor(0.6)
+                    .foregroundStyle(GlowStyle.on || palette.glass
+                                     ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
+                                     : AnyShapeStyle(.primary))
+                Text("\(greeting) · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))")
+                    .font(.subheadline.weight(.medium)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer()
             let s = streak
@@ -94,6 +98,11 @@ struct DashboardView: View {
                 .overlay(Capsule().stroke(palette.stroke))
                 .help("Days in a row you've logged food")
             }
+            Button { sheet = .layout } label: {
+                Image(systemName: "slider.horizontal.3").font(.headline).frame(width: 44, height: 44)
+                    .modifier(GlassCapsule())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.top, isPhone ? 8 : 0)
         .capType()
@@ -152,8 +161,9 @@ struct DashboardView: View {
     /// phone; on the Mac, the rings across the top and the other two side by side.
     @ViewBuilder private func heroWidgets(_ eaten: Nutrients, _ t: Targets, _ p: Profile) -> some View {
         let rings = TodayRings(eaten: eaten.targets, target: t, energy: p.energy)
-        let week = Card(title: "Nutrition & targets", systemImage: "calendar") {
-            WeekTargetsWidget(entries: loggedDays, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
+        let week = Card(title: "Weekly nutrition", systemImage: "calendar") {
+            WeekGrid(entries: loggedDays, target: { d in d == dayKey() ? t : (ctx.dayTargets(on: d) ?? target(on: d).map { p.adjust($0.targets, on: d) }) },
+                     energy: p.energy)
         }
         let balance = Card(title: "Energy balance", systemImage: "plusminus") {
             EnergyBalanceWidget(intake: ctx.dailyIntake(), target: { d in target(on: d).map { p.adjust($0.targets, on: d).kcal } },
@@ -161,15 +171,15 @@ struct DashboardView: View {
                                 energy: p.energy)
         }
         if isPhone {
-            TabView {
-                rings.padding(.horizontal, 2)
-                week.padding(.horizontal, 2)
-                balance.padding(.horizontal, 2)
+            TabView(selection: $heroPage) {
+                rings.padding(.horizontal, 2).tag(0)
+                week.padding(.horizontal, 2).tag(1)
+                balance.padding(.horizontal, 2).tag(2)
             }
             #if os(iOS)
             .tabViewStyle(.page(indexDisplayMode: .always))
             #endif
-            .frame(height: 400)
+            .frame(height: 452)
         } else {
             rings
             HStack(alignment: .top, spacing: 16) { week; balance }
@@ -181,6 +191,13 @@ struct DashboardView: View {
         case .nutrition:
             NutritionSection(items: sec.items, remaining: sec.remaining, eaten: eaten, target: t, energy: p.energy,
                              waterMl: ctx.water(on: dayKey()).reduce(0) { $0 + $1.ml }, waterGoal: ctx.waterGoalMl, sex: p.sexValue, profile: p)
+        case .insights where isPhone:
+            Text(sec.kind.label).font(.title2.bold()).padding(.top, 6)
+            let small = sec.items.filter { ["expenditure", "weight", "energyBalance", "goal"].contains($0) }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(small, id: \.self) { id in sparkCard(id, set, p) }
+            }
+            ForEach(sec.items.filter { !small.contains($0) }, id: \.self) { id in card(id, set, p) }
         case .insights, .habits:
             Text(sec.kind.label).font(.title3.bold()).padding(.top, 6)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 320), spacing: 16, alignment: .top)], spacing: 16) {
@@ -211,6 +228,45 @@ struct DashboardView: View {
     }
 
     // MARK: Cards
+
+    /// MacroFactor's small insight cards: last 7 days as a sparkline, today's value.
+    @ViewBuilder private func sparkCard(_ id: String, _ t: TargetSet, _ p: Profile) -> some View {
+        let week = (0..<7).map { addDays(dayKey(), $0 - 6) }
+        switch id {
+        case "expenditure":
+            let exp = ctx.expenditureEstimates()
+            let byDay = Dictionary(exp.map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+            SparkCard(title: "Expenditure", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.energy.fromKcal),
+                      color: palette.warn, value: number(p.energy.fromKcal(exp.last?.kcal ?? t.expenditure)), unit: p.energy.rawValue) { openPage(.insights) }
+        case "weight":
+            let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+            let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+            SparkCard(title: "Weight Trend", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.weight.fromKg),
+                      color: Color(hex: 0xA77BF3), value: series.last.map { number(p.weight.fromKg($0.trend), digits: 1) } ?? "–",
+                      unit: p.weight.rawValue) { openPage(.weight) }
+        case "energyBalance":
+            let intake = ctx.dailyIntake()
+            let exp = Dictionary(ctx.expenditureEstimates().map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+            let past = week.dropLast()
+            let diffs = past.compactMap { d in intake[d].flatMap { i in exp[d].map { i - $0 } } }
+            let avg = diffs.isEmpty ? 0 : diffs.reduce(0, +) / Double(diffs.count)
+            SparkCard(title: "Energy Balance", period: "Last 7 days", values: diffs.map(p.energy.fromKcal), color: palette.calories,
+                      value: (avg > 0 ? "+" : "") + number(p.energy.fromKcal(avg)), unit: "\(p.energy.rawValue)/day") { openPage(.insights) }
+        case "goal":
+            let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+            let start = programs.first.map(\.startDay) ?? series.first?.day ?? dayKey()
+            let since = series.filter { $0.day >= start }
+            let step = max(1, since.count / 12)
+            let pts = stride(from: 0, to: since.count, by: step).map { since[$0].trend } + (since.last.map { [$0.trend] } ?? [])
+            let goalKg = p.goalWeightKg
+            let first = since.first?.trend ?? 0, now = since.last?.trend ?? 0
+            let done = goalKg.map { g in g != first ? max(0, min(1, (now - first) / (g - first))) : 1 }
+            SparkCard(title: "Goal Progress", period: "Last \(max(1, daysBetween(start, dayKey()))) days", values: pts.map(p.weight.fromKg),
+                      color: palette.good, value: done.map { "\(Int($0 * 100 + 0.5))" } ?? number(p.weight.fromKg(now - first), digits: 1),
+                      unit: done == nil ? p.weight.rawValue : "%") { openPage(.strategy) }
+        default: EmptyView()
+        }
+    }
 
     private func weightCard(_ p: Profile) -> some View {
         let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
@@ -569,7 +625,7 @@ struct WeighInSheet: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity)
-            .background(Color.pageBackground)
+            .pageBackground()
             .navigationTitle("Weigh in")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

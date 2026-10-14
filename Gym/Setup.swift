@@ -76,7 +76,7 @@ struct SetupView: View {
             .padding(pagePadding)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         #if os(iOS)
         .sheet(isPresented: $connecting) { ConnectMacView().appStyle() }
         #endif

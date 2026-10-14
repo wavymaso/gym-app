@@ -42,7 +42,7 @@ struct FoodLogView: View {
             .frame(maxWidth: .infinity)
         }
         .debugScrollAnchor()
-        .background(Color.pageBackground)
+        .pageBackground()
         .navigationTitle("Food log")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

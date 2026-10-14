@@ -80,7 +80,7 @@ struct FoodLogger: View {
                 }
                 .frame(maxHeight: .infinity)
             }
-            .background(Color.pageBackground)
+            .pageBackground()
             #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)
             #endif
@@ -334,7 +334,7 @@ struct FoodLogger: View {
                 Spacer(minLength: 0)
             }
             .padding()
-            .background(Color.pageBackground)
+            .pageBackground()
             .navigationTitle("When")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

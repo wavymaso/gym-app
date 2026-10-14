@@ -100,7 +100,7 @@ struct AddFoodView: View {
                 }
             }
             .padding(16)
-            .background(Color.pageBackground)
+            .pageBackground()
             List {
                 switch tab {
                 case .search: searchResults
@@ -124,7 +124,7 @@ struct AddFoodView: View {
     private var standalone: some View {
         NavigationStack {
             panel
-            .background(Color.pageBackground)
+            .pageBackground()
             .navigationTitle(isPicking ? "Add ingredient" : "Add food")
             .navigationDestination(item: $chosen) { f in FoodAmountView(food: f, mode: mode, done: { dismiss() }) }
             .toolbar {

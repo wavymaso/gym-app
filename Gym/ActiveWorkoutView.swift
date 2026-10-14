@@ -50,7 +50,7 @@ struct ActiveWorkoutView: View {
             .frame(maxWidth: 860, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         .sensoryFeedback(.success, trigger: sets.filter(\.done).count) { old, new in new > old }
         .safeAreaInset(edge: .bottom) {
             if let restEnds {

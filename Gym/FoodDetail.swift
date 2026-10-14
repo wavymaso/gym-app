@@ -55,7 +55,7 @@ struct FoodDetailView: View {
             }
             .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 20)
         }
-        .background(Color.pageBackground)
+        .pageBackground()
         .safeAreaInset(edge: .bottom, spacing: 0) { bottom }
         .navigationTitle(food.name)
         #if os(iOS)

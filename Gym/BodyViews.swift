@@ -320,7 +320,7 @@ struct PhotoViewer: View {
             PhotoThumb(data: photo.jpeg, maxPixels: 1600).aspectRatio(3 / 4, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 16)).padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.pageBackground)
+                .pageBackground()
                 .navigationTitle("\(Pose(rawValue: photo.pose)?.label ?? "") · \(short(photo.day))")
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
@@ -374,7 +374,7 @@ struct CompareView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.pageBackground)
+            .pageBackground()
             .navigationTitle("Compare")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

@@ -5,7 +5,7 @@ import SwiftUI
 // changing theme rebuilds the window (see ThemedRoot in GymApp.swift).
 
 enum AppTheme: String, CaseIterable, Identifiable {
-    case midnight, graphite, ocean, daylight, system
+    case midnight, graphite, ocean, glass, daylight, system
     var id: String { rawValue }
 
     var label: String {
@@ -13,6 +13,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .midnight: return "Midnight"
         case .graphite: return "Graphite"
         case .ocean: return "Ocean"
+        case .glass: return "Glass"
         case .daylight: return "Daylight"
         case .system: return "Automatic"
         }
@@ -23,6 +24,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .midnight: return "Near-black, electric colours"
         case .graphite: return "Dark grey, warm orange"
         case .ocean: return "Deep blue, teal"
+        case .glass: return "Apple's Liquid Glass over colour"
         case .daylight: return "Light and clean"
         case .system: return "Midnight at night, Daylight by day"
         }
@@ -34,6 +36,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .midnight: return .midnight
         case .graphite: return .graphite
         case .ocean: return .ocean
+        case .glass: return .glass
         case .daylight: return .daylight
         case .system: return systemDark ? .midnight : .daylight
         }
@@ -63,6 +66,7 @@ struct Palette: Equatable {
     var carbs: Color
     var good = Color(hex: 0x34C77B)
     var warn = Color(hex: 0xFF9F2E)
+    var glass = false              // cards are Liquid Glass over a colourful backdrop
 
     static let midnight = Palette(name: "midnight", scheme: .dark, background: Color(hex: 0x09090C), surface: Color(hex: 0x15151B),
                                   raised: Color(hex: 0x22222B), stroke: .white.opacity(0.06), accent: Color(hex: 0x4C7DFF),
@@ -76,6 +80,10 @@ struct Palette: Equatable {
                                raised: Color(hex: 0x172D45), stroke: .white.opacity(0.07), accent: Color(hex: 0x14B8C8),
                                calories: Color(hex: 0x22C7DA), protein: Color(hex: 0xFF6A88), fat: Color(hex: 0xFFC65A),
                                carbs: Color(hex: 0x7BE38E))
+    static let glass = Palette(name: "glass", scheme: .dark, background: Color(hex: 0x0A0D1F), surface: .white.opacity(0.07),
+                               raised: .white.opacity(0.11), stroke: .white.opacity(0.14), accent: Color(hex: 0x7A92FF),
+                               calories: Color(hex: 0x6F8CFF), protein: Color(hex: 0xFF5C86), fat: Color(hex: 0xFFC247),
+                               carbs: Color(hex: 0x3EE0A8), glass: true)
     static let daylight = Palette(name: "daylight", scheme: .light, background: Color(hex: 0xF2F2F7), surface: .white,
                                   raised: Color(hex: 0xEDEDF2), stroke: .black.opacity(0.06), accent: Color(hex: 0x2F6BFF),
                                   calories: Color(hex: 0x2F6BFF), protein: Color(hex: 0xE8445A), fat: Color(hex: 0xEFA300),
@@ -146,17 +154,24 @@ extension View {
             .preferredColorScheme(palette.scheme)
     }
 
+    /// Behind a page: the theme's colour, or the Glass backdrop.
+    func pageBackground() -> some View {
+        background {
+            if palette.glass { GlassBackdrop() } else { Color.pageBackground.ignoresSafeArea() }
+        }
+    }
+
     /// A settings-style form on the theme's background.
     func themedForm() -> some View {
         formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .background(Color.pageBackground)
+            .pageBackground()
     }
 
     /// A list on the theme's background.
     func themedList() -> some View {
         scrollContentBackground(.hidden)
-            .background(Color.pageBackground)
+            .pageBackground()
     }
 }
 
@@ -173,7 +188,7 @@ var adaptiveStack: AnyLayout { isPhone ? AnyLayout(VStackLayout(spacing: 12)) : 
 
 extension Color {
     static var cardBackground: Color { palette.surface }
-    static var pageBackground: Color { palette.background }
+    static var pageBackground: Color { palette.glass ? .clear : palette.background }     // glass: the backdrop shows through
     static var raisedBackground: Color { palette.raised }
 }
 
@@ -205,8 +220,69 @@ struct Card<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .modifier(CardSurface())
+    }
+}
+
+/// How much flair: Standard, or Maximal (gradient edges, glow on rings, bars and charts).
+enum StyleLevel: String, CaseIterable, Identifiable {
+    case standard, maximal
+    var id: String { rawValue }
+    var label: String { self == .standard ? "Standard" : "Maximal" }
+}
+
+enum GlowStyle {
+    static var on: Bool { UserDefaults.standard.string(forKey: "styleLevel") == StyleLevel.maximal.rawValue }
+}
+
+/// Every card's surface: plain, glowing (Maximal) or Liquid Glass (Glass theme).
+struct CardSurface: ViewModifier {
+    var cornerRadius: CGFloat = 20
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if palette.glass {
+            if #available(iOS 26, macOS 26, *) {
+                content.glassEffect(.regular, in: shape)
+            } else {
+                content.background(.ultraThinMaterial, in: shape).overlay(shape.stroke(palette.stroke))
+            }
+        } else if GlowStyle.on {
+            content
+                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: palette.accent, by: 0.07), palette.surface],
+                                                      startPoint: .topLeading, endPoint: .bottomTrailing)))
+                .overlay(shape.stroke(LinearGradient(colors: [palette.accent.opacity(0.55), .white.opacity(0.03), palette.protein.opacity(0.3)],
+                                                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2))
+                .shadow(color: palette.accent.opacity(palette.scheme == .dark ? 0.18 : 0.1), radius: 16, y: 6)
+        } else {
+            content.background(Color.cardBackground, in: shape).overlay(shape.stroke(palette.stroke))
+        }
+    }
+}
+
+/// A floating capsule (the search bar, the tab bar on Glass).
+struct GlassCapsule: ViewModifier {
+    func body(content: Content) -> some View {
+        if palette.glass, #available(iOS 26, macOS 26, *) {
+            content.glassEffect(.regular.interactive(), in: Capsule())
+        } else {
+            content.background(palette.glass ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.raisedBackground), in: Capsule())
+                .overlay(Capsule().stroke(palette.stroke))
+        }
+    }
+}
+
+/// Behind everything on the Glass theme: soft colour for the glass to bend.
+struct GlassBackdrop: View {
+    var body: some View {
+        ZStack {
+            Color(hex: 0x070A18)
+            Circle().fill(palette.calories).frame(width: 420).blur(radius: 120).offset(x: -150, y: -320).opacity(0.55)
+            Circle().fill(palette.protein).frame(width: 360).blur(radius: 130).offset(x: 170, y: -40).opacity(0.38)
+            Circle().fill(palette.carbs).frame(width: 380).blur(radius: 140).offset(x: -120, y: 360).opacity(0.32)
+            Circle().fill(Color(hex: 0x9B5CFF)).frame(width: 300).blur(radius: 120).offset(x: 160, y: 520).opacity(0.35)
+        }
+        .ignoresSafeArea()
     }
 }
 
@@ -224,6 +300,7 @@ struct Ring: View {
                 .trim(from: 0, to: min(max(shown, 0), 1))
                 .stroke(AngularGradient(colors: [color.opacity(0.7), color], center: .center, startAngle: .degrees(0), endAngle: .degrees(360 * min(max(shown, 0.01), 1))),
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .shadow(color: GlowStyle.on || palette.glass ? color.opacity(0.65) : .clear, radius: lineWidth * 0.8)
                 .rotationEffect(.degrees(-90))
             if shown > 1 {
                 Circle()
@@ -333,7 +410,7 @@ extension View {
     /// Testing only (-scrollBottom YES): open long pages scrolled to the end, for snapshots.
     func debugScrollAnchor() -> some View {
         #if DEBUG
-        defaultScrollAnchor(UserDefaults.standard.bool(forKey: "scrollBottom") ? .bottom : nil)
+        defaultScrollAnchor(UserDefaults.standard.bool(forKey: "scrollBottom") ? .bottom : UserDefaults.standard.bool(forKey: "scrollMid") ? .center : nil)
         #else
         self
         #endif
