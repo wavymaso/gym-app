@@ -15,7 +15,7 @@ let syncPort: UInt16 = 8010
     let started = Date()
     ctx.applySync(records: body["records"] as? [[String: Any]] ?? [], deleted: body["deleted"] as? [[String: Any]] ?? [])
     let (records, deleted) = ctx.syncChanges(since: since)
-    UserDefaults.standard.set(Date(), forKey: "lastPhoneSync")
+    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastPhoneSync")   // a number: Settings reads it with @AppStorage
     return ["now": started.timeIntervalSince1970, "records": records, "deleted": deleted]
 }
 
