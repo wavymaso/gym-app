@@ -28,13 +28,15 @@ struct SettingsView: View {
                         row("sparkles", "Photo logging (AI)", PhotoAI.engine.label) { page("Photo logging") { PhotoAISection() } },
                         row("bell.badge", "Reminders", "Weigh-in, logging, check-in") { page("Reminders") { RemindersSection() } },
                     ])
-                    group("Feature Settings", [
-                        rowAction("square.grid.2x2", "Dashboard", "Sections, cards, consumed or remaining") { customizing = true },
-                        row("fork.knife", "Food search", usdaKey.isEmpty ? "USDA demo key" : "Your USDA key") { foodSearchPage },
+                    group("Nutrition & coaching", [
+                        row("target", "Strategy & coaching", "Goal, program, check-ins, phases") { StrategyView() },
+                        row("leaf", "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() },
                         row("bolt.fill", "Expenditure", "Algorithm, starting estimate, modifiers") { ExpenditureSettingsView() },
                         row("chart.line.uptrend.xyaxis", "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() },
-                        row("leaf", "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() },
-                        row("target", "Strategy & coaching", "Goal, program, check-ins, phases") { StrategyView() },
+                        row("fork.knife", "Food search", usdaKey.isEmpty ? "USDA demo key" : "Your USDA key") { foodSearchPage },
+                    ])
+                    group("App", [
+                        rowAction("square.grid.2x2", "Dashboard", "Sections, cards, consumed or remaining") { customizing = true },
                         row("mic.fill", "Siri & Shortcuts", "What you can say") { siriPage },
                     ])
                     VStack(alignment: .leading, spacing: 10) {

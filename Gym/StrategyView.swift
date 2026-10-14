@@ -397,49 +397,65 @@ struct StrategyView: View {
     // MARK: Settings rows
 
     @ViewBuilder private func settings(_ p: Profile, _ g: Program, _ t: TargetSet) -> some View {
-        VStack(spacing: 0) {
+        let phaseText = [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ")
+        category("Goal & targets", "What you're aiming for") {
             rowButton("target", palette.good, "Goal", g.goalValue.label + " · " + goalDetail(g, p)) { editing = true }
             rowButton("flag.checkered", palette.calories, "Goal weight", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalWeight = true }
             rowButton("fork.knife", palette.fat, "Diet & protein", "\(g.dietValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg protein") { editing = true }
-            rowButton("calendar", palette.carbs, "Calorie distribution", p.hasDistribution ? "On: varies by day" : "Off: the same every day") { showingDistribution = true }
+            rowMenu("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein",
+                    last: g.mode == "coached") {
+                ForEach(TrainingType.allCases) { t in Button(t.label) { p.trainingType = t.rawValue; ctx.commit() } }
+            }
+            if g.mode == "manual" {
+                rowButton("pencil", palette.accent, "Edit targets", "\(p.energy.format(t.targets.kcal)) a day", last: true) { manual = true }
+            }
+            if g.mode == "collaborative" {
+                rowButton("pencil", palette.accent, "Your macros", "P \(number(t.targets.protein)) · F \(number(t.targets.fat)) · C \(number(t.targets.carbs))", last: true) { collaborative = true }
+            }
+        }
+        category("Coaching", "How targets get updated") {
             rowMenu("person.crop.circle.badge.checkmark", palette.accent, "Program style", styleText(g.mode)) {
                 Button("Coached: the app sets everything, with guardrails") { g.mode = "coached"; ctx.commit() }
                 Button("Collaborative: your macros, the app's weekly calories") { collaborative = true }
                 Button("Manual: fixed targets you set") { manual = true }
             }
-            rowMenu("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein") {
-                ForEach(TrainingType.allCases) { t in Button(t.label) { p.trainingType = t.rawValue; ctx.commit() } }
+            rowMenu("clock.arrow.circlepath", palette.protein, "Check-in day", weekdayName(g.checkInWeekday)) {
+                ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in Button(weekdayName(d)) { g.checkInWeekday = d; ctx.commit() } }
             }
             if g.mode == "coached" {
                 rowButton("shield.lefthalf.filled", palette.good, "Calorie floor",
                           "Never below \(p.energy.format(p.calorieFloorKcal > 0 ? p.calorieFloorKcal : calorieFloor(p.sexValue))) · fat minimum on") { editingFloor = true }
             }
-            rowMenu("clock.arrow.circlepath", palette.protein, "Check-in day", weekdayName(g.checkInWeekday)) {
-                ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in Button(weekdayName(d)) { g.checkInWeekday = d; ctx.commit() } }
-            }
-            if g.mode == "manual" {
-                rowButton("pencil", palette.accent, "Edit targets", "\(p.energy.format(t.targets.kcal)) a day") { manual = true }
-            }
-            if g.mode == "collaborative" {
-                rowButton("pencil", palette.accent, "Your macros", "P \(number(t.targets.protein)) · F \(number(t.targets.fat)) · C \(number(t.targets.carbs))") { collaborative = true }
-            }
+            rowButton("eye.slash", Color(hex: 0xA77BF3), "Shadow mode", p.shadowMode ? "On: check-ins don't change targets" : "Off · replay past check-ins", last: true) { shadowing = true }
+        }
+        category("Your week & phases", "Planning the days and months ahead") {
+            rowButton("calendar", palette.carbs, "Calorie distribution", p.hasDistribution ? "On: varies by day" : "Off: the same every day") { showingDistribution = true }
             rowButton("arrow.up.circle", palette.carbs, "Refeed day",
                       p.refeedWeekday > 0 ? "\(weekdayName(p.refeedWeekday)) · +\(number(p.refeedExtraKcal / 4)) g carbs" : "Off") { refeeding = true }
             rowButton("pause.circle", palette.good, "Diet break",
                       p.inDietBreak(dayKey()) ? "On until \(date(fromKey: p.dietBreakEnd).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))"
                       : (!p.dietBreakStart.isEmpty && p.dietBreakStart > dayKey() ? "Planned from \(date(fromKey: p.dietBreakStart).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))"
                          : "A week or two at maintenance")) { breaking = true }
-            rowButton("flag.2.crossed", palette.calories, "Phase plan",
-                      [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ").isEmpty
-                        ? "Plan what comes after this phase"
-                        : [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ")) { planning = true }
-            rowButton("eye.slash", Color(hex: 0xA77BF3), "Shadow mode", p.shadowMode ? "On: check-ins don't change targets" : "Off · replay past check-ins") { shadowing = true }
-            rowButton("scalemass", palette.accent, "Scales", p.scaleNames.isEmpty ? "Just one" : "Main + \(p.scaleNames.joined(separator: ", "))") { scaling = true }
-            rowLink("flame", palette.warn, "Expenditure settings", "Algorithm, starting estimate") { ExpenditureSettingsView() }
-            rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
-            rowLink("chart.line.uptrend.xyaxis", Color(hex: 0xA77BF3), "Weight trend settings", "How the trend is smoothed", last: true) { WeightTrendSettingsView() }
+            rowButton("flag.2.crossed", palette.calories, "Phase plan", phaseText.isEmpty ? "Plan what comes after this phase" : phaseText, last: true) { planning = true }
         }
-        .modifier(CardSurface())
+        category("Accuracy", "How your data is read") {
+            rowButton("scalemass", palette.accent, "Scales", p.scaleNames.isEmpty ? "Just one" : "Main + \(p.scaleNames.joined(separator: ", "))") { scaling = true }
+            rowLink("flame", palette.warn, "Expenditure", "Algorithm, starting estimate") { ExpenditureSettingsView() }
+            rowLink("chart.line.uptrend.xyaxis", Color(hex: 0xA77BF3), "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() }
+            rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals", last: true) { NutrientTargetsView() }
+        }
+    }
+
+    /// A titled card of related rows.
+    private func category<C: View>(_ title: String, _ subtitle: String, @ViewBuilder _ rows: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title.uppercased()).font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary)
+                Text(subtitle).font(.caption2).foregroundStyle(.tertiary)
+            }
+            .padding(.leading, 4)
+            VStack(spacing: 0) { rows() }.modifier(CardSurface())
+        }
     }
 
     private func rowContent(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool) -> some View {
@@ -461,8 +477,8 @@ struct StrategyView: View {
         Button(action: action) { rowContent(icon, c, title, value, last: last) }.buttonStyle(.plain)
     }
 
-    private func rowMenu<M: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, @ViewBuilder _ items: () -> M) -> some View {
-        Menu { items() } label: { rowContent(icon, c, title, value, last: false) }.menuStyle(.button).buttonStyle(.plain)
+    private func rowMenu<M: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, @ViewBuilder _ items: () -> M) -> some View {
+        Menu { items() } label: { rowContent(icon, c, title, value, last: last) }.menuStyle(.button).buttonStyle(.plain)
     }
 
     private func rowLink<D: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, @ViewBuilder _ dest: @escaping () -> D) -> some View {

@@ -8,13 +8,20 @@ struct NutrientTargetsView: View {
     @State private var texts: [String: String] = [:]
 
     private let keys = ["fiber", "sugar", "satFat", "sodium"] + Micro.all.map(\.key)
+    private let groups: [(String, [String])] = [
+        ("Carbs & fats", ["fiber", "sugar", "satFat", "cholesterol"]),
+        ("Minerals", ["sodium", "potassium", "calcium", "magnesium", "iron", "zinc"]),
+        ("Vitamins", ["vitA", "vitC", "vitD", "vitE", "vitK", "b12", "folate"]),
+        ("Caffeine & alcohol", ["caffeine", "alcohol"]),
+    ]
 
     var body: some View {
         Form {
             if let p = profiles.first {
                 let kcal = ctx.dayTargets(on: dayKey())?.kcal ?? 2000
+                ForEach(groups, id: \.0) { title, ks in
                 Section {
-                    ForEach(keys, id: \.self) { k in
+                    ForEach(ks.filter(keys.contains), id: \.self) { k in
                         let def = nutrientTarget(k, kcal: kcal, sex: p.sexValue, profile: nil)
                         let unit = k == "sodium" ? "mg" : (Micro.all.first { $0.key == k }?.unit ?? "g")
                         HStack {
@@ -33,8 +40,13 @@ struct NutrientTargetsView: View {
                             Text(unit).foregroundStyle(.secondary).frame(width: 26, alignment: .leading)
                         }
                     }
+                } header: {
+                    Text(title)
                 } footer: {
-                    Text("Leave empty for the default (adult reference intakes; fibre scales with your calories). Limits are maximums, shown in orange when you go over.")
+                    if title == groups.last?.0 {
+                        Text("Leave empty for the default (adult reference intakes; fibre scales with your calories). Limits are maximums, shown in orange when you go over.")
+                    }
+                }
                 }
             }
         }
