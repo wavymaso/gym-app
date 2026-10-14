@@ -51,7 +51,7 @@ struct ActiveWorkoutView: View {
         .sheet(isPresented: $picking) {
             ExercisePicker { key in
                 ctx.addExercise(key, to: workout, order: (sets.map(\.exerciseOrder).max() ?? -1) + 1)
-                try? ctx.save()
+                ctx.commit()
             }
         }
         .confirmationDialog("Discard this workout? Nothing from it is kept.", isPresented: $confirmDiscard) {
@@ -62,7 +62,7 @@ struct ActiveWorkoutView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
-                TextField("Workout name", text: Binding(get: { workout.name }, set: { workout.name = $0; try? ctx.save() }))
+                TextField("Workout name", text: Binding(get: { workout.name }, set: { workout.name = $0; ctx.commit() }))
                     .font(.title.bold()).textFieldStyle(.plain)
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
                     Text("\(clock(workout.duration)) · \(sets.filter(\.done).count) sets done")
@@ -88,19 +88,19 @@ struct ActiveWorkoutView: View {
         } else {
             records[row.persistentModelID] = nil
         }
-        try? ctx.save()
+        ctx.commit()
     }
 
     private func addSet(to rows: [WorkoutSet]) {
         guard let last = rows.last else { return }
         ctx.insert(WorkoutSet(workoutKey: workout.key, exerciseKey: last.exerciseKey, exerciseOrder: last.exerciseOrder,
                               setOrder: last.setOrder + 1, kg: last.kg, reps: last.reps, restSeconds: last.restSeconds, day: workout.day))
-        try? ctx.save()
+        ctx.commit()
     }
 
     private func removeExercise(_ order: Int) {
         for s in sets where s.exerciseOrder == order { ctx.delete(s) }
-        try? ctx.save()
+        ctx.commit()
     }
 }
 
@@ -142,10 +142,10 @@ private struct ExerciseBlock: View {
                     GridRow {
                         Menu {
                             ForEach(SetKind.allCases, id: \.self) { k in
-                                Button(k.label) { row.kind = k.rawValue; try? ctx.save() }
+                                Button(k.label) { row.kind = k.rawValue; ctx.commit() }
                             }
                             Divider()
-                            Button("Delete set", role: .destructive) { ctx.delete(row); try? ctx.save() }
+                            Button("Delete set", role: .destructive) { ctx.delete(row); ctx.commit() }
                         } label: {
                             Text(row.kindValue == .normal ? "\(working)" : row.kindValue.short)
                                 .fontWeight(.semibold).frame(width: 26)
@@ -155,12 +155,12 @@ private struct ExerciseBlock: View {
                         Text(previousText(previous, workingIndex: working - 1, row: row))
                             .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 72 : 90, alignment: .leading)
                             .lineLimit(1).minimumScaleFactor(0.8)
-                        DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); try? ctx.save() }), digits: 2)
+                        DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commit() }), digits: 2)
                             .frame(width: isPhone ? 64 : 70)
-                        DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); try? ctx.save() }), digits: 0)
+                        DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commit() }), digits: 0)
                             .frame(width: isPhone ? 44 : 50)
                         if !isPhone {
-                            DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; try? ctx.save() }), digits: 1, emptyBelowZero: true)
+                            DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; ctx.commit() }), digits: 1, emptyBelowZero: true)
                                 .frame(width: 44)
                         }
                         HStack(spacing: 6) {
@@ -332,7 +332,7 @@ struct NewExerciseView: View {
                     Button("Save") {
                         let e = Exercise(key: "custom:\(UUID().uuidString)", name: name.trimmingCharacters(in: .whitespaces), muscle: muscle,
                                          equipment: equipment, isCustom: true)
-                        ctx.insert(e); try? ctx.save()
+                        ctx.insert(e); ctx.commit()
                         dismiss(); created(e.key)
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)

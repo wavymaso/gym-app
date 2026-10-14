@@ -38,7 +38,7 @@ extension ModelContext {
         } else {
             insert(WeightEntry(day: day, kg: kg))
         }
-        try? save()
+        commit()
     }
 }
 
@@ -93,7 +93,7 @@ extension ModelContext {
     func finishCheckIn(apply targets: Targets?, expenditure: Double) {
         if let targets { insert(TargetSet(targets: targets, expenditure: expenditure, reason: "check-in")) }
         activeProgram?.lastCheckIn = dayKey()
-        try? save()
+        commit()
     }
 }
 

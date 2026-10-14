@@ -5,6 +5,8 @@ import SwiftData
 // deleting a routine or an exercise never takes your workout history with it.
 
 @Model final class Exercise {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     @Attribute(.unique) var key: String       // builtin:<slug> | custom:<id>
     var name: String
     var muscle: String                        // Muscle.rawValue
@@ -25,6 +27,8 @@ import SwiftData
 }
 
 @Model final class Routine {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     @Attribute(.unique) var key: String
     var name: String
     var order: Int
@@ -36,6 +40,8 @@ import SwiftData
 }
 
 @Model final class RoutineExercise {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var routineKey: String
     var exerciseKey: String
     var order: Int
@@ -51,6 +57,8 @@ import SwiftData
 }
 
 @Model final class Workout {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     @Attribute(.unique) var key: String
     var name: String
     var start: Date
@@ -67,6 +75,8 @@ import SwiftData
 }
 
 @Model final class WorkoutSet {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var workoutKey: String
     var exerciseKey: String
     var exerciseOrder: Int                    // position of the exercise in the workout
@@ -127,7 +137,7 @@ extension ModelContext {
             let items = (try? fetch(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == rk }, sortBy: [SortDescriptor(\.order)]))) ?? []
             for (i, item) in items.enumerated() { addExercise(item.exerciseKey, to: w, order: i, sets: item.sets, rest: item.restSeconds, reps: item.repLow) }
         }
-        try? save()
+        commit()
         return w
     }
 
@@ -144,13 +154,13 @@ extension ModelContext {
     func finish(_ w: Workout) {
         w.end = Date()
         for s in sets(of: w.key) where !s.done { delete(s) }
-        try? save()
+        commit()
     }
 
     func discard(_ w: Workout) {
         for s in sets(of: w.key) { delete(s) }
         delete(w)
-        try? save()
+        commit()
     }
 
     /// The built-in exercise library, added once.
@@ -160,7 +170,7 @@ extension ModelContext {
         for (slug, name, muscle, secondary, equipment) in exerciseLibrary {
             insert(Exercise(key: "builtin:\(slug)", name: name, muscle: muscle, secondary: secondary, equipment: equipment, isCustom: false))
         }
-        try? save()
+        commit()
     }
 }
 

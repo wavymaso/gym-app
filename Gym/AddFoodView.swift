@@ -142,7 +142,7 @@ struct AddFoodView: View {
                 if f.source == "recipe" { Button("Edit recipe…") { editingRecipe = f } } else { Button("Edit food…") { editingFood = f } }
                 Button("Delete", role: .destructive) {
                     for i in ctx.ingredients(of: f.key) { ctx.delete(i) }
-                    ctx.delete(f); try? ctx.save()
+                    ctx.delete(f); ctx.commit()
                 }
             }
         }
@@ -314,7 +314,7 @@ struct FoodAmountView: View {
         .navigationTitle(entry == nil ? "How much?" : "Edit entry")
         .toolbar {
             ToolbarItem {
-                Button { food.isFavorite.toggle(); try? ctx.save() } label: {
+                Button { food.isFavorite.toggle(); ctx.commit() } label: {
                     Label("Favourite", systemImage: food.isFavorite ? "star.fill" : "star")
                 }
             }
@@ -362,7 +362,7 @@ struct FoodAmountView: View {
             e.amount = amount; e.unit = unit; e.grams = food.grams(amount, unit: unit); e.nutrients = food.nutrients(amount, unit: unit)
             e.time = Calendar.current.date(bySettingHour: Calendar.current.component(.hour, from: time),
                                            minute: Calendar.current.component(.minute, from: time), second: 0, of: date(fromKey: e.day)) ?? time
-            try? ctx.save()
+            ctx.commit()
         } else {
             switch mode {
             case .log(let day):
@@ -389,7 +389,7 @@ struct EntryEditor: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .destructiveAction) {
-                        Button("Delete", role: .destructive) { ctx.delete(entry); try? ctx.save(); dismiss() }
+                        Button("Delete", role: .destructive) { ctx.delete(entry); ctx.commit(); dismiss() }
                     }
                 }
         }

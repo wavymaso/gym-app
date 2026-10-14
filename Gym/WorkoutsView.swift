@@ -248,7 +248,7 @@ struct RoutineEditor: View {
             .sheet(isPresented: $picking) { ExercisePicker { items.append(Item(exerciseKey: $0)) } }
             .confirmationDialog("Delete this routine? Workouts you did with it stay in your history.", isPresented: $confirmDelete) {
                 Button("Delete routine", role: .destructive) {
-                    if let r = routine { clearItems(r.key); ctx.delete(r); try? ctx.save() }
+                    if let r = routine { clearItems(r.key); ctx.delete(r); ctx.commit() }
                     dismiss()
                 }
             }
@@ -284,7 +284,7 @@ struct RoutineEditor: View {
             ctx.insert(RoutineExercise(routineKey: r.key, exerciseKey: item.exerciseKey, order: i, sets: item.sets,
                                        repLow: item.repLow, repHigh: item.repHigh, restSeconds: item.rest))
         }
-        try? ctx.save()
+        ctx.commit()
         dismiss()
     }
 }

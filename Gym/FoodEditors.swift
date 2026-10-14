@@ -65,7 +65,7 @@ struct QuickAddView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 if let entry {
                     ToolbarItem(placement: .destructiveAction) {
-                        Button("Delete", role: .destructive) { ctx.delete(entry); try? ctx.save(); dismiss() }
+                        Button("Delete", role: .destructive) { ctx.delete(entry); ctx.commit(); dismiss() }
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -105,7 +105,7 @@ struct QuickAddView: View {
             ctx.insert(FoodEntry(day: day, time: time(when, on: day), name: label, brand: nil, foodKey: nil, amount: 1, unit: "",
                                  grams: 0, nutrients: nutrients))
         }
-        try? ctx.save()
+        ctx.commit()
         dismiss()
     }
 }
@@ -208,7 +208,7 @@ struct CustomFoodView: View {
         f.brand = brand.trimmingCharacters(in: .whitespaces).isEmpty ? nil : brand.trimmingCharacters(in: .whitespaces)
         f.barcode = barcode.isEmpty ? nil : barcode
         f.isLiquid = liquid; f.per100 = per100; f.servings = servings
-        try? ctx.save()
+        ctx.commit()
         dismiss()
     }
 }
@@ -306,7 +306,7 @@ struct RecipeView: View {
             ctx.insert(RecipeIngredient(recipeKey: r.key, foodKey: item.foodKey, name: item.name, grams: item.grams,
                                         per100: item.per100, order: i))
         }
-        try? ctx.save()
+        ctx.commit()
         dismiss()
     }
 }

@@ -6,6 +6,8 @@ import SwiftData
 
 /// You: what the starting estimate is worked out from, and your units.
 @Model final class Profile {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var sex: String
     var birthDate: Date
     var heightCm: Double
@@ -28,6 +30,8 @@ import SwiftData
 /// A goal you're following: lose, maintain or gain, how fast, and how calories are split.
 /// Changing your goal starts a new program; old ones are kept for history.
 @Model final class Program {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var startDay: String
     var goal: String
     var ratePercent: Double          // % of body weight per week
@@ -54,6 +58,8 @@ import SwiftData
 /// Daily targets from a given day on. A new set is added at setup, at each weekly
 /// check-in, and when you change your goal, so past days keep the targets they had.
 @Model final class TargetSet {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     var fromDay: String
     var kcal: Double
     var protein: Double
@@ -73,6 +79,8 @@ import SwiftData
 
 /// A scale weight on a day (one per day; logging again replaces it).
 @Model final class WeightEntry {
+    var syncID: String = ""                   // the same on the Mac and the iPhone (Sync.swift)
+    var modifiedAt: Date = Date(timeIntervalSince1970: 0)
     @Attribute(.unique) var day: String
     var kg: Double
     var bodyFatPercent: Double?
@@ -85,7 +93,7 @@ import SwiftData
 
 let allModels: [any PersistentModel.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self,
                                              Food.self, RecipeIngredient.self, FoodEntry.self,
-                                             Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self]
+                                             Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self, Tombstone.self]
 
 // MARK: - Looking things up
 
@@ -122,6 +130,6 @@ extension ModelContext {
         let t = makeTargets(expenditure: expenditure, weightKg: weightKg, sex: sex, goal: goal, ratePercent: ratePercent,
                             diet: diet, protein: protein)
         insert(TargetSet(targets: t, expenditure: expenditure, reason: reason))
-        try? save()
+        commit()
     }
 }
