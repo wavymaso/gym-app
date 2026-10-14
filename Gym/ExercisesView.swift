@@ -119,7 +119,7 @@ struct ExerciseDetail: View {
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.title2.bold()).monospacedDigit()
+            Text(value).font(.number(26)).monospacedDigit()
             Text(note).font(.caption).foregroundStyle(.secondary)
         }
     }

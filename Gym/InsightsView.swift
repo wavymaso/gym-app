@@ -41,7 +41,7 @@ struct InsightsView: View {
                             }
                         }
                     }
-                    .frame(height: 220)
+                    .numberYAxis().frame(height: 220)
                     legend([("Eaten", Macro.calories.color), ("Target", .primary.opacity(0.6))])
                 }
                 Card(title: "Expenditure and intake", systemImage: "flame") {
@@ -58,7 +58,7 @@ struct InsightsView: View {
                         }
                     }
                     .chartYScale(domain: .automatic(includesZero: false))
-                    .frame(height: 200)
+                    .numberYAxis().frame(height: 200)
                     legend([("Expenditure", Macro.fat.color), ("Intake, 7-day average", Macro.calories.color)])
                     Text("When intake sits below expenditure you lose weight, above it you gain. The gap is your daily deficit or surplus.")
                         .font(.callout).foregroundStyle(.secondary)
@@ -74,7 +74,7 @@ struct InsightsView: View {
                     }
                     .chartForegroundStyleScale(["Protein": Macro.protein.color, "Fat": Macro.fat.color, "Carbs": Macro.carbs.color])
                     .chartYAxisLabel("kcal from each")
-                    .frame(height: 200)
+                    .numberYAxis().frame(height: 200)
                     if let a = d.avg, let t = d.avgTarget {
                         adaptiveStack {
                             ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
@@ -96,7 +96,7 @@ struct InsightsView: View {
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.title2.bold()).monospacedDigit()
+            Text(value).font(.number(26)).monospacedDigit()
             Text(note).font(.caption).foregroundStyle(.secondary)
         }
     }

@@ -7,33 +7,17 @@ struct WeightView: View {
     @Environment(\.modelContext) private var ctx
     @Query private var profiles: [Profile]
     @Query(sort: \WeightEntry.day, order: .reverse) private var entries: [WeightEntry]
-    @State private var text = ""
-    @State private var day = Date()
     @State private var range = ChartRange.month
+    @State private var weighing = false
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
         let series = trendSeries(entries.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Card(title: "Log weight", systemImage: "scalemass") {
-                    HStack {
-                        TextField("", text: $text, prompt: Text(unit == .kg ? "78,4" : "172,8")).frame(width: 90)
-                            .onSubmit(save)
-                            #if os(iOS)
-                            .keyboardType(.decimalPad)
-                            #endif
-                        Text(unit.rawValue).foregroundStyle(.secondary)
-                        DatePicker("", selection: $day, in: ...Date(), displayedComponents: .date).labelsHidden()
-                        Spacer()
-                        Button("Save", action: save).buttonStyle(.borderedProminent).disabled(parsed == nil)
-                    }
-                    Text("Weigh yourself in the morning, after the bathroom, before eating. Daily is best; the trend handles the swings.")
-                        .font(.callout).foregroundStyle(.secondary)
-                }
-                if let now = series.last {
+                hero(series, unit)
+                if !series.isEmpty {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16, alignment: .top)], spacing: 16) {
-                        stat("Trend weight", unit.format(now.trend), "The number to watch")
                         stat("Per week", weeklyTrendChange(series).map { signed(unit, $0) } ?? "–", "Over the last 2 weeks")
                         stat("30 days", change(series, 30).map { signed(unit, $0) } ?? "–", "Trend change")
                         stat("Since start", change(series, series.count).map { signed(unit, $0) } ?? "–",
@@ -72,20 +56,34 @@ struct WeightView: View {
         .navigationTitle("Weight")
     }
 
-    private var parsed: Double? {
-        let unit = profiles.first?.weight ?? .kg
-        return parseNumber(text).map(unit.toKg).flatMap { (25...350).contains($0) ? $0 : nil }
-    }
-
-    private func save() {
-        guard let kg = parsed else { return }
-        ctx.logWeight(kg, on: dayKey(day))
-        text = ""
+    private func hero(_ series: [(day: String, scale: Double, trend: Double, logged: Bool)], _ unit: WeightUnit) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("TREND WEIGHT").font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(series.last.map { number(unit.fromKg($0.trend), digits: 1) } ?? "–").font(.number(44)).monospacedDigit()
+                    Text(unit.rawValue).font(.title3.weight(.semibold)).foregroundStyle(.secondary)
+                    if let wk = weeklyTrendChange(series) { Delta(text: signed(unit, wk) + "/wk", good: nil) }
+                }
+                if let w = entries.first {
+                    Text("Last weigh-in \(unit.format(w.kg)) \(relative(w.day))").font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Button { weighing = true } label: {
+                Label("Weigh in", systemImage: "plus").font(.headline).padding(.horizontal, 6).padding(.vertical, 4)
+            }
+            .buttonStyle(.borderedProminent).controlSize(.large)
+        }
+        .padding(18)
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .sheet(isPresented: $weighing) { WeighInSheet() }
     }
 
     private func stat(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.title2.bold()).monospacedDigit()
+            Text(value).font(.number(26)).monospacedDigit()
             Text(note).font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -123,11 +121,17 @@ struct WeightChart: View {
                     .foregroundStyle(Color.primary.opacity(0.4)).symbolSize(22)
             }
             ForEach(series, id: \.day) { p in
+                AreaMark(x: .value("Day", date(fromKey: p.day)), yStart: .value("Low", lo), yEnd: .value("Trend", unit.fromKg(p.trend)))
+                    .foregroundStyle(LinearGradient(colors: [palette.accent.opacity(0.3), palette.accent.opacity(0)], startPoint: .top, endPoint: .bottom))
+                    .interpolationMethod(.monotone)
+            }
+            ForEach(series, id: \.day) { p in
                 LineMark(x: .value("Day", date(fromKey: p.day)), y: .value("Trend", unit.fromKg(p.trend)))
                     .foregroundStyle(palette.accent).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
             }
         }
         .chartYScale(domain: lo...hi)
+        .numberYAxis(digits: hi - lo < 4 ? 1 : 0)
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 5)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.day().month(.abbreviated).locale(appLocale)) } }
         .appStyle()
     }

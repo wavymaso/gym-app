@@ -295,3 +295,36 @@ struct AnyLabelStyle: LabelStyle {
     init<S: LabelStyle>(_ style: S) { make = { AnyView(style.makeBody(configuration: $0)) } }
     func makeBody(configuration: Configuration) -> some View { make(configuration) }
 }
+
+import Charts
+
+extension View {
+    /// Y axis numbers written our way (2360, not 2,360).
+    func numberYAxis(digits: Int = 0) -> some View {
+        chartYAxis {
+            AxisMarks { v in
+                AxisGridLine()
+                AxisValueLabel { if let d = v.as(Double.self) { Text(number(d, digits: digits)) } }
+            }
+        }
+    }
+}
+
+/// Where the day's calories come from: protein, fat and carbs as a ring.
+struct MacroDonut: View {
+    let targets: Targets
+    var body: some View {
+        let parts: [(Macro, Double)] = [(.protein, targets.protein * 4), (.fat, targets.fat * 9), (.carbs, targets.carbs * 4)]
+        let total = max(1, parts.reduce(0) { $0 + $1.1 })
+        ZStack {
+            Chart(parts, id: \.0) { m, kcal in
+                SectorMark(angle: .value("kcal", kcal), innerRadius: .ratio(0.68), angularInset: 2)
+                    .cornerRadius(4).foregroundStyle(m.color)
+            }
+            VStack(spacing: 0) {
+                Text("\(Int((parts[0].1 / total * 100).rounded()))%").font(.number(18)).foregroundStyle(Macro.protein.color)
+                Text("protein").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+}

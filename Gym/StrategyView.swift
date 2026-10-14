@@ -16,7 +16,7 @@ struct StrategyView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
                     Card(title: "Goal", systemImage: "target") {
-                        Text(g.goalValue.label).font(.title2.bold())
+                        Text(g.goalValue.label).font(.number(26))
                         Text(goalDetail(g, p)).foregroundStyle(.secondary)
                         Divider()
                         row("Diet", g.dietValue.label)
@@ -24,7 +24,10 @@ struct StrategyView: View {
                         row("Started", date(fromKey: g.startDay).formatted(.dateTime.day().month(.wide).year().locale(appLocale)))
                     }
                     Card(title: "Daily targets", systemImage: "chart.bar") {
-                        TargetsGrid(targets: t.targets, energy: p.energy)
+                        HStack(spacing: 20) {
+                            MacroDonut(targets: t.targets).frame(width: 110, height: 110)
+                            TargetsGrid(targets: t.targets, energy: p.energy)
+                        }
                         Text("Since \(relative(t.fromDay)), based on an expenditure of \(p.energy.format(t.expenditure)).")
                             .font(.callout).foregroundStyle(.secondary)
                     }
