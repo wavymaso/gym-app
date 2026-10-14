@@ -89,6 +89,11 @@ struct InsightsView: View {
                 EnergyBalanceCard(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
                 WeeklyTable(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
                 let inRange = entries.filter { $0.day >= (d.span.first ?? "") }
+                let finishedInRange = inRange.filter { $0.day < dayKey() }
+                if !finishedInRange.isEmpty {
+                    NutrientPanel(total: finishedInRange.reduce(Nutrients.zero) { $0 + $1.nutrients }, entries: finishedInRange,
+                                  days: max(1, Set(finishedInRange.map(\.day)).count), title: "Nutrients, daily average")
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
                     NutrientTimingCard(entries: inRange, energy: energy)
                     TopContributorsCard(entries: inRange, energy: energy)

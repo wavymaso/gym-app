@@ -242,11 +242,14 @@ func addDemoProfile(_ ctx: ModelContext) {
     ctx.startProgram(goal: .lose, ratePercent: 0.5, diet: .balanced, protein: .high, weightKg: 78.4, expenditure: exp, sex: .male, reason: "setup")
     // A morning of food, so the log and dashboard have something to show.
     let oats = Food(key: "custom:demo-oats", name: "Copos de avena", brand: "Hacendado", source: "custom",
-                    per100: Nutrients(kcal: 372, protein: 14, fat: 7, carbs: 59, fiber: 10), servings: [Serving(name: "1 bowl", grams: 60)])
+                    per100: Nutrients(kcal: 372, protein: 14, fat: 7, carbs: 59, fiber: 10,
+                                                      micros: ["iron": 4.3, "magnesium": 138, "zinc": 3.6, "potassium": 362]),
+                    servings: [Serving(name: "1 bowl", grams: 60)])
     let yogurt = Food(key: "off:20416690", name: "Yogur Griego Natural Light", brand: "Milbona", source: "off",
                       per100: Nutrients(kcal: 59, protein: 6, fat: 2, carbs: 4), servings: [Serving(name: "1 pot", grams: 125)])
     let chicken = Food(key: "usda:demo-chicken", name: "Chicken breast, roasted", source: "usda",
-                       per100: Nutrients(kcal: 165, protein: 31, fat: 3.6, carbs: 0))
+                       per100: Nutrients(kcal: 165, protein: 31, fat: 3.6, carbs: 0, satFat: 1, sodium: 74,
+                                                  micros: ["potassium": 256, "b12": 0.34, "zinc": 1, "iron": 1, "cholesterol": 85]))
     [oats, yogurt, chicken].forEach(ctx.insert)
     let cal = Calendar.current
     func at(_ h: Int, _ m: Int) -> Date { cal.date(bySettingHour: h, minute: m, second: 0, of: Date())! }

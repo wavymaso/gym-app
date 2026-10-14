@@ -41,6 +41,7 @@ struct FoodLogView: View {
             .frame(maxWidth: 820, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .debugScrollAnchor()
         .background(Color.pageBackground)
         .navigationTitle("Food log")
         #if os(iOS)
@@ -208,6 +209,7 @@ struct DayLog: View {
                 section(title: m.label, icon: m.icon, color: m.color, items: own.filter { Meal(time: $0.time) == m }, meal: m)
             }
         }
+        if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
     }
 
     // MARK: Pieces

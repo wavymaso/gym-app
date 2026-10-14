@@ -14,19 +14,22 @@ struct Nutrients: Codable, Equatable, Hashable {
     var sugar: Double?
     var satFat: Double?
     var sodium: Double?
+    var micros: [String: Double]? = nil       // vitamins and minerals by Micro.key, in the Micro's unit (Micros.swift)
 
     static let zero = Nutrients(kcal: 0, protein: 0, fat: 0, carbs: 0)
 
     func scaled(_ f: Double) -> Nutrients {
         Nutrients(kcal: kcal * f, protein: protein * f, fat: fat * f, carbs: carbs * f,
-                  fiber: fiber.map { $0 * f }, sugar: sugar.map { $0 * f }, satFat: satFat.map { $0 * f }, sodium: sodium.map { $0 * f })
+                  fiber: fiber.map { $0 * f }, sugar: sugar.map { $0 * f }, satFat: satFat.map { $0 * f }, sodium: sodium.map { $0 * f },
+                  micros: micros?.mapValues { $0 * f })
     }
 
     static func + (a: Nutrients, b: Nutrients) -> Nutrients {
         func add(_ x: Double?, _ y: Double?) -> Double? { x == nil && y == nil ? nil : (x ?? 0) + (y ?? 0) }
         return Nutrients(kcal: a.kcal + b.kcal, protein: a.protein + b.protein, fat: a.fat + b.fat, carbs: a.carbs + b.carbs,
                          fiber: add(a.fiber, b.fiber), sugar: add(a.sugar, b.sugar), satFat: add(a.satFat, b.satFat),
-                         sodium: add(a.sodium, b.sodium))
+                         sodium: add(a.sodium, b.sodium),
+                         micros: a.micros == nil && b.micros == nil ? nil : (a.micros ?? [:]).merging(b.micros ?? [:], uniquingKeysWith: +))
     }
 
     var targets: Targets { Targets(kcal: kcal, protein: protein, fat: fat, carbs: carbs) }
@@ -111,7 +114,8 @@ enum FoodAPI {
         let kcal = v("energy-kcal_100g") ?? v("energy-kj_100g").map { $0 / 4.184 } ?? v("energy_100g").map { $0 / 4.184 }
             ?? ((protein ?? 0) * 4 + (carbs ?? 0) * 4 + (fat ?? 0) * 9)
         let per100 = Nutrients(kcal: kcal, protein: protein ?? 0, fat: fat ?? 0, carbs: carbs ?? 0, fiber: v("fiber_100g"),
-                               sugar: v("sugars_100g"), satFat: v("saturated-fat_100g"), sodium: v("sodium_100g").map { $0 * 1000 })
+                               sugar: v("sugars_100g"), satFat: v("saturated-fat_100g"), sodium: v("sodium_100g").map { $0 * 1000 },
+                               micros: Micro.fromOFF(v))
         let brand: String? = (p["brands"] as? [String])?.first ?? (p["brands"] as? String)?.split(separator: ",").first.map {
             $0.trimmingCharacters(in: .whitespaces)
         }
@@ -170,7 +174,7 @@ enum FoodAPI {
         guard let protein = n[1003], let fat = n[1004], let carbs = n[1005] else { return nil }
         let kcal = n[1008] ?? n[2047] ?? n[2048] ?? (protein * 4 + carbs * 4 + fat * 9)
         let per100 = Nutrients(kcal: kcal, protein: protein, fat: fat, carbs: carbs, fiber: n[1079], sugar: n[2000] ?? n[1063],
-                               satFat: n[1258], sodium: n[1093])
+                               satFat: n[1258], sodium: n[1093], micros: Micro.fromUSDA(n))
         let servings: [Serving] = (f["foodMeasures"] as? [[String: Any]] ?? []).compactMap { m in
             guard let text = m["disseminationText"] as? String, text != "Quantity not specified",
                   let g = (m["gramWeight"] as? Double) ?? (m["gramWeight"] as? Int).map(Double.init), g > 0 else { return nil }
