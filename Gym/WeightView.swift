@@ -57,11 +57,13 @@ struct WeightView: View {
     }
 
     private func hero(_ series: [(day: String, scale: Double, trend: Double, logged: Bool)], _ unit: WeightUnit) -> some View {
-        HStack(alignment: .center, spacing: 16) {
+        let layout = isPhone ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14)) : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+        return layout {
             VStack(alignment: .leading, spacing: 4) {
                 Text("TREND WEIGHT").font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(series.last.map { number(unit.fromKg($0.trend), digits: 1) } ?? "–").font(.number(44)).monospacedDigit()
+                        .lineLimit(1).fixedSize()
                     Text(unit.rawValue).font(.title3.weight(.semibold)).foregroundStyle(.secondary)
                     if let wk = weeklyTrendChange(series) { Delta(text: signed(unit, wk) + "/wk", good: nil) }
                 }
@@ -69,9 +71,10 @@ struct WeightView: View {
                     Text("Last weigh-in \(unit.format(w.kg)) \(relative(w.day))").font(.callout).foregroundStyle(.secondary)
                 }
             }
-            Spacer()
+            if !isPhone { Spacer() }
             Button { weighing = true } label: {
                 Label("Weigh in", systemImage: "plus").font(.headline).padding(.horizontal, 6).padding(.vertical, 4)
+                    .frame(maxWidth: isPhone ? .infinity : nil)
             }
             .buttonStyle(.borderedProminent).controlSize(.large)
         }

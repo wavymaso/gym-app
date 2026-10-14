@@ -144,6 +144,13 @@ struct MainView: View {
         return .dashboard
     }()
 
+    @State private var quick: QuickSheet?
+    @State private var plus = false
+    #if os(iOS)
+    @State private var tab: PhoneTab = .dashboard
+    @State private var morePath: [Page] = []
+    #endif
+
     var body: some View {
         #if os(macOS)
         NavigationSplitView {
@@ -158,23 +165,58 @@ struct MainView: View {
                     row(.settings)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .safeAreaInset(edge: .bottom) { SidebarToday() }
+            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
         } detail: {
             NavigationStack { page(page ?? .dashboard) }
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { plus = true } label: { Label("Add", systemImage: "plus.circle.fill") }
+                            .keyboardShortcut("k", modifiers: .command).help("Quick add (⌘K)")
+                    }
+                }
         }
         .environment(\.openPage, { page = $0 })
+        .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { page = .workouts }) }
+        .sheet(item: $quick) { quickSheet($0) }
         #else
-        // Four tabs, the rest under "More".
-        TabView(selection: Binding(get: { page ?? .dashboard }, set: { page = $0 })) {
-            ForEach([Page.dashboard, .food, .workouts, .weight, .insights, .strategy, .exercises, .settings]) { s in
-                NavigationStack { page(s) }.tabItem { Label(s.label, systemImage: s.icon) }.tag(s)
+        TabView(selection: $tab) {
+            NavigationStack { page(.dashboard) }.tag(PhoneTab.dashboard).toolbar(.hidden, for: .tabBar)
+            NavigationStack { page(.food) }.tag(PhoneTab.food).toolbar(.hidden, for: .tabBar)
+            NavigationStack { page(.workouts) }.tag(PhoneTab.training).toolbar(.hidden, for: .tabBar)
+            NavigationStack(path: $morePath) {
+                MorePage(path: $morePath).navigationDestination(for: Page.self) { page($0) }
             }
+            .tag(PhoneTab.more).toolbar(.hidden, for: .tabBar)
         }
-        .environment(\.openPage, { page = $0 })
+        .safeAreaInset(edge: .bottom, spacing: 0) { PhoneTabBar(tab: $tab) { plus = true } }
+        .environment(\.openPage, { open($0) })
+        .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { tab = .training }) }
+        .sheet(item: $quick) { quickSheet($0) }
+        .onAppear {
+            if let p = page, p != .dashboard { open(p) }
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "plus") { plus = true }      // testing only
+            #endif
+        }
         #endif
     }
 
-    private func row(_ s: Page) -> some View { Label(s.label, systemImage: s.icon).tag(s) }
+    #if os(iOS)
+    /// Go to a page: one of the tabs, or into More.
+    private func open(_ p: Page) {
+        switch p {
+        case .dashboard: tab = .dashboard
+        case .food: tab = .food
+        case .workouts: tab = .training
+        default: tab = .more; morePath = [p]
+        }
+    }
+    #endif
+
+    private func row(_ s: Page) -> some View {
+        Label { Text(s.label).font(.body.weight(.medium)) } icon: { PageIcon(page: s, size: 24) }.tag(s)
+    }
 
     @ViewBuilder private func page(_ s: Page) -> some View {
         switch s {

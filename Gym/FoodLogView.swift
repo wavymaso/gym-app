@@ -38,7 +38,7 @@ struct FoodLogView: View {
                        style: $style) { sheet = $0 }
             }
             .padding(pagePadding)
-            .frame(maxWidth: 820, alignment: .leading)
+            .frame(maxWidth: isPhone ? 820 : 1180, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .debugScrollAnchor()
@@ -184,8 +184,27 @@ struct DayLog: View {
 
     var body: some View {
         let total = entries.reduce(Nutrients.zero) { $0 + $1.nutrients }
-        summary(total)
+        if isPhone {
+            summary(total)
+                .sensoryFeedback(.success, trigger: entries.count) { old, new in new > old }
+            log
+            if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
+        } else {
+            // The Mac: the day's food on the left, its totals and nutrients beside it.
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) { log }
+                    .frame(maxWidth: .infinity)
+                VStack(spacing: 16) {
+                    summary(total)
+                    if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
+                }
+                .frame(width: 360)
+            }
             .sensoryFeedback(.success, trigger: entries.count) { old, new in new > old }
+        }
+    }
+
+    @ViewBuilder private var log: some View {
         Picker("View", selection: $style.animation(.snappy)) {
             Text("Meals").tag(FoodLogView.LogStyle.meals)
             Text("Timeline").tag(FoodLogView.LogStyle.timeline)
@@ -209,7 +228,6 @@ struct DayLog: View {
                 section(title: m.label, icon: m.icon, color: m.color, items: own.filter { Meal(time: $0.time) == m }, meal: m)
             }
         }
-        if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
     }
 
     // MARK: Pieces

@@ -10,6 +10,7 @@ struct AddFoodView: View {
 
     let mode: Mode
     var initialQuery: String? = nil              // recipe import: search for the ingredient straight away
+    var startScanning = false                    // the + button's "Scan barcode"
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @AppStorage("usdaKey") private var usdaKey = ""
@@ -112,6 +113,9 @@ struct AddFoodView: View {
         .onAppear {
             focused = true
             if let q = initialQuery, query.isEmpty { query = q }
+            #if os(iOS)
+            if startScanning { scanning = true }
+            #endif
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "chooseFirst") { chosen = localMatches.first }   // testing only
             #endif

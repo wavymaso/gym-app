@@ -31,7 +31,7 @@ struct NutrientPanel: View {
                     Text("Vitamins and minerals show up for foods logged from USDA or Open Food Facts from now on.")
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 150 : 190), spacing: 10)], spacing: 10) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
                         ForEach(Micro.all) { m in tile(m, n.micros?[m.key], m.target(sex)) }
                     }
                     Text("\(withMicros) of \(entries.count) foods have vitamin and mineral data, so real intake is likely higher.")
