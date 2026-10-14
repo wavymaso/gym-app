@@ -232,6 +232,12 @@ struct RecipeView: View {
     @State private var servings = "4"
     @State private var items: [Item] = []
     @State private var picking = false
+    @State private var pending: [RecipeLine] = []           // imported ingredient lines still to match to a food
+    @State private var matching: RecipeLine?
+    @State private var importing = false
+    @State private var link = ""
+    @State private var importError: String?
+    @State private var loadingLink = false
 
     struct Item: Identifiable {
         let id = UUID()
@@ -239,6 +245,52 @@ struct RecipeView: View {
         var name: String
         var grams: Double
         var per100: Nutrients
+    }
+
+    /// Paste a recipe link: fills in the name, servings and ingredients to match.
+    private var linkSheet: some View {
+        NavigationStack {
+            Form {
+                TextField("Recipe link", text: $link, prompt: Text("https://…"))
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never).keyboardType(.URL)
+                    #endif
+                if let importError { Text(importError).foregroundStyle(palette.warn) }
+                Text("Works with most recipe sites (they publish the recipe in a standard format).").font(.callout).foregroundStyle(.secondary)
+            }
+            .themedForm()
+            .navigationTitle("Import a recipe")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { importing = false } }
+                ToolbarItem(placement: .confirmationAction) {
+                    if loadingLink { ProgressView() } else {
+                        Button("Import") {
+                            loadingLink = true; importError = nil
+                            Task {
+                                do {
+                                    let r = try await RecipeImport.fetch(link)
+                                    if name.trimmingCharacters(in: .whitespaces).isEmpty { name = r.name }
+                                    if let s = r.servings { servings = number(s) }
+                                    pending = r.lines
+                                    importing = false
+                                } catch RecipeImport.Failure.noRecipe {
+                                    importError = "No recipe found on that page."
+                                } catch {
+                                    importError = "Couldn't open that link."
+                                }
+                                loadingLink = false
+                            }
+                        }
+                        .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 440, height: 240)
+        #endif
     }
 
     var body: some View {
@@ -249,6 +301,28 @@ struct RecipeView: View {
                 Section {
                     TextField("Recipe name", text: $name)
                     NumberRow(label: "Makes", text: $servings, unit: "servings")
+                    if recipe == nil { Button { importing = true } label: { Label("Import from a link…", systemImage: "link") } }
+                }
+                if !pending.isEmpty {
+                    Section {
+                        ForEach(pending) { l in
+                            Button { matching = l } label: {
+                                HStack {
+                                    Image(systemName: "magnifyingglass").foregroundStyle(palette.accent)
+                                    Text(l.text).lineLimit(2).foregroundStyle(.primary)
+                                    Spacer()
+                                    if let g = l.grams { Text("\(number(g)) g").foregroundStyle(.secondary).monospacedDigit() }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions { Button("Skip", role: .destructive) { pending.removeAll { $0.id == l.id } } }
+                            .contextMenu { Button("Skip", role: .destructive) { pending.removeAll { $0.id == l.id } } }
+                        }
+                    } header: {
+                        Text("To match (\(pending.count))")
+                    } footer: {
+                        Text("Tap each one to find the food. Amounts in g, ml, spoons or cups are filled in; others you enter.")
+                    }
                 }
                 Section("Ingredients") {
                     ForEach($items) { $item in
@@ -279,6 +353,13 @@ struct RecipeView: View {
                     Button("Save", action: save).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || totals == nil)
                 }
             }
+            .sheet(item: $matching) { line in
+                AddFoodView(mode: .pick { food, grams in
+                    items.append(Item(foodKey: food.key, name: food.name, grams: (line.grams ?? grams).rounded(), per100: food.per100))
+                    pending.removeAll { $0.id == line.id }
+                }, initialQuery: line.food)
+            }
+            .sheet(isPresented: $importing) { linkSheet }
             .sheet(isPresented: $picking) {
                 AddFoodView(mode: .pick { food, grams in
                     items.append(Item(foodKey: food.key, name: food.name, grams: grams.rounded(), per100: food.per100))
