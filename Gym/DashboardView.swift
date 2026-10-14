@@ -14,6 +14,12 @@ struct DashboardView: View {
     @Query private var loggedDays: [FoodEntry]
     @AppStorage("dashLayout") private var layoutJSON = ""
     @State private var heroPage = UserDefaults.standard.integer(forKey: "heroPage")      // testing: -heroPage 1
+    @State private var detail: InsightKind? = {
+        #if DEBUG
+        if let k = UserDefaults.standard.string(forKey: "insight") { return InsightKind(rawValue: k) }   // testing: -insight expenditure
+        #endif
+        return nil
+    }()
     @State private var sheet: DashSheet? = {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "checkIn") { return .checkIn }       // testing only
@@ -59,6 +65,7 @@ struct DashboardView: View {
         .debugScrollAnchor()
         .pageBackground()
         .navigationTitle("Dashboard")
+        .navigationDestination(item: $detail) { InsightDetailView(kind: $0) }
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
         #endif
@@ -237,13 +244,13 @@ struct DashboardView: View {
             let exp = ctx.expenditureEstimates()
             let byDay = Dictionary(exp.map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
             SparkCard(title: "Expenditure", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.energy.fromKcal),
-                      color: palette.warn, value: number(p.energy.fromKcal(exp.last?.kcal ?? t.expenditure)), unit: p.energy.rawValue) { openPage(.insights) }
+                      color: palette.warn, value: number(p.energy.fromKcal(exp.last?.kcal ?? t.expenditure)), unit: p.energy.rawValue) { detail = .expenditure }
         case "weight":
             let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
             let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
             SparkCard(title: "Weight Trend", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.weight.fromKg),
                       color: Color(hex: 0xA77BF3), value: series.last.map { number(p.weight.fromKg($0.trend), digits: 1) } ?? "–",
-                      unit: p.weight.rawValue) { openPage(.weight) }
+                      unit: p.weight.rawValue) { detail = .weightTrend }
         case "energyBalance":
             let intake = ctx.dailyIntake()
             let exp = Dictionary(ctx.expenditureEstimates().map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
@@ -251,7 +258,7 @@ struct DashboardView: View {
             let diffs = past.compactMap { d in intake[d].flatMap { i in exp[d].map { i - $0 } } }
             let avg = diffs.isEmpty ? 0 : diffs.reduce(0, +) / Double(diffs.count)
             SparkCard(title: "Energy Balance", period: "Last 7 days", values: diffs.map(p.energy.fromKcal), color: palette.calories,
-                      value: (avg > 0 ? "+" : "") + number(p.energy.fromKcal(avg)), unit: "\(p.energy.rawValue)/day") { openPage(.insights) }
+                      value: (avg > 0 ? "+" : "") + number(p.energy.fromKcal(avg)), unit: "\(p.energy.rawValue)/day") { detail = .energyBalance }
         case "goal":
             let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
             let start = programs.first.map(\.startDay) ?? series.first?.day ?? dayKey()
@@ -263,7 +270,7 @@ struct DashboardView: View {
             let done = goalKg.map { g in g != first ? max(0, min(1, (now - first) / (g - first))) : 1 }
             SparkCard(title: "Goal Progress", period: "Last \(max(1, daysBetween(start, dayKey()))) days", values: pts.map(p.weight.fromKg),
                       color: palette.good, value: done.map { "\(Int($0 * 100 + 0.5))" } ?? number(p.weight.fromKg(now - first), digits: 1),
-                      unit: done == nil ? p.weight.rawValue : "%") { openPage(.strategy) }
+                      unit: done == nil ? p.weight.rawValue : "%") { detail = .goal }
         default: EmptyView()
         }
     }
@@ -284,7 +291,7 @@ struct DashboardView: View {
                 Button("Weigh in") { sheet = .weighIn }
             }
         }
-        .onTapGesture { openPage(.weight) }
+        .onTapGesture { detail = .weightTrend }
     }
 
     private func expenditureCard(_ t: TargetSet, _ p: Profile) -> some View {
@@ -300,7 +307,7 @@ struct DashboardView: View {
             }
             Text(exp?.status ?? "Starting estimate.").font(.callout).foregroundStyle(.secondary)
         }
-        .onTapGesture { openPage(.insights) }
+        .onTapGesture { detail = .expenditure }
     }
 
     private func goalCard(_ g: Program, _ p: Profile) -> some View {
@@ -346,7 +353,7 @@ struct DashboardView: View {
                 }
             }
         }
-        .onTapGesture { openPage(.strategy) }
+        .onTapGesture { detail = .goal }
     }
 
     /// Losing is good when you're cutting, gaining when bulking.
