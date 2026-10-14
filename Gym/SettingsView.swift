@@ -44,6 +44,11 @@ struct SettingsView: View {
                 Section {
                     TextField("USDA API key", text: $usdaKey, prompt: Text("Using the shared demo key"))
                     Link("Get a free key (takes a minute)", destination: URL(string: "https://fdc.nal.usda.gov/api-key-signup")!)
+                    if LocalFoods.shared.available {
+                        LabeledContent("Built-in products", value: "\(number(Double(LocalFoods.shared.count))) · \(LocalFoods.shared.built)")
+                        Text("Spain (Alcampo, Mercadona, Costco and more), Saudi Arabia and the Gulf, from Open Food Facts. Searched first and works offline.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 } header: {
                     Text("Food search")
                 } footer: {

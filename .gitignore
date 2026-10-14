@@ -3,3 +3,6 @@ xcuserdata/
 *.xcuserstate
 .DS_Store
 .backups/
+
+# Offline food database: rebuilt with tools/update-food-db.sh (about 40 MB)
+Gym/foods.sqlite

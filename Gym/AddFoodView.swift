@@ -25,6 +25,8 @@ struct AddFoodView: View {
     @State private var tab = Tab.search
     @State private var generic: [FoodResult] = []
     @State private var products: [FoodResult] = []
+    @State private var local: [FoodResult] = []                  // the offline database (LocalFoods)
+    @AppStorage("foodScope") private var scope: LocalFoods.Scope = .all
     @State private var genericError: String?
     @State private var productError: String?
     @State private var searching = false
@@ -47,8 +49,22 @@ struct AddFoodView: View {
                         .onSubmit { tab = .search }
                     Picker("", selection: $tab) { ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
                         .pickerStyle(.segmented).labelsHidden()
+                    if tab == .search && LocalFoods.shared.available {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(LocalFoods.Scope.allCases) { s in
+                                    Button(s.label) { scope = s; local = LocalFoods.shared.search(query, scope: s) }
+                                        .font(.caption.weight(.semibold)).buttonStyle(.plain)
+                                        .padding(.horizontal, 10).padding(.vertical, 5)
+                                        .background(scope == s ? palette.accent : Color.raisedBackground, in: Capsule())
+                                        .foregroundStyle(scope == s ? .white : .primary)
+                                }
+                            }
+                        }
+                    }
                 }
                 .padding(16)
+                .background(Color.pageBackground)
                 List {
                     switch tab {
                     case .search: searchResults
@@ -62,6 +78,7 @@ struct AddFoodView: View {
                 .themedList()
                 #endif
             }
+            .background(Color.pageBackground)
             .navigationTitle(isPicking ? "Add ingredient" : "Add food")
             .navigationDestination(item: $chosen) { f in FoodAmountView(food: f, mode: mode, done: { dismiss() }) }
             .toolbar {
@@ -140,16 +157,22 @@ struct AddFoodView: View {
             if !localMatches.isEmpty {
                 Section("Your foods") { ForEach(localMatches) { f in foodRow(f) } }
             }
+            let mine = Set(localMatches.map(\.key))
+            if !local.isEmpty {
+                Section { ForEach(local.filter { !mine.contains($0.key) }) { r in resultRow(r) } } header: {
+                    Text(scope == .all ? "Products · Spain & Saudi" : "Products · \(scope.label)")
+                }
+            }
             Section {
                 ForEach(generic) { r in resultRow(r) }
                 if let genericError { Text(genericError).font(.callout).foregroundStyle(.secondary) }
                 else if generic.isEmpty && !searching { Text("No matches").font(.callout).foregroundStyle(.secondary) }
             } header: { header("Common foods · USDA") }
             Section {
-                ForEach(products.filter { p in !localMatches.contains { $0.key == p.key } }) { r in resultRow(r) }
+                ForEach(products.filter { p in !mine.contains(p.key) && !local.contains { $0.key == p.key } }) { r in resultRow(r) }
                 if let productError { Text(productError).font(.callout).foregroundStyle(.secondary) }
                 else if products.isEmpty && !searching { Text("No matches").font(.callout).foregroundStyle(.secondary) }
-            } header: { header("Products · Open Food Facts") }
+            } header: { header(local.isEmpty ? "Products · Open Food Facts" : "More products online · Open Food Facts") }
         }
     }
 
@@ -202,7 +225,7 @@ struct AddFoodView: View {
     /// Products: fetch the full record first, for its serving size.
     private func open(_ r: FoodResult) async {
         var r = r
-        if r.source == "off", let code = r.barcode {
+        if r.source == "off", r.servings.isEmpty, let code = r.barcode {      // local results usually have their servings already
             opening = r.key
             if let full = try? await FoodAPI.product(barcode: code) { r.servings = full.servings }
             opening = nil
@@ -212,7 +235,13 @@ struct AddFoodView: View {
 
     private func search() async {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard q.count >= 2, tab == .search else { generic = []; products = []; return }
+        guard q.count >= 2, tab == .search else { generic = []; products = []; local = []; return }
+        // The offline database answers straight away; the internet ones once you stop typing.
+        if q.allSatisfy(\.isNumber) && q.count >= 8 {
+            local = LocalFoods.shared.product(barcode: q).map { [$0] } ?? []
+        } else {
+            local = LocalFoods.shared.search(q, scope: scope)
+        }
         try? await Task.sleep(nanoseconds: 450_000_000)            // wait until you stop typing
         guard !Task.isCancelled else { return }
         searching = true
@@ -222,9 +251,9 @@ struct AddFoodView: View {
         if q.allSatisfy(\.isNumber) && q.count >= 8 {               // a barcode
             generic = []
             do {
-                if let p = try await FoodAPI.product(barcode: q) { products = [p] }
-                else { products = []; productError = "No product with barcode \(q) on Open Food Facts. You can add it as a new food." }
-            } catch { productError = error.localizedDescription }
+                if let p = try await FoodAPI.product(barcode: q) { products = local.contains { $0.key == p.key } ? [] : [p] }
+                else if local.isEmpty { products = []; productError = "No product with barcode \(q) on Open Food Facts. You can add it as a new food, or scan its label." }
+            } catch { if local.isEmpty { productError = error.localizedDescription } }
             return
         }
         async let g = Result { try await FoodAPI.searchGeneric(q, apiKey: usdaKey) }
@@ -232,7 +261,10 @@ struct AddFoodView: View {
         let (gr, pr) = await (g, p)
         guard !Task.isCancelled else { return }
         switch gr { case .success(let x): generic = x; case .failure(let e): generic = []; genericError = e.localizedDescription }
-        switch pr { case .success(let x): products = x; case .failure(let e): products = []; productError = e.localizedDescription }
+        switch pr {
+        case .success(let x): products = x
+        case .failure(let e): products = []; productError = local.isEmpty ? e.localizedDescription : "Offline: showing the built-in database only."
+        }
     }
 }
 
