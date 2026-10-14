@@ -24,6 +24,7 @@ import HealthKit
     var day: String
     var steps: Int
     var activeKcal: Double
+    var sleepHours: Double = 0                 // the night before this day, from Apple Health
 
     init(day: String, steps: Int, activeKcal: Double) { self.day = day; self.steps = steps; self.activeKcal = activeKcal }
 }
@@ -42,11 +43,12 @@ extension WaterEntry: Syncable {
 extension DailyActivity: Syncable {
     static var syncType: String { "activity" }
     var naturalID: String { "a:\(day)" }                     // one per day
-    func encode() -> [String: Any] { ["day": day, "steps": steps, "activeKcal": activeKcal] }
+    func encode() -> [String: Any] { ["day": day, "steps": steps, "activeKcal": activeKcal, "sleepHours": sleepHours] }
     func decode(_ d: [String: Any]) {
         day = d["day"] as? String ?? ""
         steps = (d["steps"] as? Int) ?? Int((d["steps"] as? Double) ?? 0)
         activeKcal = (d["activeKcal"] as? Double) ?? Double((d["activeKcal"] as? Int) ?? 0)
+        sleepHours = (d["sleepHours"] as? Double) ?? 0
     }
     static func blank() -> Self { Self(day: "", steps: 0, activeKcal: 0) }
 }
@@ -102,7 +104,7 @@ func litres(_ ml: Double) -> String { ml >= 1000 ? "\(number(ml / 1000, digits: 
 /// Steps and active energy from Apple Health, for the last few days.
 enum HealthActivity {
     static let store = HealthWeights.store
-    static let types: Set<HKObjectType> = [HKQuantityType(.stepCount), HKQuantityType(.activeEnergyBurned)]
+    static let types: Set<HKObjectType> = [HKQuantityType(.stepCount), HKQuantityType(.activeEnergyBurned), HKCategoryType(.sleepAnalysis)]
 
     static func requestAccess() async -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
@@ -112,13 +114,35 @@ enum HealthActivity {
     /// Today and the two days before (a late sync from a watch can change yesterday).
     @MainActor static func refresh(into ctx: ModelContext) async {
         guard UserDefaults.standard.bool(forKey: "healthSteps"), HKHealthStore.isHealthDataAvailable() else { return }
+        if !UserDefaults.standard.bool(forKey: "healthSleepAsked") {      // sleep was added later: ask once
+            UserDefaults.standard.set(true, forKey: "healthSleepAsked")
+            _ = await requestAccess()
+        }
         for back in 0..<3 {
             let day = addDays(dayKey(), -back)
             let start = date(fromKey: day), end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
             let steps = await sum(.stepCount, .count(), start, end)
             let kcal = await sum(.activeEnergyBurned, .kilocalorie(), start, end)
             if steps > 0 || kcal > 0 { ctx.setActivity(day: day, steps: Int(steps), activeKcal: kcal) }
+            let sleep = await sleepHours(endingOn: start)
+            if sleep > 0, let a = ctx.activity(on: day) ?? { ctx.setActivity(day: day, steps: 0, activeKcal: 0); return ctx.activity(on: day) }(),
+               abs(a.sleepHours - sleep) >= 0.05 {
+                a.sleepHours = sleep; ctx.commit()
+            }
         }
+    }
+
+    /// Hours asleep from 6 pm the evening before to noon (any stage of sleep, overlaps merged).
+    private static func sleepHours(endingOn day: Date) async -> Double {
+        let from = day.addingTimeInterval(-6 * 3600), to = day.addingTimeInterval(12 * 3600)
+        let desc = HKSampleQueryDescriptor(predicates: [.categorySample(type: HKCategoryType(.sleepAnalysis),
+                                                                        predicate: HKQuery.predicateForSamples(withStart: from, end: to))],
+                                           sortDescriptors: [SortDescriptor(\.startDate)])
+        let asleep = [HKCategoryValueSleepAnalysis.asleepCore, .asleepDeep, .asleepREM, .asleepUnspecified].map(\.rawValue)
+        let spans = ((try? await desc.result(for: store)) ?? []).filter { asleep.contains($0.value) }.map { ($0.startDate, $0.endDate) }
+        var total = 0.0, end = Date.distantPast
+        for (s, e) in spans where e > end { total += e.timeIntervalSince(max(s, end)); end = e }
+        return total / 3600
     }
 
     private static func sum(_ id: HKQuantityTypeIdentifier, _ unit: HKUnit, _ start: Date, _ end: Date) async -> Double {

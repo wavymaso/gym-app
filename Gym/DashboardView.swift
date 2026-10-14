@@ -249,7 +249,7 @@ struct DashboardView: View {
             SparkCard(title: "Expenditure", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.energy.fromKcal),
                       color: palette.warn, value: number(p.energy.fromKcal(exp.last?.kcal ?? t.expenditure)), unit: p.energy.rawValue) { detail = .expenditure }
         case "weight":
-            let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+            let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
             let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
             SparkCard(title: "Weight Trend", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.weight.fromKg),
                       color: Color(hex: 0xA77BF3), value: series.last.map { number(p.weight.fromKg($0.trend), digits: 1) } ?? "–",
@@ -263,7 +263,7 @@ struct DashboardView: View {
             SparkCard(title: "Energy Balance", period: "Last 7 days", values: diffs.map(p.energy.fromKcal), color: palette.calories,
                       value: (avg > 0 ? "+" : "") + number(p.energy.fromKcal(avg)), unit: "\(p.energy.rawValue)/day") { detail = .energyBalance }
         case "goal":
-            let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+            let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
             let start = programs.first.map(\.startDay) ?? series.first?.day ?? dayKey()
             let since = series.filter { $0.day >= start }
             let step = max(1, since.count / 12)
@@ -279,7 +279,7 @@ struct DashboardView: View {
     }
 
     private func weightCard(_ p: Profile) -> some View {
-        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         return Card(title: "Trend weight", systemImage: "scalemass") {
             if let now = series.last, let w = weights.first {
                 HStack(alignment: .firstTextBaseline) {
@@ -314,7 +314,7 @@ struct DashboardView: View {
     }
 
     private func goalCard(_ g: Program, _ p: Profile) -> some View {
-        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let weeks = max(0, Calendar.current.dateComponents([.day], from: date(fromKey: g.startDay), to: Date()).day ?? 0) / 7
         return Card(title: "Goal", systemImage: "target") {
             HStack(alignment: .firstTextBaseline) {
@@ -610,12 +610,21 @@ struct WeighInSheet: View {
     @Query(sort: \WeightEntry.day, order: .reverse) private var weights: [WeightEntry]
     @State private var text = ""
     @State private var day = Date()
+    @AppStorage("lastScale") private var scale = ""
     @FocusState private var focused: Bool
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
+        let names = profiles.first?.scaleNames ?? []
         NavigationStack {
             VStack(spacing: 18) {
+                if !names.isEmpty {
+                    Picker("Scale", selection: $scale) {
+                        Text("Main").tag("")
+                        ForEach(names, id: \.self) { Text($0).tag($0) }
+                    }
+                    .pickerStyle(.segmented).frame(maxWidth: 320)
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     TextField("", text: $text, prompt: Text(weights.first.map { number(unit == .kg ? $0.kg : $0.kg / 0.45359237, digits: 1) } ?? "78,4"))
                         .font(.number(56)).multilineTextAlignment(.center).focused($focused).frame(maxWidth: 220)
@@ -660,7 +669,7 @@ struct WeighInSheet: View {
 
     private func save() {
         guard let kg else { return }
-        ctx.logWeight(kg, on: dayKey(day))
+        ctx.logWeight(kg, on: dayKey(day), scale: (profiles.first?.scaleNames ?? []).contains(scale) ? scale : "")
         dismiss()
     }
 }

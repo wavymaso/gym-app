@@ -231,10 +231,14 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 7
+    static let version = 8
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("flag.2.crossed", "Phase plan", "Cut → maintenance → bulk, each with an end (date or weight); the check-in offers the next phase (Strategy)."),
+        ("scalemass", "Scales", "Name your other scales; their offsets are worked out so a trip home isn't a weight jump (Strategy → Scales)."),
+        ("eye.slash", "Shadow mode", "The coach calculates check-ins without changing targets, and replays the last 12 weeks (Strategy)."),
+        ("bed.double.fill", "Sleep", "From Apple Health, in the weekly review: a bad-sleep week explains a strength dip."),
         ("calendar.badge.checkmark", "Weekly review", "On check-in day: logging, protein, rate vs goal, expenditure, sets per muscle, lifts, and what they say together."),
         ("magnifyingglass", "Search forgives typos", "“platno” finds plátano; Spanish words find USDA foods; foods whose label doesn't add up are flagged."),
         ("link", "Recipes from Instagram", "Paste a post link, the caption, or photograph a cookbook page: ingredients and macros worked out."),

@@ -181,7 +181,8 @@ extension Profile: Syncable {
          "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
          "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
          "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal,
-         "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "refeedSince": refeedSince, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
+         "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "refeedSince": refeedSince,
+         "scales": scales, "phaseEnd": phaseEnd, "phaseQueue": phaseQueue, "shadowMode": shadowMode, "shadowLog": shadowLog, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
@@ -195,6 +196,9 @@ extension Profile: Syncable {
         if let t = d["trainingType"] as? String, !t.isEmpty { trainingType = t }
         calorieFloorKcal = d.num("calorieFloorKcal")
         refeedWeekday = d.int("refeedWeekday"); refeedExtraKcal = d.num("refeedExtraKcal"); refeedSince = d.str("refeedSince")
+        scales = d.str("scales"); phaseEnd = d.str("phaseEnd"); phaseQueue = d.str("phaseQueue")
+        shadowMode = d.bool("shadowMode"); shadowLog = d.str("shadowLog")
+        scaleOffsets = scaleOffsetMap
         dietBreakStart = d.str("dietBreakStart"); dietBreakEnd = d.str("dietBreakEnd")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
@@ -232,8 +236,8 @@ extension TargetSet: Syncable {
 extension WeightEntry: Syncable {
     static var syncType: String { "weight" }
     var naturalID: String { "w:\(day)" }                      // one weigh-in per day, wherever it was entered
-    func encode() -> [String: Any] { ["day": day, "kg": kg, "bodyFatPercent": n(bodyFatPercent), "createdAt": t(createdAt)] }
-    func decode(_ d: [String: Any]) { day = d.str("day"); kg = d.num("kg"); bodyFatPercent = d.optNum("bodyFatPercent"); createdAt = d.date("createdAt") }
+    func encode() -> [String: Any] { ["day": day, "kg": kg, "bodyFatPercent": n(bodyFatPercent), "createdAt": t(createdAt), "scale": scale] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); kg = d.num("kg"); bodyFatPercent = d.optNum("bodyFatPercent"); createdAt = d.date("createdAt"); scale = d.str("scale") }
     static func blank() -> Self { Self(day: "", kg: 0) }
 }
 

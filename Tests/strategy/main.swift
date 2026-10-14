@@ -97,5 +97,37 @@ check(m.kcal == 2750 && m.protein == 190, "diet break: maintenance calories, sam
 check(abs(m.fat * 9 / (m.fat * 9 + m.carbs * 4) - 585.0 / (585 + 800)) < 0.01, "and the same carb/fat split")
 check(weekStart("2026-10-18") == "2026-10-12" && weekStart("2026-10-12") == "2026-10-12", "weeks start on Monday")
 
+// Scales: a second scale reading 0,8 kg heavy is worked out and evened out
+let c2 = ModelContext(try! ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+let pr = Profile(sex: .male, birthDate: Date(timeIntervalSince1970: 0), heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal)
+c2.insert(pr)
+for i in 0..<30 {
+    let d = addDays(dayKey(), -29 + i)
+    let w = WeightEntry(day: d, kg: 90 - Double(i) * 0.05)
+    if i % 5 == 2 { w.kg += 0.8; w.scale = "Madrid" }
+    c2.insert(w)
+}
+c2.commit()
+let madrid = c2.estimatedScaleOffsets()["Madrid"] ?? 0
+check(abs(madrid + 0.8) < 0.15, "Madrid scale offset worked out (\(String(format: "%.2f", madrid)))")
+pr.scaleOffsetMap = ["Madrid": madrid]
+let vals = c2.weightValues
+check(vals.allSatisfy { abs($0.value - (90 - Double(daysBetween(addDays(dayKey(), -29), $0.day)) * 0.05)) < 0.15 }, "readings corrected to the main scale")
+check(pr.scaleOffsetMap["Madrid"].map { abs($0 - madrid) < 0.01 } == true, "offsets saved on the profile")
+
+// Phases: a cut that reached its weight hands over to the next phase
+c2.startProgram(goal: .lose, ratePercent: 0.5, diet: .balanced, protein: .high, weightKg: 89, expenditure: 2800, sex: .male, reason: "goal")
+pr.phaseEnd = "kg:89.0"
+pr.phases = [PhaseStep(goal: GoalType.maintain.rawValue, ratePercent: 0, weeks: 4), PhaseStep(goal: GoalType.gain.rawValue, ratePercent: 0.25, untilKg: 95)]
+check(c2.phaseDone, "cut done at the target weight")
+c2.startNextPhase()
+check(c2.activeProgram?.goalValue == .maintain && pr.phaseEnd == "day:\(addDays(dayKey(), 28))", "maintenance for 4 weeks starts (\(pr.phaseEnd))")
+check(pr.phases.count == 1 && pr.phases[0].goalValue == .gain, "the bulk waits next")
+check(!c2.phaseDone, "maintenance not done yet")
+
+// Shadow log
+pr.shadowEntries += [ShadowEntry(day: dayKey(), currentKcal: 2500, proposedKcal: 2400, rawKcal: 2300, expenditure: 2700, weekChangeKg: -0.4)]
+check(pr.shadowEntries.count == 1 && pr.shadowEntries[0].proposedKcal == 2400, "shadow check-ins are logged")
+
 print(failed == 0 ? "ALL PASSED" : "\(failed) FAILED")
 exit(failed == 0 ? 0 : 1)

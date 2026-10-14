@@ -46,7 +46,7 @@ struct WeeklyReview: View {
         let proteinHit = full.filter { d in (byDay[d]?.protein ?? 0) >= (ctx.dayTargets(on: d)?.protein ?? 1) * 0.9 }
         let unit = profiles.first?.weight ?? .kg
         let energy = profiles.first?.energy ?? .kcal
-        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: today)
+        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: today)
         let rate = weeklyTrendChange(trend, days: 7)
         let program = ctx.activeProgram
         let trendKg = trend.last?.trend ?? 75
@@ -75,6 +75,7 @@ struct WeeklyReview: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             musclesCard
+            sleepCard
             StrengthRetentionCard(unit: unit)
             ForEach(flags(rate: rate, trendKg: trendKg, goal: program?.goalValue, target: target), id: \.self) { f in
                 Label(f, systemImage: "lightbulb.fill").font(.callout)
@@ -126,6 +127,31 @@ struct WeeklyReview: View {
         }
     }
 
+    private var sleep: (now: Double?, before: Double?) {
+        let today = dayKey(), from = addDays(today, -14)
+        let rows = ((try? ctx.fetch(FetchDescriptor<DailyActivity>(predicate: #Predicate { $0.day >= from && $0.day <= today }))) ?? []).filter { $0.sleepHours > 1 }
+        func avg(_ r: [DailyActivity]) -> Double? { r.count >= 3 ? r.map(\.sleepHours).reduce(0, +) / Double(r.count) : nil }
+        let cut = addDays(today, -6)
+        return (avg(rows.filter { $0.day >= cut }), avg(rows.filter { $0.day < cut }))
+    }
+
+    @ViewBuilder private var sleepCard: some View {
+        let s = sleep
+        if let now = s.now {
+            HStack(spacing: 12) {
+                Image(systemName: "bed.double.fill").font(.title3).foregroundStyle(Color(hex: 0x7B8CF3))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sleep \(number(now, digits: 1)) h a night").font(.headline)
+                    Text(s.before.map { "\($0 <= now ? "+" : "−")\(number(abs(now - $0), digits: 1)) h on the week before" } ?? "from Apple Health")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: now >= 7 ? "checkmark.circle.fill" : "exclamationmark.circle.fill").foregroundStyle(now >= 7 ? palette.good : palette.warn)
+            }
+            .padding(12).modifier(CardSurface(cornerRadius: 14))
+        }
+    }
+
     /// What nutrition and training say together (no other app can: they're in one place here).
     private func flags(rate: Double?, trendKg: Double, goal: GoalType?, target: Double) -> [String] {
         guard let rate, let goal else { return [] }
@@ -142,7 +168,10 @@ struct WeeklyReview: View {
         let falling = changes.filter { $0 < -0.03 }.count, rising = changes.filter { $0 > 0.01 }.count
         var out: [String] = []
         let pctPerWeek = rate / trendKg * 100
-        if goal == .lose, pctPerWeek < -0.75, falling >= 2 {
+        let slept = sleep.now
+        if falling >= 2, let h = slept, h < 6.5 {
+            out.append("\(falling) main lifts are down, and you've slept \(number(h, digits: 1)) h a night. That's likely the sleep, not the calories: fix sleep before changing the plan.")
+        } else if goal == .lose, pctPerWeek < -0.75, falling >= 2 {
             out.append("You're losing \(number(abs(pctPerWeek), digits: 1))% a week and \(falling) main lifts are down. The deficit looks too aggressive for keeping muscle: consider a slower rate or a diet break.")
         }
         if goal == .gain, rate > target * 1.5, rising == 0, !changes.isEmpty {

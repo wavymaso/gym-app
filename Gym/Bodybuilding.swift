@@ -110,7 +110,7 @@ struct ProteinMealsCard: View {
         let first = days.min() ?? dayKey(), last = days.max() ?? dayKey()
         let entries = (try? ctx.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= first && $0.day <= last }))) ?? []
         let logged = max(1, Set(entries.map(\.day)).count)
-        let kg = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey()).last?.trend ?? 75
+        let kg = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey()).last?.trend ?? 75
         let per = roundTo(0.4 * kg, 1)
         let byMeal = Dictionary(grouping: entries) { Meal(time: $0.time) }.mapValues { $0.reduce(0) { $0 + $1.nutrients.protein } / Double(logged) }
         let hits = Meal.allCases.filter { (byMeal[$0] ?? 0) >= per * 0.85 }.count
@@ -176,7 +176,7 @@ struct StrengthRetentionCard: View {
                 .sorted { $0.week < $1.week }
             return Lift(key: key, name: ctx.exercise(key)?.name ?? key, weekly: weekly)
         }
-        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let bwNow = trend.last?.trend, bwThen = trend.last { $0.day <= addDays(dayKey(), -42) }?.trend
         let falling = lifts.filter { ($0.change ?? 0) < -0.03 }
         if !lifts.isEmpty {

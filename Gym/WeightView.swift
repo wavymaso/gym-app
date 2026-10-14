@@ -12,7 +12,7 @@ struct WeightView: View {
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
-        let series = trendSeries(entries.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let series = trendSeries(entries.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 hero(series, unit)

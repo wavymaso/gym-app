@@ -5,7 +5,8 @@ import SwiftData
 
 extension ModelContext {
     var weightValues: [DayValue] {
-        ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.kg) }
+        scaleOffsets = profile?.scaleOffsetMap ?? [:]
+        return ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.trendKg) }
     }
 
     /// kcal per finished day (before today), for days with anything logged. Days with nothing
@@ -108,11 +109,12 @@ extension ModelContext {
     }
 
     /// Log (or replace) the weight for a day.
-    func logWeight(_ kg: Double, on day: String = dayKey()) {
+    func logWeight(_ kg: Double, on day: String = dayKey(), scale: String = "") {
         if let w = try? fetch(FetchDescriptor<WeightEntry>(predicate: #Predicate { $0.day == day })).first {
-            w.kg = kg
+            w.kg = kg; w.scale = scale
         } else {
-            insert(WeightEntry(day: day, kg: kg))
+            let w = WeightEntry(day: day, kg: kg); w.scale = scale
+            insert(w)
         }
         commit()
     }

@@ -212,7 +212,7 @@ struct EnergyBalanceCard: View {
             } else {
                 let avg = days.reduce(0) { $0 + $1.balance } / Double(days.count)
                 let implied = days.reduce(0) { $0 + $1.balance } / kcalPerKg
-                let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+                let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
                 let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
                 let actual = (byDay[days.last!.day] ?? 0) - (byDay[days.first!.day] ?? 0)
                 HStack(alignment: .firstTextBaseline) {
@@ -251,7 +251,7 @@ struct WeeklyTable: View {
 
     var body: some View {
         let weeks = Dictionary(grouping: d.finished) { mondayOf($0.day) }.sorted { $0.key > $1.key }.prefix(12)
-        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let trend = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
         Card(title: "Week by week", systemImage: "tablecells") {
             if weeks.isEmpty {

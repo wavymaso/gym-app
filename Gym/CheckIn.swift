@@ -19,6 +19,7 @@ struct CheckInView: View {
             ScrollView {
                 if let s = ctx.checkInSummary() {
                     VStack(alignment: .leading, spacing: 16) {
+                        if ctx.phaseDone, let p = profiles.first { phaseCard(p) }
                         if !fast { WeeklyReview() }
                         Text(fast ? "How your week went" : "The numbers").font(.title2.bold())
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
@@ -47,8 +48,12 @@ struct CheckInView: View {
                             HStack {
                                 Button("Keep current targets") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
                                 Spacer()
-                                Button("Apply new targets") {
-                                    if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
+                                Button(profiles.first?.shadowMode == true ? "Log it (shadow)" : "Apply new targets") {
+                                    if let prof = profiles.first, prof.shadowMode {
+                                        prof.shadowEntries += [ShadowEntry(day: dayKey(), currentKcal: s.current.kcal, proposedKcal: p.kcal, rawKcal: s.raw?.kcal ?? p.kcal,
+                                                                           expenditure: s.expenditure, weekChangeKg: s.weekChangeKg)]
+                                        ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss()
+                                    } else if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
                                 }
                                 .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                                 .confirmationDialog("Expenditure moved \(energy.format(abs(s.expenditure - s.previousExpenditure))) since last time", isPresented: $confirmBig, titleVisibility: .visible) {
@@ -87,6 +92,21 @@ struct CheckInView: View {
         #if os(macOS)
         .frame(width: 580, height: 640)
         #endif
+    }
+
+    /// The phase reached its end: offer the next one (or maintenance).
+    private func phaseCard(_ p: Profile) -> some View {
+        let next = p.phases.first ?? PhaseStep(goal: GoalType.maintain.rawValue, ratePercent: 0, weeks: 4)
+        return Card(title: "Phase complete", systemImage: "flag.checkered") {
+            Text("\(ctx.activeProgram?.goalValue.label ?? "This phase") is done (\(p.phaseEndText(p.weight) ?? "")). Next: \(next.describe(p.weight)).")
+                .font(.callout)
+            HStack {
+                Button("Start it") { ctx.startNextPhase(); refresh += 1 }.buttonStyle(.borderedProminent)
+                Button("Keep going") { p.phaseEnd = ""; ctx.commit(); refresh += 1 }.buttonStyle(.bordered)
+            }
+            Text("Going from a cut straight into a surplus mostly adds fat back; a few weeks at your new maintenance first settles water, hunger and expenditure.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     /// Coaching: days last week that look half-logged. A guess of the whole day keeps the

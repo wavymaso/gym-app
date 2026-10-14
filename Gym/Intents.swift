@@ -66,7 +66,7 @@ struct LogWeightIntent: AppIntent {
         guard kg > 25, kg < 350 else { return .result(dialog: "That doesn't look like a weight. Nothing logged.") }
         ctx.logWeight(kg)
         WidgetData.write(ctx)
-        let trend = trendSeries(((try? ctx.fetch(FetchDescriptor<WeightEntry>())) ?? []).map { DayValue(day: $0.day, value: $0.kg) },
+        let trend = trendSeries(((try? ctx.fetch(FetchDescriptor<WeightEntry>())) ?? []).map { DayValue(day: $0.day, value: $0.trendKg) },
                                 through: dayKey()).last?.trend
         return .result(dialog: "Logged \(unit.format(kg)).\(trend.map { " Trend: \(unit.format($0))." } ?? "")")
     }

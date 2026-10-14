@@ -35,6 +35,11 @@ import SwiftData
     var refeedWeekday: Int = 0               // a weekly high-carb day (Calendar weekday; 0 = none)
     var refeedExtraKcal: Double = 0          // all carbs, taken back evenly from the other days
     var refeedSince: String = ""             // when refeeds started (their water swings are expected from then)
+    var scales: String = ""                  // other scales and how they read vs your main one: "Madrid=-0.6;Gym=0.4"
+    var phaseEnd: String = ""                // when the current phase ends: "" | "day:2026-12-01" | "kg:100.0"
+    var phaseQueue: String = ""              // the phases after this one (JSON [PhaseStep])
+    var shadowMode: Bool = false             // check-ins calculate but don't change targets
+    var shadowLog: String = ""               // what the coach would have done (JSON [ShadowEntry])
     var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)
     var dietBreakEnd: String = ""
 
@@ -108,6 +113,7 @@ import SwiftData
     var bodyFatPercent: Double?
     var createdAt: Date
 
+    var scale: String = ""                    // "" = your main scale; else a named one (Profile.scales)
     init(day: String = dayKey(), kg: Double, bodyFatPercent: Double? = nil) {
         self.day = day; self.kg = kg; self.bodyFatPercent = bodyFatPercent; self.createdAt = Date()
     }

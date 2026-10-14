@@ -16,7 +16,7 @@ struct StrategyView: View {
 
     /// "At −0,62 kg a week you'll reach 100 kg around 12 Mar 2027."
     private func projection(_ p: Profile, _ goal: Double) -> String? {
-        let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         guard let now = series.last?.trend else { return nil }
         if abs(now - goal) < 0.1 { return "You're there." }
         guard let wk = weeklyTrendChange(series), let d = goalDate(trendKg: now, goalKg: goal, weeklyKg: wk) else {
@@ -28,6 +28,9 @@ struct StrategyView: View {
     @State private var selectedDay = dayKey()
     @State private var collaborative = false
     @State private var refeeding = false
+    @State private var planning = false
+    @State private var shadowing = false
+    @State private var scaling = false
     @State private var breaking = false
     @State private var editingFloor = false
 
@@ -69,6 +72,9 @@ struct StrategyView: View {
         .sheet(isPresented: $manual) { ManualTargetsView() }
         .sheet(isPresented: $collaborative) { ManualTargetsView(mode: "collaborative") }
         .sheet(isPresented: $refeeding) { if let p = profiles.first { RefeedSheet(profile: p) } }
+        .sheet(isPresented: $planning) { if let p = profiles.first { PhasePlanSheet(profile: p) } }
+        .sheet(isPresented: $shadowing) { if let p = profiles.first { ShadowSheet(profile: p) } }
+        .sheet(isPresented: $scaling) { if let p = profiles.first { ScalesSheet(profile: p) } }
         .sheet(isPresented: $breaking) { if let p = profiles.first { DietBreakSheet(profile: p) } }
         .sheet(isPresented: $editingFloor) { if let p = profiles.first { CalorieFloorSheet(profile: p) } }
         .sheet(isPresented: $editingGoalWeight) { if let p = profiles.first { GoalWeightSheet(profile: p) } }
@@ -114,7 +120,7 @@ struct StrategyView: View {
     // MARK: The program
 
     private func hero(_ p: Profile, _ g: Program) -> some View {
-        let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let now = series.last?.trend
         let startKg = series.first { $0.day >= g.startDay }?.trend ?? g.startWeightKg
         let tint: Color = g.goalValue == .lose ? palette.calories : g.goalValue == .gain ? palette.protein : palette.good
@@ -130,7 +136,8 @@ struct StrategyView: View {
             }
             HStack(spacing: 8) {
                 chip(goalDetail(g, p))
-                chip(p.inDietBreak(dayKey()) ? "Diet break" : styleText(g.mode))
+                chip(p.inDietBreak(dayKey()) ? "Diet break" : p.shadowMode ? "Shadow" : styleText(g.mode))
+                if let end = p.phaseEndText(p.weight) { chip(end) }
                 chip(g.dietValue.label)
             }
             if let goal = p.goalWeightKg, let now {
@@ -291,6 +298,12 @@ struct StrategyView: View {
                       p.inDietBreak(dayKey()) ? "On until \(date(fromKey: p.dietBreakEnd).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))"
                       : (!p.dietBreakStart.isEmpty && p.dietBreakStart > dayKey() ? "Planned from \(date(fromKey: p.dietBreakStart).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))"
                          : "A week or two at maintenance")) { breaking = true }
+            rowButton("flag.2.crossed", palette.calories, "Phase plan",
+                      [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ").isEmpty
+                        ? "Plan what comes after this phase"
+                        : [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ")) { planning = true }
+            rowButton("eye.slash", Color(hex: 0xA77BF3), "Shadow mode", p.shadowMode ? "On: check-ins don't change targets" : "Off · replay past check-ins") { shadowing = true }
+            rowButton("scalemass", palette.accent, "Scales", p.scaleNames.isEmpty ? "Just one" : "Main + \(p.scaleNames.joined(separator: ", "))") { scaling = true }
             rowLink("flame", palette.warn, "Expenditure settings", "Algorithm, starting estimate") { ExpenditureSettingsView() }
             rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
             rowLink("chart.line.uptrend.xyaxis", Color(hex: 0xA77BF3), "Weight trend settings", "How the trend is smoothed", last: true) { WeightTrendSettingsView() }

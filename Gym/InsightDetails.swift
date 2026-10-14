@@ -136,7 +136,7 @@ struct InsightDetailView: View {
     // MARK: Data
 
     private func series(_ unit: WeightUnit, _ energy: EnergyUnit) -> [Point] {
-        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         switch kind {
         case .weightTrend:
             return trend.map { Point(day: $0.day, value: unit.fromKg($0.trend), extra: $0.logged ? unit.fromKg($0.scale) : nil) }
@@ -367,7 +367,7 @@ struct InsightDetailView: View {
     }
 
     @ViewBuilder private func explainers(_ all: [Point], _ unit: WeightUnit, _ energy: EnergyUnit) -> some View {
-        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let weekly = weeklyTrendChange(trend, days: 21)
         VStack(spacing: 14) {
             switch kind {
