@@ -152,6 +152,7 @@ struct MainView: View {
         } detail: {
             NavigationStack { page(page ?? .dashboard) }
         }
+        .environment(\.openPage, { page = $0 })
         #else
         // Four tabs, the rest under "More".
         TabView(selection: Binding(get: { page ?? .dashboard }, set: { page = $0 })) {
@@ -159,6 +160,7 @@ struct MainView: View {
                 NavigationStack { page(s) }.tabItem { Label(s.label, systemImage: s.icon) }.tag(s)
             }
         }
+        .environment(\.openPage, { page = $0 })
         #endif
     }
 
