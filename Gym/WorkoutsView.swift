@@ -376,6 +376,7 @@ struct WorkoutRow: View {
 struct WeekCard: View {
     @Environment(\.modelContext) private var ctx
     @Query private var all: [WorkoutSet]
+    @State private var editingRanges = false
 
     init() {
         var cal = Calendar(identifier: .gregorian)
@@ -389,7 +390,8 @@ struct WeekCard: View {
             ctx.exercise(s.exerciseKey).map { ($0.muscleValue, $0.secondaryValues, s.kindValue) }
         })
         let rows = Muscle.allCases.filter { (counts[$0] ?? 0) > 0 && $0 != .cardio }
-        Card(title: "This week", systemImage: "calendar") {
+        Card(title: "This week", systemImage: "calendar",
+             accessory: AnyView(Button("Ranges") { editingRanges = true }.buttonStyle(.borderless).font(.caption.weight(.semibold)))) {
             if rows.isEmpty {
                 Text("Sets you finish this week show up here by muscle. Helper muscles count as half a set.")
                     .font(.callout).foregroundStyle(.secondary)
@@ -403,9 +405,12 @@ struct WeekCard: View {
                             GeometryReader { g in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.raisedBackground)
-                                    // 10–20 working sets a week: the usual target zone
-                                    Rectangle().fill(palette.good.opacity(0.12)).frame(width: g.size.width * 10 / top).offset(x: g.size.width * 10 / top)
-                                    Capsule().fill(n >= 10 ? palette.good : palette.accent).frame(width: max(8, g.size.width * min(n, top) / top))
+                                    // This muscle's growth range (volumeRange, adjustable)
+                                    let r = volumeRange(m)
+                                    Rectangle().fill(palette.good.opacity(0.12)).frame(width: g.size.width * (r.upperBound - r.lowerBound) / top)
+                                        .offset(x: g.size.width * r.lowerBound / top)
+                                    Capsule().fill(n >= r.lowerBound ? (n > r.upperBound ? palette.protein : palette.good) : palette.accent)
+                                        .frame(width: max(8, g.size.width * min(n, top) / top))
                                 }
                                 .clipShape(Capsule())
                             }
@@ -415,9 +420,10 @@ struct WeekCard: View {
                         }
                     }
                 }
-                Text("Working sets; helper muscles count as half. Shaded: 10–20 a week, a common target.").font(.caption).foregroundStyle(.secondary)
+                Text("Working sets; helper muscles count as half. Shaded: each muscle's growth range (tap Ranges to fit how you recover).").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .sheet(isPresented: $editingRanges) { VolumeRangesSheet() }
     }
 }
 
@@ -629,5 +635,47 @@ struct StrengthCard: View {
     private func mondayOf(_ day: String) -> String {
         let n = dayNumber(day)
         return dayKey(number: n - ((n + 3) % 7 + 7) % 7)
+    }
+}
+
+/// Your own weekly set ranges per muscle (start: enough to grow; end: about what you recover from).
+struct VolumeRangesSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var ranges: [String: [Double]] = UserDefaults.standard.dictionary(forKey: "volumeRanges") as? [String: [Double]] ?? [:]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(Muscle.allCases.filter { $0 != .cardio && $0 != .fullBody }) { m in
+                        let r = ranges[m.rawValue] ?? [volumeRange(m).lowerBound, volumeRange(m).upperBound]
+                        HStack {
+                            Text(m.label)
+                            Spacer()
+                            Stepper("\(Int(r[0]))", value: Binding(get: { r[0] }, set: { ranges[m.rawValue] = [min($0, r[1]), r[1]] }), in: 0...30)
+                                .fixedSize()
+                            Text("–")
+                            Stepper("\(Int(r[1]))", value: Binding(get: { r[1] }, set: { ranges[m.rawValue] = [r[0], max($0, r[0])] }), in: 0...40)
+                                .fixedSize()
+                        }
+                    }
+                } footer: {
+                    Text("Working sets a week. Start low and raise the top end while you still recover between sessions; drop it if performance falls. Helper muscles count as half a set.")
+                }
+                Button("Back to the defaults", role: .destructive) { ranges = [:] }
+            }
+            .themedForm()
+            .navigationTitle("Volume ranges")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { UserDefaults.standard.set(ranges, forKey: "volumeRanges"); dismiss() }
+                }
+            }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 460, height: 600)
+        #endif
     }
 }

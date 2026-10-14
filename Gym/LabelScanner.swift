@@ -191,6 +191,7 @@ private struct IdentifiedValues: Identifiable {
 #if os(iOS)
 /// The system camera, returning the photo as JPEG data.
 struct CameraPicker: UIViewControllerRepresentable {
+    var ghost: Data? = nil                    // a faint copy of the last progress photo, to line up pose and framing
     let done: (Data) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -198,6 +199,15 @@ struct CameraPicker: UIViewControllerRepresentable {
         let p = UIImagePickerController()
         p.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
         p.delegate = context.coordinator
+        if p.sourceType == .camera, let ghost, let img = UIImage(data: ghost) {
+            let v = UIImageView(image: img)
+            v.contentMode = .scaleAspectFit
+            v.alpha = 0.3
+            v.isUserInteractionEnabled = false
+            let b = UIScreen.main.bounds
+            v.frame = CGRect(x: 0, y: b.height * 0.1, width: b.width, height: b.width * 4 / 3)   // the preview area
+            p.cameraOverlayView = v
+        }
         return p
     }
     func updateUIViewController(_ vc: UIImagePickerController, context: Context) {}

@@ -220,6 +220,12 @@ private struct ExerciseBlock: View {
                         Button { ctx.trackSides(order: rows[0].exerciseOrder, in: workout) } label: { Label("Track left & right", systemImage: "arrow.left.and.right") }
                     }
                     Divider()
+                    Button {
+                        // Busy gym, sore joint: drop what's left of it today; the routine keeps it.
+                        for r in rows where !r.done { ctx.delete(r) }
+                        ctx.commit()
+                    } label: { Label("Skip the rest today", systemImage: "forward.end") }
+                    .disabled(rows.allSatisfy(\.done))
                     Button("Remove exercise", role: .destructive, action: remove)
                 } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
@@ -249,7 +255,7 @@ private struct ExerciseBlock: View {
             Grid(alignment: .leading, horizontalSpacing: isPhone ? 10 : 14, verticalSpacing: 8) {
                 GridRow {
                     Text("Set"); Text("Previous"); Text(unit.rawValue); Text("Reps")
-                    if !isPhone { Text("RIR") }                         // the phone has no room; add RIR on the Mac
+                    Text("RIR").frame(width: isPhone ? 34 : 44)
                     Text("")
                 }
                 .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -269,13 +275,23 @@ private struct ExerciseBlock: View {
                         }
                         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                         Text(previousText(previous, workingIndex: working - 1, row: row))
-                            .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 72 : 90, alignment: .leading)
+                            .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 60 : 90, alignment: .leading)
                             .lineLimit(1).minimumScaleFactor(0.8)
                         DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commit() }), digits: 2)
                             .frame(width: isPhone ? 64 : 70)
                         DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commit() }), digits: 0)
                             .frame(width: isPhone ? 44 : 50)
-                        if !isPhone {
+                        if isPhone {
+                            // Reps in reserve: one tap picks it (it makes progression and e1RM honest).
+                            Menu {
+                                Button("–") { row.rir = nil; ctx.commit() }
+                                ForEach([0, 1, 2, 3, 4, 5], id: \.self) { v in Button("\(v)\(v == 0 ? " (failure)" : "")") { row.rir = Double(v); ctx.commit() } }
+                            } label: {
+                                Text(row.rir.map { number($0) } ?? "–").font(.callout.weight(.semibold)).monospacedDigit()
+                                    .frame(width: 34, height: 34).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 9))
+                            }
+                            .menuStyle(.button).buttonStyle(.plain)
+                        } else {
                             DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; ctx.commit() }), digits: 1, emptyBelowZero: true)
                                 .frame(width: 44)
                         }

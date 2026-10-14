@@ -243,6 +243,8 @@ struct PhotoThumb: View {
 
 struct AddProgressPhoto: View {
     @Environment(\.modelContext) private var ctx
+    @Query(sort: \ProgressPhoto.day, order: .reverse) private var previous: [ProgressPhoto]
+    private var lastPhoto: ProgressPhoto? { previous.first { $0.pose == pose.rawValue } }
     @Environment(\.dismiss) private var dismiss
     @State private var pose = Pose.front
     @State private var day = Date()
@@ -268,14 +270,14 @@ struct AddProgressPhoto: View {
                     #endif
                     PhotosPicker(selection: $item, matching: .images) { Label("Choose from Photos", systemImage: "photo") }
                 } footer: {
-                    Text("Tip: same place, same light, same time of day (morning, before eating). A timer and a fixed phone help.")
+                    Text("The camera shows your last \(pose.label.lowercased()) photo faintly: line yourself up with it. Same place, same light, same time of day (morning, before eating).")
                 }
             }
             .themedForm()
             .navigationTitle("Progress photo")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $camera) { CameraPicker { use($0) }.ignoresSafeArea() }
+            .sheet(isPresented: $camera) { CameraPicker(ghost: lastPhoto?.jpeg) { use($0) }.ignoresSafeArea() }
             #else
             .fileImporter(isPresented: $importing, allowedContentTypes: [.image]) { r in
                 if case .success(let url) = r {

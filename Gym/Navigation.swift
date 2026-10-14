@@ -231,10 +231,15 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 6
+    static let version = 7
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("calendar.badge.checkmark", "Weekly review", "On check-in day: logging, protein, rate vs goal, expenditure, sets per muscle, lifts, and what they say together."),
+        ("magnifyingglass", "Search forgives typos", "“platno” finds plátano; Spanish words find USDA foods; foods whose label doesn't add up are flagged."),
+        ("link", "Recipes from Instagram", "Paste a post link, the caption, or photograph a cookbook page: ingredients and macros worked out."),
+        ("gauge.with.dots.needle.33percent", "Calmer, smarter coaching", "Retuned on your 3 years of data; refeeds and water days don't fool it; each check-in says why."),
+        ("dumbbell.fill", "RIR, skip today, your volume ranges", "Reps in reserve on the phone, skip an exercise for one session, and per-muscle set ranges."),
         ("timer", "Rest timer on your lock screen", "Counts down on the lock screen and Dynamic Island, and alerts you when rest is over."),
         ("pills.fill", "Supplements", "Tick off creatine and the rest each day and keep the streak (Dashboard → Habits)."),
         ("figure.strengthtraining.traditional", "Strength retention & deloads", "Your main lifts against body weight while you cut, and a deload when they slip (Training)."),
