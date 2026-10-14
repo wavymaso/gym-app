@@ -339,3 +339,9 @@ extension View {
         #endif
     }
 }
+
+extension View {
+    /// Compact, number-heavy pieces (rings, bars, tab bar) grow with your text size only up to XXL,
+    /// so they stay readable instead of wrapping digit by digit. Reading text still grows fully.
+    func capType() -> some View { dynamicTypeSize(...DynamicTypeSize.xxLarge) }
+}

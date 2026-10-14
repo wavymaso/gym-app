@@ -99,6 +99,7 @@ struct PhoneTabBar: View {
             item(.more, "More", "ellipsis.circle")
         }
         .padding(.top, 8).padding(.horizontal, 6)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
     }
@@ -109,7 +110,7 @@ struct PhoneTabBar: View {
                 Image(systemName: tab == t && icon != "fork.knife" ? icon + ".fill" : icon).font(.system(size: 21, weight: .medium))
                     .symbolRenderingMode(.hierarchical)
                     .frame(height: 26)
-                Text(title).font(.caption2.weight(.semibold))
+                Text(title).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundStyle(tab == t ? palette.accent : Color.secondary)
             .frame(maxWidth: .infinity).contentShape(Rectangle())
@@ -217,5 +218,48 @@ struct SidebarToday: View {
             .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .padding(10)
         }
+    }
+}
+
+/// Shown once after an update: what's new, briefly.
+struct WhatsNewSheet: View {
+    static let version = 3
+    @Environment(\.dismiss) private var dismiss
+
+    private let items: [(String, String, String)] = [
+        ("plus.circle.fill", "The + button", "Log food, scan a barcode or label, quick add, weigh in, water or train, from anywhere."),
+        ("slider.horizontal.3", "Your dashboard", "Customize it: move sections, pick nutrients, consumed or remaining. Swipe the top widgets."),
+        ("chart.line.uptrend.xyaxis", "Smarter numbers", "Weight trend V2 and expenditure V2: more accurate and quicker to react (Settings → Feature settings)."),
+        ("calendar", "Calorie distribution", "More on training days, fasting days, and an optional weekly budget (Strategy)."),
+        ("square.and.arrow.down", "Saved meals & day notes", "Save a meal to log it in one tap; mark a day as partially logged."),
+        ("link", "Supersets & notes", "Superset exercises, track left and right, and keep notes per exercise."),
+        ("externaldrive", "Backups", "A full backup every day; add a folder like iCloud Drive in Settings."),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("What's new").font(.number(30)).padding(.top, 24)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(items, id: \.1) { icon, title, text in
+                        HStack(alignment: .top, spacing: 14) {
+                            Image(systemName: icon).font(.title3.weight(.semibold)).foregroundStyle(palette.accent).frame(width: 32)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(title).font(.headline)
+                                Text(text).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+            }
+            Button { dismiss() } label: { Text("Continue").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6) }
+                .buttonStyle(.borderedProminent).controlSize(.large).padding(.bottom, 20)
+        }
+        .padding(.horizontal, 24)
+        .background(Color.pageBackground)
+        #if os(macOS)
+        .frame(width: 460, height: 560)
+        #endif
+        .appStyle()
     }
 }

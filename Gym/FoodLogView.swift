@@ -70,32 +70,6 @@ struct FoodLogView: View {
     }
 }
 
-/// Meals are times of day (Spanish hours), so every entry has one without choosing.
-enum Meal: Int, CaseIterable, Identifiable {
-    case breakfast, lunch, snack, dinner
-    var id: Int { rawValue }
-
-    var label: String { ["Breakfast", "Lunch", "Merienda", "Dinner"][rawValue] }
-    var icon: String { ["sunrise.fill", "sun.max.fill", "cup.and.saucer.fill", "moon.stars.fill"][rawValue] }
-    var color: Color { [palette.fat, palette.calories, palette.carbs, palette.protein][rawValue] }
-    /// Starts at (minutes after midnight): 05:00, 11:30, 17:00, 20:30.
-    var start: Int { [300, 690, 1020, 1230][rawValue] }
-    /// When something added to this meal is timed: 08:30, 14:30, 18:00, 21:30.
-    var usual: (Int, Int) { [(8, 30), (14, 30), (18, 0), (21, 30)][rawValue] }
-
-    init(time: Date) {
-        let c = Calendar.current.dateComponents([.hour, .minute], from: time)
-        let m = (c.hour ?? 0) * 60 + (c.minute ?? 0)
-        self = Meal.allCases.last { m >= $0.start } ?? .dinner        // after midnight still counts as dinner
-    }
-
-    /// The time for a new entry in this meal: now, if it's this meal now and the day is today; else its usual time.
-    func time(on day: String) -> Date {
-        if day == dayKey(), Meal(time: Date()) == self { return Date() }
-        return Calendar.current.date(bySettingHour: usual.0, minute: usual.1, second: 0, of: date(fromKey: day)) ?? Date()
-    }
-}
-
 /// Monday to Sunday around the chosen day, each with a little calorie ring.
 struct WeekStrip: View {
     @Binding var day: String
@@ -153,6 +127,7 @@ struct WeekStrip: View {
             .padding(6)
             .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+            .capType()
         }
     }
 
@@ -311,6 +286,7 @@ struct DayLog: View {
                 Text("\(energy.format(total.kcal)) eaten").font(.number(22))
             }
         }
+        .capType()
     }
 
     private func section(title: String, icon: String, color: Color, items: [FoodEntry], meal: Meal?) -> some View {
@@ -417,7 +393,7 @@ struct CompactMacroBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(macro.label).font(.caption.weight(.semibold)).frame(width: 52, alignment: .leading)
+            Text(macro.label).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6).frame(width: 52, alignment: .leading)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(macro.color.opacity(0.16))

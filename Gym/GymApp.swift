@@ -147,6 +147,9 @@ struct MainView: View {
 
     @State private var quick: QuickSheet?
     @State private var plus = false
+    @State private var weighing = false
+    @AppStorage("whatsNewSeen") private var whatsNewSeen = 0
+    @State private var whatsNew = false
     #if os(iOS)
     @State private var tab: PhoneTab = .dashboard
     @State private var morePath: [Page] = []
@@ -180,6 +183,16 @@ struct MainView: View {
         .environment(\.openPage, { page = $0 })
         .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { page = .workouts }) }
         .sheet(item: $quick) { quickSheet($0) }
+        .sheet(isPresented: $weighing) { WeighInSheet() }
+        .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
+        .background {
+            // Keyboard: ⌘1–⌘8 for the pages, ⌘⇧W to weigh in.
+            ForEach(Array([Page.dashboard, .food, .weight, .insights, .strategy, .workouts, .exercises, .settings].enumerated()), id: \.offset) { i, p in
+                Button("") { page = p }.keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command).opacity(0)
+            }
+            Button("") { weighing = true }.keyboardShortcut("w", modifiers: [.command, .shift]).opacity(0)
+        }
+        .onAppear { showWhatsNew() }
         #else
         TabView(selection: $tab) {
             NavigationStack { page(.dashboard) }.tag(PhoneTab.dashboard).toolbar(.hidden, for: .tabBar)
@@ -194,13 +207,22 @@ struct MainView: View {
         .environment(\.openPage, { open($0) })
         .sheet(isPresented: $plus) { QuickActionsSheet(choose: { quick = $0 }, train: { tab = .training }) }
         .sheet(item: $quick) { quickSheet($0) }
+        .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
         .onAppear {
             if let p = page, p != .dashboard { open(p) }
+            showWhatsNew()
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "plus") { plus = true }      // testing only
             #endif
         }
         #endif
+    }
+
+    /// Once per update (not in testing runs).
+    private func showWhatsNew() {
+        guard whatsNewSeen < WhatsNewSheet.version, !UserDefaults.standard.bool(forKey: "inMemory") else { return }
+        whatsNewSeen = WhatsNewSheet.version
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { whatsNew = true }
     }
 
     #if os(iOS)

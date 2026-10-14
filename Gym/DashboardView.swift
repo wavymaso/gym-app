@@ -79,7 +79,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)).uppercased())
                     .font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(.secondary)
-                Text(greeting).font(.number(isPhone ? 30 : 34))
+                Text(greeting).font(.number(isPhone ? 30 : 34)).lineLimit(1).minimumScaleFactor(0.6)
             }
             Spacer()
             let s = streak
@@ -96,6 +96,7 @@ struct DashboardView: View {
             }
         }
         .padding(.top, isPhone ? 8 : 0)
+        .capType()
     }
 
     private var greeting: String {
@@ -142,6 +143,7 @@ struct DashboardView: View {
             QuickAction(title: "Weigh in", icon: "scalemass.fill", color: Macro.carbs.color) { sheet = .weighIn }
             QuickAction(title: "Train", icon: "dumbbell.fill", color: Macro.protein.color) { openPage(.workouts) }
         }
+        .capType()
     }
 
     // MARK: Top widgets and sections
@@ -308,6 +310,10 @@ struct TodayRings: View {
     let energy: EnergyUnit
 
     var body: some View {
+        rings.capType()
+    }
+
+    private var rings: some View {
         Card(title: "") {
             let layout = isPhone ? AnyLayout(VStackLayout(spacing: 16)) : AnyLayout(HStackLayout(spacing: 36))
             layout {

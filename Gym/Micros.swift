@@ -61,26 +61,3 @@ enum Reference {
     /// Sodium: under 2000 mg (5 g of salt).
     static let sodium = 2000.0
 }
-
-extension Profile {
-    var customGoals: [String: Double] {
-        get { Dictionary(nutrientGoals.split(separator: ";").compactMap { kv -> (String, Double)? in
-            let p = kv.split(separator: "="); guard p.count == 2, let v = Double(p[1]) else { return nil }; return (String(p[0]), v)
-        }, uniquingKeysWith: { a, _ in a }) }
-        set { nutrientGoals = newValue.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ";") }
-    }
-}
-
-/// A nutrient's daily target (your own if you set one) and whether it's a limit.
-func nutrientTarget(_ key: String, kcal: Double, sex: Sex, profile: Profile?) -> (value: Double, limit: Bool) {
-    let own = profile?.customGoals[key]
-    switch key {
-    case "fiber": return (own ?? Reference.fiber(kcal: kcal), false)
-    case "sugar": return (own ?? Reference.sugar(kcal: kcal), true)
-    case "satFat": return (own ?? Reference.satFat(kcal: kcal), true)
-    case "sodium": return (own ?? Reference.sodium, true)
-    default:
-        let m = Micro.all.first { $0.key == key }
-        return (own ?? m?.target(sex) ?? 0, m?.isLimit ?? false)
-    }
-}
