@@ -67,14 +67,14 @@ struct QuickActionsSheet: View {
 /// The sheet behind each quick action.
 @ViewBuilder func quickSheet(_ s: QuickSheet) -> some View {
     switch s {
-    case .food: AddFoodView(mode: .log(day: dayKey()))
-    case .scan: AddFoodView(mode: .log(day: dayKey()), startScanning: true)
+    case .food: FoodLogger(day: dayKey(), start: .search)
+    case .scan: FoodLogger(day: dayKey(), start: .scan)
     case .label: LabelScanView()
-    case .quickAdd: QuickAddView(day: dayKey(), entry: nil)
+    case .quickAdd: FoodLogger(day: dayKey(), start: .quickAdd)
     case .weighIn: WeighInSheet()
     case .water: WaterAmountSheet()
-    case .photo: PhotoLogView(day: dayKey(), start: .camera)
-    case .describe: PhotoLogView(day: dayKey(), start: .describe)
+    case .photo: FoodLogger(day: dayKey(), start: .ai, startCamera: true)
+    case .describe: FoodLogger(day: dayKey(), start: .ai, describe: true)
     }
 }
 

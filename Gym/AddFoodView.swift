@@ -10,6 +10,11 @@ struct AddFoodView: View {
 
     let mode: Mode
     var initialQuery: String? = nil              // recipe import: search for the ingredient straight away
+    /// Inside the food logger (FoodLogger.swift): just the search, or just your library; a pick goes to `choose`.
+    enum Embedded { case search, library }
+    var embedded: Embedded? = nil
+    var choose: ((Food) -> Void)? = nil
+    var chooseMeal: ((SavedMeal) -> Void)? = nil
     var startScanning = false                    // the + button's "Scan barcode"
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
@@ -43,47 +48,82 @@ struct AddFoodView: View {
     enum Tab: String, CaseIterable { case search = "Search", recent = "Recent", meals = "Meals", favourites = "Favourites", mine = "My foods" }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                VStack(spacing: 10) {
-                    TextField("Search foods, brands or a barcode", text: $query)
-                        .textFieldStyle(.roundedBorder).focused($focused)
-                        .onSubmit { tab = .search }
-                    Picker("", selection: $tab) { ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
-                        .pickerStyle(.segmented).labelsHidden()
-                    if tab == .search && LocalFoods.shared.available {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(LocalFoods.Scope.allCases) { s in
-                                    Button(s.label) { scope = s; local = LocalFoods.shared.search(query, scope: s) }
-                                        .font(.caption.weight(.semibold)).buttonStyle(.plain)
-                                        .padding(.horizontal, 10).padding(.vertical, 5)
-                                        .background(scope == s ? palette.accent : Color.raisedBackground, in: Capsule())
-                                        .foregroundStyle(scope == s ? .white : .primary)
-                                }
+        if embedded != nil {
+            panel
+                .sheet(isPresented: $newFood) { CustomFoodView(food: nil) }
+                .sheet(item: $editingFood) { CustomFoodView(food: $0) }
+                .sheet(item: $editingRecipe) { RecipeView(recipe: $0) }
+                .onAppear { if let q = initialQuery, query.isEmpty { query = q }; if embedded == .library { tab = .recent } }
+                .task(id: query) { await search() }
+        } else {
+            standalone
+        }
+    }
+
+    private var panel: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 10) {
+                if embedded != .library {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                        TextField("Search foods, brands or a barcode", text: $query)
+                            .textFieldStyle(.plain).focused($focused)
+                            .onSubmit { tab = .search }
+                            #if os(iOS)
+                            .submitLabel(.search).autocorrectionDisabled()
+                            #endif
+                        if !query.isEmpty {
+                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 11)
+                    .background(Color.raisedBackground, in: Capsule())
+                }
+                if embedded != .search {
+                    Picker("", selection: $tab) {
+                        ForEach(Tab.allCases.filter { embedded == nil || $0 != .search }, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden()
+                }
+                if tab == .search && LocalFoods.shared.available {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(LocalFoods.Scope.allCases) { s in
+                                Button(s.label) { scope = s; local = LocalFoods.shared.search(query, scope: s) }
+                                    .font(.caption.weight(.semibold)).buttonStyle(.plain)
+                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .background(scope == s ? palette.accent : Color.raisedBackground, in: Capsule())
+                                    .foregroundStyle(scope == s ? .white : .primary)
                             }
                         }
                     }
                 }
-                .padding(16)
-                .background(Color.pageBackground)
-                List {
-                    switch tab {
-                    case .search: searchResults
-                    case .recent: localList(foods.filter { $0.lastUsed != nil }.prefix(60).map { $0 }, empty: "Foods you log appear here.")
-                    case .favourites: localList(foods.filter(\.isFavorite).sorted { $0.name < $1.name }, empty: "Star a food to keep it here.")
-                    case .mine: myFoods
-                    case .meals:
-                        SavedMealsList(pick: { m in
-                            if case .log(let day, let at) = mode { ctx.log(m, day: day, time: at ?? defaultTime(for: day)); dismiss() }
-                        }, energy: (try? ctx.fetch(FetchDescriptor<Profile>()).first?.energy) ?? .kcal)
-                    }
-                }
-                #if os(macOS)
-                .listStyle(.inset)
-                .themedList()
-                #endif
             }
+            .padding(16)
+            .background(Color.pageBackground)
+            List {
+                switch tab {
+                case .search: searchResults
+                case .recent: localList(foods.filter { $0.lastUsed != nil }.prefix(60).map { $0 }, empty: "Foods you log appear here.")
+                case .favourites: localList(foods.filter(\.isFavorite).sorted { $0.name < $1.name }, empty: "Star a food to keep it here.")
+                case .mine: myFoods
+                case .meals:
+                    SavedMealsList(pick: { m in
+                        if let chooseMeal { chooseMeal(m) }
+                        else if case .log(let day, let at) = mode { ctx.log(m, day: day, time: at ?? defaultTime(for: day)); dismiss() }
+                    }, energy: (try? ctx.fetch(FetchDescriptor<Profile>()).first?.energy) ?? .kcal)
+                }
+            }
+            #if os(macOS)
+            .listStyle(.inset)
+            .themedList()
+            #endif
+        }
+    }
+
+    private var standalone: some View {
+        NavigationStack {
+            panel
             .background(Color.pageBackground)
             .navigationTitle(isPicking ? "Add ingredient" : "Add food")
             .navigationDestination(item: $chosen) { f in FoodAmountView(food: f, mode: mode, done: { dismiss() }) }
@@ -168,9 +208,11 @@ struct AddFoodView: View {
     }
 
     @ViewBuilder private var searchResults: some View {
-        if query.trimmingCharacters(in: .whitespaces).isEmpty, !isPicking, !usual.foods.isEmpty {
-            Section("Usual for \(usual.meal.label.lowercased())") { ForEach(usual.foods) { f in foodRow(f) } }
-            Section("Recent") { ForEach(foods.filter { $0.lastUsed != nil && !usual.foods.contains($0) }.prefix(15).map { $0 }) { f in foodRow(f) } }
+        if query.trimmingCharacters(in: .whitespaces).isEmpty, !isPicking, !usual.foods.isEmpty || foods.contains(where: { $0.lastUsed != nil }) {
+            if !usual.foods.isEmpty {
+                Section("Usual for \(usual.meal.label.lowercased())") { ForEach(usual.foods) { f in foodRow(f) } }
+            }
+            Section("Recent") { ForEach(foods.filter { $0.lastUsed != nil && !usual.foods.contains($0) }.prefix(25).map { $0 }) { f in foodRow(f) } }
         } else if query.trimmingCharacters(in: .whitespaces).count < 2 {
             Text("Type at least two letters. Plain foods (rice, chicken breast) come from USDA, in English; supermarket products from Open Food Facts, in Spanish.")
                 .font(.callout).foregroundStyle(.secondary).listRowSeparator(.hidden)
@@ -227,7 +269,7 @@ struct AddFoodView: View {
     }
 
     private func foodRow(_ f: Food) -> some View {
-        Button { chosen = f } label: {
+        Button { pick(f) } label: {
             FoodRowLabel(name: f.name, brand: f.brand, source: f.source, per100: f.per100, unit: f.baseUnit, favorite: f.isFavorite)
         }
         .buttonStyle(.plain)
@@ -251,8 +293,10 @@ struct AddFoodView: View {
             if let full = try? await FoodAPI.product(barcode: code) { r.servings = full.servings }
             opening = nil
         }
-        chosen = ctx.food(for: r)
+        pick(ctx.food(for: r))
     }
+
+    private func pick(_ f: Food) { if let choose { choose(f) } else { chosen = f } }
 
     private func search() async {
         let q = query.trimmingCharacters(in: .whitespaces)
@@ -467,10 +511,15 @@ struct EntryEditor: View {
     let entry: FoodEntry
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
+    @State private var time = Date()
+    @State private var loaded = false
 
     var body: some View {
         NavigationStack {
-            FoodAmountView(food: food, mode: .log(day: entry.day), entry: entry, done: { dismiss() })
+            FoodDetailView(food: food, day: entry.day, initial: (entry.amount, entry.unit),
+                           primary: ("Save", { a, u in save(a, u) }),
+                           alreadyToday: ctx.entries(on: entry.day).filter { $0.id != entry.id }.reduce(.zero) { $0 + $1.nutrients },
+                           time: $time)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .destructiveAction) {
@@ -480,8 +529,19 @@ struct EntryEditor: View {
         }
         .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
-        .frame(width: 520, height: 600)
+        .frame(width: 560, height: 720)
         #endif
+        .onAppear { if !loaded { loaded = true; time = entry.time } }
+    }
+
+    private func save(_ amount: Double, _ unit: String) {
+        let f = food
+        entry.amount = amount; entry.unit = unit; entry.grams = f.grams(amount, unit: unit); entry.nutrients = f.nutrients(amount, unit: unit)
+        let c = Calendar.current
+        entry.time = c.date(bySettingHour: c.component(.hour, from: time), minute: c.component(.minute, from: time), second: 0,
+                            of: date(fromKey: entry.day)) ?? time
+        ctx.commit()
+        dismiss()
     }
 
     private var food: Food {

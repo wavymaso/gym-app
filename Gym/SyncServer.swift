@@ -116,11 +116,11 @@ let syncPort: UInt16 = 8010
         } else if r.method == "POST" && r.path == "/gym/photo",
                   let body = (try? JSONSerialization.jsonObject(with: r.body)) as? [String: Any] {
             // The phone's photo, through the model on this Mac (takes a few seconds; answer when done).
-            let image = (body["image"] as? String).flatMap { Data(base64Encoded: $0) }
+            let images = ((body["images"] as? [String]) ?? [body["image"] as? String].compactMap { $0 }).compactMap { Data(base64Encoded: $0) }
             let text = body["text"] as? String ?? ""
             Task { @MainActor in
                 do {
-                    let items = try await PhotoAI.askLocal(image: image, text: text)
+                    let items = try await PhotoAI.askLocal(images: images, text: text)
                     self.send(c, 200, ["items": items.map(\.dict)])
                 } catch {
                     self.send(c, 502, ["error": error.localizedDescription])

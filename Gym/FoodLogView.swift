@@ -60,7 +60,7 @@ struct FoodLogView: View {
         }
         .sheet(item: $sheet) { s in
             switch s {
-            case .add(let t): AddFoodView(mode: .log(day: day, time: t))
+            case .add(let t): FoodLogger(day: day, time: t)
             case .quickAdd(let t): QuickAddView(day: day, entry: nil, at: t)
             case .copy: CopyDayView(target: day)
             case .edit(let e):

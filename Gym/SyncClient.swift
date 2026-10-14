@@ -133,9 +133,8 @@ import SwiftData
 
     // MARK: Photo logging (the model runs on the Mac)
 
-    func photo(image: Data?, text: String) async throws -> [AIItem] {
-        var body: [String: Any] = ["text": text]
-        if let image { body["image"] = image.base64EncodedString() }
+    func photo(images: [Data], text: String) async throws -> [AIItem] {
+        let body: [String: Any] = ["text": text, "images": images.map { $0.base64EncodedString() }]
         let (data, _) = try await request(base: address, code: code, path: "/gym/photo", body: body, timeout: 240)
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         return (json["items"] as? [[String: Any]] ?? []).compactMap(AIItem.init)

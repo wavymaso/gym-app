@@ -218,7 +218,7 @@ struct PhotoLogView: View {
             }
         }
         do {
-            let (items, by) = try await PhotoAI.analyse(image: jpeg, text: details)
+            let (items, by) = try await PhotoAI.analyse(images: jpeg.map { [$0] } ?? [], text: details)
             var matched = ctx.plate(from: items)
             if !found.isEmpty {     // the packet the model saw is the one already read from its barcode
                 var skip = found.count
@@ -316,7 +316,7 @@ struct PhotoLogView: View {
 }
 
 /// One food on the plate: on or off, how much, and where its numbers come from.
-private struct PlateRow: View {
+struct PlateRow: View {
     @Binding var item: PlateItem
     let energy: EnergyUnit
     let swap: () -> Void

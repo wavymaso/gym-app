@@ -96,7 +96,7 @@ enum PhotoAI {
 
     // MARK: Asking the model
 
-    static func prompt(text: String, hasImage: Bool) -> String {
+    static func prompt(text: String, hasImage: Bool, photos: Int = 1) -> String {
         var p = """
         You are a meticulous dietitian logging a meal for someone in Spain (they also eat Saudi/Gulf food).
         \(hasImage ? "Look at the photo and identify every food and drink that will be eaten." : "Identify every food and drink in the description.")
@@ -111,6 +111,7 @@ enum PhotoAI {
         - "confidence": 0 to 1, how sure you are of the identity and portion.
         Reply with JSON only: {"items":[{"name":"","name_es":"","search":"","grams":0,"kcal_100g":0,"protein_100g":0,"fat_100g":0,"carbs_100g":0,"fiber_100g":0,"liquid":false,"packaged":false,"brand":"","confidence":0.0}]}
         """
+        if photos > 1 { p += "\n\nThe \(photos) photos show the SAME meal from different angles or parts of it: don't count anything twice." }
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !t.isEmpty { p += "\n\nWhat the person says about the meal (trust it over the photo): \(t)" }
         return p
@@ -135,9 +136,9 @@ enum PhotoAI {
     ]
 
     /// The model on this Mac, through Ollama.
-    static func askLocal(image: Data?, text: String) async throws -> [AIItem] {
-        var message: [String: Any] = ["role": "user", "content": prompt(text: text, hasImage: image != nil)]
-        if let image { message["images"] = [image.base64EncodedString()] }
+    static func askLocal(images: [Data], text: String) async throws -> [AIItem] {
+        var message: [String: Any] = ["role": "user", "content": prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]
+        if !images.isEmpty { message["images"] = images.map { $0.base64EncodedString() } }
         let body: [String: Any] = ["model": localModel, "messages": [message], "stream": false, "format": schema,
                                    "options": ["temperature": 0.1, "num_ctx": 8192, "num_predict": 1500], "keep_alive": "15m"]
         var r = URLRequest(url: URL(string: "\(ollama)/api/chat")!, timeoutInterval: 240)
@@ -158,13 +159,13 @@ enum PhotoAI {
 
     /// Google Gemini (free tier with your own key). Busy or out of free quota: try once more,
     /// then the next model (each has its own free quota).
-    static func askGemini(image: Data?, text: String) async throws -> [AIItem] {
+    static func askGemini(images: [Data], text: String) async throws -> [AIItem] {
         guard !geminiKey.isEmpty else { throw Failure(message: "Add a free Gemini key in Settings → Photo logging.") }
         let models = Array(NSOrderedSet(array: [geminiModel, "gemini-2.5-flash", "gemini-flash-lite-latest"])) as? [String] ?? [geminiModel]
         var last: Failure?
         for (n, model) in models.enumerated() {
             for attempt in 0..<(n == 0 ? 2 : 1) {
-                do { return try await askGemini(model: model, image: image, text: text) } catch let f as GeminiFailure {
+                do { return try await askGemini(model: model, images: images, text: text) } catch let f as GeminiFailure {
                     last = Failure(message: f.message)
                     if !f.tryAnother { throw Failure(message: f.message) }
                     if f.status == 503 && attempt == 0 && n == 0 { try? await Task.sleep(nanoseconds: 2_000_000_000) } else { break }
@@ -176,9 +177,9 @@ enum PhotoAI {
 
     private struct GeminiFailure: Error { let status: Int; let message: String; var tryAnother: Bool { [404, 429, 500, 503].contains(status) } }
 
-    private static func askGemini(model: String, image: Data?, text: String) async throws -> [AIItem] {
-        var parts: [[String: Any]] = [["text": prompt(text: text, hasImage: image != nil)]]
-        if let image { parts.append(["inline_data": ["mime_type": "image/jpeg", "data": image.base64EncodedString()]]) }
+    private static func askGemini(model: String, images: [Data], text: String) async throws -> [AIItem] {
+        var parts: [[String: Any]] = [["text": prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]]
+        for image in images { parts.append(["inline_data": ["mime_type": "image/jpeg", "data": image.base64EncodedString()]]) }
         let body: [String: Any] = ["contents": [["parts": parts]],
                                    "generationConfig": ["temperature": 0.1, "responseMimeType": "application/json"]]
         let m = model.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? model
@@ -232,17 +233,17 @@ enum PhotoAI {
     }
 
     /// Ask whichever engine is set and reachable. Returns the items and who answered.
-    @MainActor static func analyse(image: Data?, text: String) async throws -> (items: [AIItem], by: String) {
+    @MainActor static func analyse(images: [Data], text: String) async throws -> (items: [AIItem], by: String) {
         var errors: [String] = []
         let e = engine
         if e != .gemini {
             do {
                 #if os(macOS)
-                return (try await askLocal(image: image, text: text), "this Mac")
+                return (try await askLocal(images: images, text: text), "this Mac")
                 #else
                 let client = SyncClient.shared
                 if client.connected {
-                    return (try await client.photo(image: image, text: text), client.macName)
+                    return (try await client.photo(images: images, text: text), client.macName)
                 }
                 errors.append("This iPhone isn't connected to your Mac (Settings → Mac sync).")
                 #endif
@@ -258,7 +259,7 @@ enum PhotoAI {
         }
         if e != .mac {
             if e == .gemini || !geminiKey.isEmpty {
-                do { return (try await askGemini(image: image, text: text), "Gemini") } catch { errors.append(error.localizedDescription) }
+                do { return (try await askGemini(images: images, text: text), "Gemini") } catch { errors.append(error.localizedDescription) }
             } else {
                 errors.append("No Gemini key for when the Mac can't be reached (Settings → Photo logging).")
             }
@@ -417,8 +418,9 @@ extension ModelContext {
     }
 
     /// Log the plate; learn from how you changed the portions.
-    func log(plate: [PlateItem], day: String, time: Date) {
-        for item in plate where item.included && item.grams > 0 {
+    /// The plate as foods and grams (making foods for estimates); learns from changed portions.
+    func foods(for plate: [PlateItem]) -> [(food: Food, grams: Double)] {
+        plate.filter { $0.included && $0.grams > 0 }.map { item in
             if let a = item.ai, item.source != .picked {
                 PhotoAI.learn(search: a.search, aiGrams: a.grams, grams: item.grams)
             }
@@ -435,7 +437,11 @@ extension ModelContext {
                     insert(food)
                 }
             }
-            log(food, amount: item.grams.rounded(), unit: food.baseUnit, day: day, time: time)
+            return (food, item.grams.rounded())
         }
+    }
+
+    func log(plate: [PlateItem], day: String, time: Date) {
+        for (food, grams) in foods(for: plate) { log(food, amount: grams, unit: food.baseUnit, day: day, time: time) }
     }
 }

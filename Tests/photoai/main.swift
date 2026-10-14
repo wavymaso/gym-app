@@ -98,7 +98,7 @@ Task {
         let t = Date()
         do {
             let gemini = ProcessInfo.processInfo.environment["GEMINI_KEY"] != nil
-            let found = gemini ? try await PhotoAI.askGemini(image: jpeg, text: "") : try await PhotoAI.askLocal(image: jpeg, text: "")
+            let found = gemini ? try await PhotoAI.askGemini(images: [jpeg], text: "") : try await PhotoAI.askLocal(images: [jpeg], text: "")
             print("\n\((path as NSString).lastPathComponent)  \(jpeg.count / 1024) KB  \(cg.width)x\(cg.height)  \(String(format: "%.0f", Date().timeIntervalSince(t))) s  barcodes \(codes)")
             var total = 0.0
             for p in ctx.plate(from: found, foods: local) {

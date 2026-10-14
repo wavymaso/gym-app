@@ -63,7 +63,7 @@ struct DashboardView: View {
         #endif
         .sheet(item: $sheet) { s in
             switch s {
-            case .addFood: AddFoodView(mode: .log(day: dayKey()))
+            case .addFood: FoodLogger(day: dayKey())
             case .quickAdd: QuickAddView(day: dayKey(), entry: nil)
             case .weighIn: WeighInSheet()
             case .checkIn: CheckInView()
