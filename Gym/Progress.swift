@@ -12,8 +12,9 @@ extension ModelContext {
     /// logged are left out, not counted as zero, and today is left out because it isn't over yet.
     func dailyIntake() -> [String: Double] {
         let today = dayKey()
+        let partial = partialDays                               // marked "partially logged": treated as not logged
         var out: [String: Double] = [:]
-        for e in (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day < today }))) ?? [] {
+        for e in (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day < today }))) ?? [] where !partial.contains(e.day) {
             out[e.day, default: 0] += e.nutrients.kcal
         }
         return out

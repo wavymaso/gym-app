@@ -177,6 +177,9 @@ struct DayLog: View {
     @Binding var style: FoodLogView.LogStyle
     let open: (FoodLogView.LogSheet) -> Void
 
+    @State private var savingMeal: (Meal, [FoodEntry])?
+    @State private var mealName = ""
+
     init(day: String, energy: EnergyUnit, target: Targets?, style: Binding<FoodLogView.LogStyle>, open: @escaping (FoodLogView.LogSheet) -> Void) {
         _entries = Query(filter: #Predicate<FoodEntry> { $0.day == day }, sort: \FoodEntry.time)
         self.day = day; self.energy = energy; self.target = target; _style = style; self.open = open
@@ -189,6 +192,7 @@ struct DayLog: View {
                 .sensoryFeedback(.success, trigger: entries.count) { old, new in new > old }
             log
             if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
+            DayNoteCard(day: day)
         } else {
             // The Mac: the day's food on the left, its totals and nutrients beside it.
             HStack(alignment: .top, spacing: 16) {
@@ -196,12 +200,14 @@ struct DayLog: View {
                     .frame(maxWidth: .infinity)
                 VStack(spacing: 16) {
                     summary(total)
+                    DayNoteCard(day: day)
                     if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
                 }
                 .frame(width: 360)
             }
             .sensoryFeedback(.success, trigger: entries.count) { old, new in new > old }
         }
+
     }
 
     @ViewBuilder private var log: some View {
@@ -210,6 +216,11 @@ struct DayLog: View {
             Text("Timeline").tag(FoodLogView.LogStyle.timeline)
         }
         .pickerStyle(.segmented).labelsHidden()
+            .alert("Save as meal", isPresented: Binding(get: { savingMeal != nil }, set: { if !$0 { savingMeal = nil } })) {
+                TextField("Name", text: $mealName)
+                Button("Save") { if let (_, items) = savingMeal { ctx.saveMeal(mealName.isEmpty ? "Meal" : mealName, from: items) }; savingMeal = nil }
+                Button("Cancel", role: .cancel) { savingMeal = nil }
+            } message: { Text("Log these foods again in one tap, from Add food → Meals.") }
         if style == .timeline {
             if entries.isEmpty {
                 ContentUnavailableView("Nothing logged", systemImage: "fork.knife",
@@ -317,6 +328,7 @@ struct DayLog: View {
                         }
                         if !items.isEmpty {
                             Button { copy(items, to: addDays(day, 1), meal: meal) } label: { Label("Copy to the next day", systemImage: "arrow.right.doc.on.clipboard") }
+                            Button { savingMeal = (meal, items); mealName = meal.label } label: { Label("Save as meal…", systemImage: "square.and.arrow.down") }
                         }
                     } label: {
                         Image(systemName: "plus").font(.body.weight(.bold)).foregroundStyle(palette.accent)

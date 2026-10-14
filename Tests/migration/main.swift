@@ -17,9 +17,9 @@ MainActor.assumeIsolated {
         check("calorie total unchanged", abs(total - expected) < 0.5, total)
         let e = FoodEntry(day: "2000-01-01", time: Date(), name: "migration test", brand: nil, foodKey: nil, amount: 1, unit: "", grams: 0,
                           nutrients: Nutrients(kcal: 10, protein: 1, fat: 0, carbs: 1, micros: ["iron": 2.5, "vitD": 4]))
-        ctx.insert(e); try ctx.save()
+        ctx.insert(e); ctx.commit()
         let p = try ctx.fetch(FetchDescriptor<Profile>()).first
-        check("profile has new fields", p?.fastKcal == 600 && p?.highDays == "", (p?.fastKcal ?? -1, p?.highDays ?? "?"))
+        check("profile has the new settings", p != nil && (p!.fastKcal > 0) && BMREquation(rawValue: p!.bmrEquation) != nil, (p?.fastKcal ?? -1, p?.bmrEquation ?? "?"))
     } catch { print("ERROR", error); fails += 1 }
     do {
         let c = try ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(url: url))

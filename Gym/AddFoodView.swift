@@ -39,7 +39,7 @@ struct AddFoodView: View {
     @State private var scanning = false
     @FocusState private var focused: Bool
 
-    enum Tab: String, CaseIterable { case search = "Search", recent = "Recent", favourites = "Favourites", mine = "My foods" }
+    enum Tab: String, CaseIterable { case search = "Search", recent = "Recent", meals = "Meals", favourites = "Favourites", mine = "My foods" }
 
     var body: some View {
         NavigationStack {
@@ -72,6 +72,10 @@ struct AddFoodView: View {
                     case .recent: localList(foods.filter { $0.lastUsed != nil }.prefix(60).map { $0 }, empty: "Foods you log appear here.")
                     case .favourites: localList(foods.filter(\.isFavorite).sorted { $0.name < $1.name }, empty: "Star a food to keep it here.")
                     case .mine: myFoods
+                    case .meals:
+                        SavedMealsList(pick: { m in
+                            if case .log(let day, let at) = mode { ctx.log(m, day: day, time: at ?? defaultTime(for: day)); dismiss() }
+                        }, energy: (try? ctx.fetch(FetchDescriptor<Profile>()).first?.energy) ?? .kcal)
                     }
                 }
                 #if os(macOS)

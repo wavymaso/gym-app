@@ -38,7 +38,7 @@ extension Syncable {
 /// Every kind of record that syncs, in the order they're applied.
 let syncTypes: [any Syncable.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self, Food.self, RecipeIngredient.self,
                                       FoodEntry.self, Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self,
-                                      WaterEntry.self, DailyActivity.self]
+                                      WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self]
 
 extension Notification.Name {
     static let gymDidCommit = Notification.Name("gymDidCommit")
@@ -331,4 +331,24 @@ extension WorkoutSet: Syncable {
         done = d.bool("done"); restSeconds = d.int("restSeconds"); day = d.str("day")
     }
     static func blank() -> Self { Self(workoutKey: "", exerciseKey: "", exerciseOrder: 0, setOrder: 0, day: "") }
+}
+
+extension SavedMeal: Syncable {
+    static var syncType: String { "savedMeal" }
+    func encode() -> [String: Any] {
+        ["name": name, "items": encodeJSON(items), "useCount": useCount, "lastUsed": t(lastUsed), "createdAt": t(createdAt)]
+    }
+    func decode(_ d: [String: Any]) {
+        name = d.str("name"); items = decodeJSON(d["items"]) ?? []; useCount = d.int("useCount")
+        lastUsed = d.optDate("lastUsed"); createdAt = d.date("createdAt")
+    }
+    static func blank() -> Self { Self(name: "", items: []) }
+}
+
+extension DayNote: Syncable {
+    static var syncType: String { "dayNote" }
+    var naturalID: String { "note:\(day)" }                    // one per day
+    func encode() -> [String: Any] { ["day": day, "text": text, "partial": partial] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); text = d.str("text"); partial = d.bool("partial") }
+    static func blank() -> Self { Self(day: "") }
 }
