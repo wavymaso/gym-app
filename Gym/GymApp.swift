@@ -188,6 +188,7 @@ struct MainView: View {
         TabView(selection: $tab) {
             NavigationStack { page(.dashboard) }.tag(PhoneTab.dashboard).toolbar(.hidden, for: .tabBar)
             NavigationStack { page(.food) }.tag(PhoneTab.food).toolbar(.hidden, for: .tabBar)
+            NavigationStack { page(.strategy) }.tag(PhoneTab.strategy).toolbar(.hidden, for: .tabBar)
             NavigationStack { page(.workouts) }.tag(PhoneTab.training).toolbar(.hidden, for: .tabBar)
             NavigationStack(path: $morePath) {
                 MorePage(path: $morePath).navigationDestination(for: Page.self) { page($0) }
@@ -196,7 +197,7 @@ struct MainView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
-                if tab == .dashboard || tab == .food {
+                if tab == .dashboard || tab == .food || tab == .strategy {
                     FoodSearchBar(search: { quick = .food }, scan: { quick = .scan })
                 }
                 PhoneTabBar(tab: $tab) { plus = true }
@@ -247,6 +248,8 @@ struct MainView: View {
         case .dashboard: tab = .dashboard
         case .food: tab = .food
         case .workouts: tab = .training
+        case .strategy: tab = .strategy
+        case .settings: tab = .more; morePath = []
         default: tab = .more; morePath = [p]
         }
     }

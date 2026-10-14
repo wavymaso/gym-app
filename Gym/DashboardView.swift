@@ -110,6 +110,14 @@ struct DashboardView: View {
                     .modifier(GlassCapsule())
             }
             .buttonStyle(.plain)
+            if isPhone {
+                // More: profile, settings, weight, insights, exercises, data
+                Button { openPage(.settings) } label: {
+                    Image(systemName: "person.crop.circle").font(.title3).frame(width: 44, height: 44)
+                        .modifier(GlassCapsule())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.top, isPhone ? 8 : 0)
         .capType()

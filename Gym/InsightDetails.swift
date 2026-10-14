@@ -70,6 +70,7 @@ struct InsightDetailView: View {
     @State private var goalOnTrend = true
     @State private var editing: WeightEntry?
     @State private var weighing = false
+    @State private var picked: Date?                  // touch-and-drag on the chart
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
@@ -255,6 +256,28 @@ struct InsightDetailView: View {
             }
             .chartYScale(domain: zoomed ? (lo - pad)...(hi + pad) : (min(0, lo))...(hi + pad))
             .chartPlotStyle { $0.clipped() }
+            .chartXSelection(value: $picked)
+            .chartOverlay { proxy in
+                // "Daily total" bubble for the touched day
+                GeometryReader { geo in
+                    if let d = picked, let p = pts.min(by: { abs($0.when.timeIntervalSince(d)) < abs($1.when.timeIntervalSince(d)) }),
+                       let x = proxy.position(forX: p.when), let frame = proxy.plotFrame {
+                        let px = geo[frame].origin.x + x
+                        Rectangle().fill(Color.secondary.opacity(0.6)).frame(width: 1).position(x: px, y: geo[frame].midY).frame(height: geo[frame].height)
+                        VStack(spacing: 3) {
+                            Text(grouping == .day ? "Daily Total" : grouping == .week ? "Week Average" : "Month Average").font(.subheadline.weight(.semibold))
+                            Text(p.when.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year().locale(appLocale))).font(.caption)
+                            Divider()
+                            Text("\(kind.title): \(number(p.value, digits: [.expenditure, .energyBalance].contains(kind) ? 0 : 1)) \([.expenditure, .energyBalance].contains(kind) ? energy.rawValue : unit.rawValue)")
+                                .font(.caption.weight(.semibold)).monospacedDigit()
+                        }
+                        .padding(10).foregroundStyle(.black)
+                        .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+                        .fixedSize()
+                        .position(x: min(max(px, 90), geo.size.width - 90), y: geo[frame].minY + 40)
+                    }
+                }
+            }
             .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine(stroke: StrokeStyle(dash: [4, 4])); AxisValueLabel() } }
             .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
         }

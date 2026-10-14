@@ -26,6 +26,7 @@ struct StrategyView: View {
     }
 
     @State private var selectedDay = dayKey()
+    @Query(sort: \Program.startDay, order: .reverse) private var allPrograms: [Program]
     @State private var collaborative = false
     @State private var refeeding = false
     @State private var planning = false
@@ -48,11 +49,15 @@ struct StrategyView: View {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
+                    checkInRing(g)
+                    Text("In Progress").font(.title2.bold()).padding(.top, 4)
                     hero(p, g)
                     weekTargets(p, t)
-                    checkInCard(g)
-                    Text("Program").font(.title2.bold()).padding(.top, 4)
+                    programButtons(g)
+                    goalCard(p, g)
+                    Text("Program settings").font(.title2.bold()).padding(.top, 4)
                     settings(p, g, t)
+                    goalHistory(p)
                 }
             }
             .padding(pagePadding)
@@ -244,6 +249,132 @@ struct StrategyView: View {
 
     private func segment(_ c: Color, _ h: Double) -> some View {
         RoundedRectangle(cornerRadius: 4, style: .continuous).fill(c.gradient).frame(width: 22, height: max(0, h))
+    }
+
+    // MARK: MacroFactor's Strategy top: the countdown, then the program and goal
+
+    /// Days to the next check-in as a ring, with Goal and Check-in buttons under it.
+    private func checkInRing(_ g: Program) -> some View {
+        let due = ctx.dueCheckIn != nil
+        var days = 0
+        if !due {
+            var d = addDays(dayKey(), 1); days = 1
+            while Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d)) != g.checkInWeekday { d = addDays(d, 1); days += 1 }
+        }
+        let progress = due ? 1 : Double(7 - days) / 7
+        return VStack(spacing: 18) {
+            ZStack {
+                Circle().stroke(Color.raisedBackground, lineWidth: 10)
+                Circle().trim(from: 0, to: progress).stroke(palette.good, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .shadow(color: GlowStyle.on || palette.glass ? palette.good.opacity(0.6) : .clear, radius: 8)
+                Circle().inset(by: 22).stroke(Color.primary.opacity(0.85), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                VStack(spacing: 2) {
+                    Text(due ? "TODAY" : "\(days) DAY\(days == 1 ? "" : "S")").font(.pageTitle(30)).monospacedDigit()
+                    Text(due ? "check-in ready" : "until check-in").font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 230, height: 230)
+            .animation(.snappy, value: progress)
+            HStack(spacing: 28) {
+                Button { editing = true } label: { Label("Goal", systemImage: "target").font(.headline) }
+                Button { checkingIn = true } label: {
+                    Label(due ? "Check in now" : "Check-in", systemImage: "calendar.badge.checkmark").font(.headline)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    private func programButtons(_ g: Program) -> some View {
+        HStack(spacing: 10) {
+            pill("arrow.clockwise", "New Program") { editing = true }
+            pill("pencil", "Edit Program") {
+                if g.mode == "manual" { manual = true } else if g.mode == "collaborative" { collaborative = true } else { editing = true }
+            }
+        }
+    }
+
+    private func pill(_ icon: String, _ title: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon).font(.subheadline.weight(.semibold)).lineLimit(1)
+                .padding(.horizontal, 16).padding(.vertical, 11).modifier(GlassCapsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Goal weight and rate, with New Goal / Edit Goal.
+    private func goalCard(_ p: Profile, _ g: Program) -> some View {
+        let trend = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey()).last?.trend ?? g.startWeightKg
+        let weekly = weeklyChangeKg(goal: g.goalValue, ratePercent: g.ratePercent, weightKg: trend)
+        return VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(g.goalValue == .lose ? "Weight Loss Goal" : g.goalValue == .gain ? "Weight Gain Goal" : "Maintenance Goal").font(.title3.weight(.semibold))
+                Text("\(date(fromKey: g.startDay).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale))) – Now")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+            HStack(alignment: .top) {
+                goalStat(p.goalWeightKg.map { number(p.weight.fromKg($0), digits: 1) } ?? "–", p.weight.rawValue, "Goal Weight")
+                goalStat((weekly > 0 ? "+" : weekly < 0 ? "−" : "") + number(abs(p.weight.fromKg(weekly)), digits: 2), p.weight.rawValue, "Goal Rate")
+                goalStat((g.goalValue == .lose ? "−" : g.goalValue == .gain ? "+" : "") + number(g.ratePercent, digits: 2), "%", "Goal Rate")
+            }
+            if let gw = p.goalWeightKg, let proj = projection(p, gw) {
+                Text(proj).font(.caption).foregroundStyle(palette.good)
+            }
+            Divider()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    pill("plus", "New Goal") { editing = true }
+                    pill("pencil", "Edit Goal") { editingGoalWeight = true }
+                    pill("flag.2.crossed", "Phase Plan") { planning = true }
+                }
+            }
+        }
+        .padding(16).modifier(CardSurface())
+    }
+
+    private func goalStat(_ value: String, _ unit: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value).font(.number(26, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                Text(unit).font(.caption).foregroundStyle(.secondary)
+            }
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Every program you've run: when, from what weight to what, and which is current.
+    private func goalHistory(_ p: Profile) -> some View {
+        let trend = Dictionary(trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey()).map { ($0.day, $0.trend) },
+                               uniquingKeysWith: { a, _ in a })
+        func kg(_ day: String) -> Double? { trend[day] ?? trend.filter { $0.key <= day }.max { $0.key < $1.key }?.value }
+        let list = Array(allPrograms.prefix(20))
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Goal History").font(.title2.bold()).padding(.top, 4)
+            ForEach(Array(list.enumerated()), id: \.element.id) { i, prog in
+                let end = i == 0 ? nil : list[i - 1].startDay
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(date(fromKey: prog.startDay).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale))) – \(end.map { date(fromKey: $0).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)) } ?? "Now")")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(p.weight.format(kg(prog.startDay) ?? prog.startWeightKg)).font(.title3.weight(.semibold)).monospacedDigit()
+                            if let e = end, let w = kg(e) {
+                                Text("to").font(.caption).foregroundStyle(.secondary)
+                                Text(p.weight.format(w)).font(.title3.weight(.semibold)).monospacedDigit()
+                            }
+                        }
+                    }
+                    Spacer()
+                    Text(prog.goalValue.label).font(.subheadline).foregroundStyle(.secondary)
+                    Image(systemName: prog.isActive ? "hourglass" : "checkmark.circle.fill").foregroundStyle(prog.isActive ? Color.primary : palette.good)
+                }
+                .padding(16).modifier(CardSurface())
+            }
+        }
     }
 
     private func checkInCard(_ g: Program) -> some View {

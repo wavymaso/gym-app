@@ -79,9 +79,9 @@ struct QuickActionsSheet: View {
 }
 
 #if os(iOS)
-enum PhoneTab: Hashable { case dashboard, food, training, more }
+enum PhoneTab: Hashable { case dashboard, food, strategy, training, more }
 
-/// Dashboard · Food log · + · Training · More
+/// Dashboard · Food log · + · Strategy · Training   (More opens from the Dashboard's top right)
 struct PhoneTabBar: View {
     @Binding var tab: PhoneTab
     let plus: () -> Void
@@ -99,8 +99,8 @@ struct PhoneTabBar: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
             .sensoryFeedback(.impact(weight: .medium), trigger: tab)
+            item(.strategy, "Strategy", "target")
             item(.training, "Training", "dumbbell")
-            item(.more, "More", "ellipsis.circle")
         }
         .padding(.top, 8).padding(.horizontal, 6)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
@@ -115,7 +115,7 @@ struct PhoneTabBar: View {
     private func item(_ t: PhoneTab, _ title: String, _ icon: String) -> some View {
         Button { tab = t } label: {
             VStack(spacing: 4) {
-                Image(systemName: tab == t && icon != "fork.knife" ? icon + ".fill" : icon).font(.system(size: 21, weight: .medium))
+                Image(systemName: tab == t && icon != "fork.knife" && icon != "target" ? icon + ".fill" : icon).font(.system(size: 21, weight: .medium))
                     .symbolRenderingMode(.hierarchical)
                     .frame(height: 26)
                 Text(title).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
@@ -127,45 +127,10 @@ struct PhoneTabBar: View {
     }
 }
 
-/// More: everything else, as big friendly rows.
+/// More: your profile, settings and the other pages, MacroFactor-style (SettingsView).
 struct MorePage: View {
     @Binding var path: [Page]
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("More").font(.number(32)).padding(.top, 8)
-                group("Progress", [.weight, .insights, .strategy])
-                group("Training", [.exercises])
-                group("App", [.settings])
-            }
-            .padding(pagePadding)
-        }
-        .pageBackground()
-        .toolbar(.hidden, for: .navigationBar)
-    }
-
-    private func group(_ title: String, _ pages: [Page]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased()).font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(.secondary).padding(.leading, 4)
-            VStack(spacing: 0) {
-                ForEach(pages) { p in
-                    Button { path.append(p) } label: {
-                        HStack(spacing: 14) {
-                            PageIcon(page: p)
-                            Text(p.label).font(.body.weight(.medium)).foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
-                        }
-                        .padding(14).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    if p != pages.last { Divider().padding(.leading, 60) }
-                }
-            }
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-    }
+    var body: some View { SettingsView() }
 }
 #endif
 
@@ -231,10 +196,13 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 8
+    static let version = 9
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("target", "Strategy has its own tab", "Countdown to check-in, your program and goal, goal history, and every coaching setting in one place."),
+        ("person.crop.circle", "More, tidied up", "Top right of the Dashboard: your profile, then short groups of settings, each on its own page."),
+        ("hand.point.up.left", "Touch the charts", "Drag on a detail chart to see that day's value."),
         ("flag.2.crossed", "Phase plan", "Cut → maintenance → bulk, each with an end (date or weight); the check-in offers the next phase (Strategy)."),
         ("scalemass", "Scales", "Name your other scales; their offsets are worked out so a trip home isn't a weight jump (Strategy → Scales)."),
         ("eye.slash", "Shadow mode", "The coach calculates check-ins without changing targets, and replays the last 12 weeks (Strategy)."),
