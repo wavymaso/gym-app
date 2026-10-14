@@ -266,12 +266,15 @@ struct AppearanceSection: View {
     }
 
     @ViewBuilder var content: some View {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 96 : 120), spacing: 12)], spacing: 12) {
-                ForEach(AppTheme.allCases) { t in
-                    Button { theme = t } label: { tile(t) }.buttonStyle(.plain)
+            ForEach(AppTheme.Group.allCases, id: \.self) { g in
+                Text(g.rawValue.uppercased()).font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary).padding(.top, 4)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 96 : 120), spacing: 12)], spacing: 12) {
+                    ForEach(AppTheme.allCases.filter { $0.group == g }) { t in
+                        Button { theme = t } label: { tile(t) }.buttonStyle(.plain)
+                    }
                 }
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 6)
             Text(theme.detail).font(.callout).foregroundStyle(.secondary)
             Picker("Style", selection: $style) { ForEach(StyleLevel.allCases) { Text($0.label).tag($0) } }
                 .pickerStyle(.segmented)

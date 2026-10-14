@@ -38,13 +38,79 @@ struct Icon: View {
         ZStack {
             LinearGradient(colors: [c(0x1C2140), c(0x0A0A10)], startPoint: .topLeading, endPoint: .bottomTrailing)
             RadialGradient(colors: [c(0x4C7DFF).opacity(0.25), .clear], center: .center, startRadius: 10, endRadius: 520)
-            Arc(progress: 0.78, color: c(0x4C7DFF), width: 74).frame(width: 720, height: 720)
-            Arc(progress: 0.62, color: c(0xFF4F70), width: 66).frame(width: 540, height: 540)
-            Arc(progress: 0.86, color: c(0x2FD39A), width: 58).frame(width: 376, height: 376)
-            Image(systemName: "dumbbell.fill").font(.system(size: 170, weight: .bold)).foregroundStyle(.white)
-                .rotationEffect(.degrees(-30))
+            Arc(progress: 0.78, color: c(0x4C7DFF), width: 46).frame(width: 860, height: 860)
+            ZStack {
+                Lifter().fill(LinearGradient(colors: [.white, c(0xD9E2FF)], startPoint: .top, endPoint: .bottom))
+                    .shadow(color: c(0x4C7DFF).opacity(0.9), radius: 30)
+                Definition().stroke(c(0x1C2140).opacity(0.55), style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
+            }
+            .frame(width: 740, height: 740).offset(y: 46)
         }
         .frame(width: 1024, height: 1024)
+    }
+}
+
+/// A bodybuilder hitting a front double biceps, upper body (drawn in a 100 × 100 box).
+struct Lifter: Shape {
+    func path(in r: CGRect) -> Path {
+        let sx = r.width / 100, sy = r.height / 100
+        func p(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: r.minX + x * sx, y: r.minY + y * sy) }
+        var path = Path()
+        // Head and neck
+        path.addEllipse(in: CGRect(origin: p(43, 13), size: CGSize(width: 14 * sx, height: 16 * sy)))
+        path.addRect(CGRect(origin: p(45.5, 26), size: CGSize(width: 9 * sx, height: 6 * sy)))
+        // Torso: traps, wide lats, narrow waist
+        var t = Path()
+        t.move(to: p(50, 29))
+        t.addQuadCurve(to: p(70, 36), control: p(61, 29))      // right trap
+        t.addQuadCurve(to: p(74, 47), control: p(76, 40))      // right delt
+        t.addQuadCurve(to: p(62, 84), control: p(72, 68))      // right lat to waist
+        t.addLine(to: p(38, 84))
+        t.addQuadCurve(to: p(26, 47), control: p(28, 68))      // left lat
+        t.addQuadCurve(to: p(30, 36), control: p(24, 40))      // left delt
+        t.addQuadCurve(to: p(50, 29), control: p(39, 29))      // left trap
+        t.closeSubpath()
+        path = path.union(t)
+        // Arms, mirrored: triceps hanging under, forearm up, one big biceps peak
+        for side in [-1.0, 1.0] {
+            func q(_ x: Double, _ y: Double) -> CGPoint { p(50 + side * (x - 50), y) }
+            var a = Path()
+            a.move(to: q(30, 53))                               // armpit
+            a.addQuadCurve(to: q(11, 48), control: q(19, 58))   // triceps
+            a.addQuadCurve(to: q(7, 40), control: q(6, 46))     // elbow
+            a.addQuadCurve(to: q(11, 15), control: q(4, 27))    // forearm, outside
+            a.addLine(to: q(18.5, 15))                          // wrist
+            a.addQuadCurve(to: q(17, 35), control: q(20.5, 25)) // forearm, inside
+            a.addQuadCurve(to: q(31, 39), control: q(21, 21))   // biceps peak
+            a.addQuadCurve(to: q(30, 53), control: q(33, 46))   // into the delt
+            a.closeSubpath()
+            path = path.union(a)
+            let fist = q(14.8, 10.5)
+            path = path.union(Path(ellipseIn: CGRect(x: fist.x - 6.2 * sx, y: fist.y - 6 * sy, width: 12.4 * sx, height: 12 * sy)))
+        }
+        return path
+    }
+}
+
+/// Pecs, abs and biceps lines, so it reads as muscle.
+struct Definition: Shape {
+    func path(in r: CGRect) -> Path {
+        let sx = r.width / 100, sy = r.height / 100
+        func p(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: r.minX + x * sx, y: r.minY + y * sy) }
+        var d = Path()
+        d.move(to: p(36, 50)); d.addQuadCurve(to: p(50, 51), control: p(42, 56))     // left pec
+        d.move(to: p(64, 50)); d.addQuadCurve(to: p(50, 51), control: p(58, 56))     // right pec
+        d.move(to: p(50, 41)); d.addLine(to: p(50, 81))                               // linea alba
+        for y in [61.0, 69.0, 77.0] {                                                 // abs
+            d.move(to: p(43, y)); d.addQuadCurve(to: p(50, y + 0.5), control: p(46.5, y + 2))
+            d.move(to: p(57, y)); d.addQuadCurve(to: p(50, y + 0.5), control: p(53.5, y + 2))
+        }
+        for side in [-1.0, 1.0] {                                                     // elbow crease, delt line
+            func q(_ x: Double, _ y: Double) -> CGPoint { p(50 + side * (x - 50), y) }
+            d.move(to: q(17, 35)); d.addQuadCurve(to: q(12, 40), control: q(13, 36))
+            d.move(to: q(32, 41)); d.addQuadCurve(to: q(32, 51), control: q(29, 46))
+        }
+        return d
     }
 }
 

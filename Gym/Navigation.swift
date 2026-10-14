@@ -196,10 +196,12 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 11
+    static let version = 12
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("paintpalette.fill", "23 themes", "More → Theme: dark (OLED, Forest, Ember, Crimson, Amethyst, Neon…), light (Sand, Mint, Blush, Arctic, Paper) and Glass (Aurora, Sunset, Ocean, Frost)."),
+        ("figure.arms.open", "New icon", "Front double biceps."),
         ("target", "Edit Goal", "Strategy → Edit Goal: drag a ruler to your target weight, set the rate, see your budget and end date, then review."),
         ("calendar", "Edit Program, day by day", "Collaborative or manual: set each day's calories, protein and carb/fat split, or all days at once with the lock."),
         ("list.bullet.rectangle", "The numbers under every chart", "Detail screens now list each day's value by month, with how it changed."),
