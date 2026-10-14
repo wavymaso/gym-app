@@ -25,85 +25,271 @@ struct StrategyView: View {
         return "At \(signed(p.weight, wk)) a week: \(p.weight.format(goal)) around \(d.formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)))"
     }
 
+    @State private var selectedDay = dayKey()
+    @State private var showingDistribution = false
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 18) {
+                header
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
-                    Card(title: "Goal", systemImage: "target") {
-                        Text(g.goalValue.label).font(.number(26))
-                        Text(goalDetail(g, p)).foregroundStyle(.secondary)
-                        Divider()
-                        row("Diet", g.dietValue.label)
-                        row("Protein", "\(g.proteinValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg")
-                        row("Started", date(fromKey: g.startDay).formatted(.dateTime.day().month(.wide).year().locale(appLocale)))
-                        HStack {
-                            Text("Goal weight").foregroundStyle(.secondary)
-                            Spacer()
-                            Button(p.goalWeightKg.map { p.weight.format($0) } ?? "Set…") { editingGoalWeight = true }
-                                .buttonStyle(.borderless)
-                        }
-                        if let gw = p.goalWeightKg, let proj = projection(p, gw) {
-                            Text(proj).font(.callout).foregroundStyle(palette.good)
-                        }
-                    }
-                    Card(title: "Daily targets", systemImage: "chart.bar") {
-                        HStack(spacing: 20) {
-                            MacroDonut(targets: t.targets).frame(width: 110, height: 110)
-                            TargetsGrid(targets: t.targets, energy: p.energy)
-                        }
-                        Text("Since \(relative(t.fromDay)), based on an expenditure of \(p.energy.format(t.expenditure)).")
-                            .font(.callout).foregroundStyle(.secondary)
-                        if p.hasDistribution {
-                            let today = p.adjust(t.targets, on: dayKey())
-                            Text("That's your daily average. Today: \(p.energy.format(today.kcal)), \(number(today.carbs)) g carbs.")
-                                .font(.callout.weight(.semibold)).foregroundStyle(palette.accent)
-                        }
-                    }
-                    DistributionCard(profile: p, targets: t.targets)
-                    Card(title: "Weekly check-in", systemImage: "calendar.badge.clock") {
-                        Picker("Targets", selection: Binding(get: { g.mode }, set: { m in
-                            if m == "manual" { manual = true } else { g.mode = "coached"; ctx.commit(); checkingIn = true }
-                        })) {
-                            Text("Coached").tag("coached")
-                            Text("Manual").tag("manual")
-                        }
-                        .pickerStyle(.segmented)
-                        Text(g.mode == "coached"
-                             ? "Once a week the app compares what you ate with how your trend weight moved, updates your expenditure, and suggests targets for the week ahead."
-                             : "You set your own targets. Check-ins still show how your week went.")
-                            .font(.callout).foregroundStyle(.secondary)
-                        Picker("Check-in day", selection: Binding(get: { g.checkInWeekday }, set: { g.checkInWeekday = $0; ctx.commit() })) {
-                            ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in
-                                Text(weekdayName(d)).tag(d)
-                            }
-                        }
-                        HStack {
-                            if ctx.dueCheckIn != nil {
-                                Button("Check in now") { checkingIn = true }.buttonStyle(.borderedProminent)
-                            } else {
-                                Text("Next check-in: \(nextCheckIn(g))").foregroundStyle(.secondary)
-                                Spacer()
-                                Button("Check in early") { checkingIn = true }
-                            }
-                        }
-                    }
-                    HStack {
-                        Button("Change goal…") { editing = true }
-                        if g.mode == "manual" { Button("Edit targets…") { manual = true } }
-                    }
-                    .controlSize(.large)
+                    hero(p, g)
+                    weekTargets(p, t)
+                    checkInCard(g)
+                    Text("Program").font(.title2.bold()).padding(.top, 4)
+                    settings(p, g, t)
                 }
             }
             .padding(pagePadding)
-            .frame(maxWidth: 700, alignment: .leading)
+            .frame(maxWidth: 760, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .debugScrollAnchor()
         .pageBackground()
+        #if os(iOS)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        #else
         .navigationTitle("Strategy")
+        #endif
         .sheet(isPresented: $editing) { GoalEditor() }
         .sheet(isPresented: $checkingIn) { CheckInView() }
         .sheet(isPresented: $manual) { ManualTargetsView() }
         .sheet(isPresented: $editingGoalWeight) { if let p = profiles.first { GoalWeightSheet(profile: p) } }
+        .sheet(isPresented: $showingDistribution) {
+            NavigationStack {
+                ScrollView {
+                    if let p = profiles.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
+                        DistributionCard(profile: p, targets: t.targets).padding(16)
+                    }
+                }
+                .pageBackground()
+                .navigationTitle("Calorie distribution")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                #endif
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showingDistribution = false } } }
+            }
+            .appStyle()
+            #if os(macOS)
+            .frame(width: 560, height: 620)
+            #endif
+        }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack {
+            Text("STRATEGY").font(.pageTitle(isPhone ? 30 : 34)).lineLimit(1).minimumScaleFactor(0.6)
+                .foregroundStyle(GlowStyle.on || palette.glass
+                                 ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.good], startPoint: .leading, endPoint: .trailing))
+                                 : AnyShapeStyle(.primary))
+            Spacer()
+            Button { checkingIn = true } label: { roundIcon("calendar.badge.checkmark") }.buttonStyle(.plain)
+            Button { editing = true } label: { roundIcon("slider.horizontal.3") }.buttonStyle(.plain)
+        }
+    }
+
+    private func roundIcon(_ name: String) -> some View {
+        Image(systemName: name).font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
+    }
+
+    // MARK: The program
+
+    private func hero(_ p: Profile, _ g: Program) -> some View {
+        let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())
+        let now = series.last?.trend
+        let startKg = series.first { $0.day >= g.startDay }?.trend ?? g.startWeightKg
+        let tint: Color = g.goalValue == .lose ? palette.calories : g.goalValue == .gain ? palette.protein : palette.good
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("CURRENT PROGRAM").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
+                    Text(g.goalValue.label).font(.number(32)).foregroundStyle(.white)
+                }
+                Spacer()
+                Text("Week \(daysBetween(g.startDay, dayKey()) / 7 + 1)").font(.caption.weight(.bold))
+                    .padding(.horizontal, 10).padding(.vertical, 5).background(.white.opacity(0.2), in: Capsule()).foregroundStyle(.white)
+            }
+            HStack(spacing: 8) {
+                chip(goalDetail(g, p))
+                chip(g.mode == "coached" ? "Coached" : "Manual")
+                chip(g.dietValue.label)
+            }
+            if let goal = p.goalWeightKg, let now {
+                let total = goal - startKg
+                let done = total != 0 ? max(0, min(1, (now - startKg) / total)) : 1
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("\(p.weight.format(startKg)) → \(p.weight.format(goal))").font(.callout.weight(.semibold)).foregroundStyle(.white)
+                        Spacer()
+                        Text("\(Int(done * 100 + 0.5))%").font(.callout.weight(.bold)).foregroundStyle(.white).monospacedDigit()
+                    }
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.white.opacity(0.22))
+                            Capsule().fill(.white).frame(width: max(8, geo.size.width * done))
+                        }
+                    }
+                    .frame(height: 8)
+                    if let proj = projection(p, goal) { Text(proj).font(.caption).foregroundStyle(.white.opacity(0.85)) }
+                }
+            } else {
+                Button("Set a goal weight") { editingGoalWeight = true }.font(.callout.weight(.semibold)).foregroundStyle(.white)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [tint, tint.mix(with: palette.accent.mix(with: .purple, by: 0.4), by: 0.5)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: "target").font(.system(size: 110, weight: .bold)).foregroundStyle(.white.opacity(0.08))
+                .offset(x: 24, y: 30).allowsHitTesting(false)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: GlowStyle.on || palette.glass ? tint.opacity(0.45) : .clear, radius: 18, y: 6)
+    }
+
+    private func chip(_ t: String) -> some View {
+        Text(t).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+            .padding(.horizontal, 10).padding(.vertical, 6).background(.white.opacity(0.18), in: Capsule()).foregroundStyle(.white)
+    }
+
+    /// This week, Monday to Sunday: each day's calories as a stacked column of protein, fat and carbs.
+    private func weekTargets(_ p: Profile, _ t: TargetSet) -> some View {
+        var cal = Calendar(identifier: .gregorian); cal.firstWeekday = 2
+        let monday = dayKey(cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date())
+        let days = (0..<7).map { addDays(monday, $0) }
+        let targets = days.map { ctx.dayTargets(on: $0) ?? p.adjust(t.targets, on: $0) }
+        let top = max(targets.map(\.kcal).max() ?? 1, 1)
+        let sel = days.firstIndex(of: selectedDay) ?? days.firstIndex(of: dayKey()) ?? 0
+        let s = targets[sel]
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Weekly Targets").font(.title3.weight(.semibold))
+                Spacer()
+                Text("avg \(p.energy.format(targets.map(\.kcal).reduce(0, +) / 7))").font(.callout).foregroundStyle(.secondary)
+            }
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach(days.indices, id: \.self) { i in
+                    let d = targets[i]
+                    Button { withAnimation(.snappy) { selectedDay = days[i] } } label: {
+                        VStack(spacing: 6) {
+                            Text(number(p.energy.fromKcal(d.kcal))).font(.caption2.weight(.semibold)).monospacedDigit()
+                                .lineLimit(1).minimumScaleFactor(0.6).foregroundStyle(i == sel ? .primary : .secondary)
+                            VStack(spacing: 2) {
+                                let h = 130 * d.kcal / top
+                                segment(palette.carbs, h * d.carbs * 4 / max(d.kcal, 1))
+                                segment(palette.fat, h * d.fat * 9 / max(d.kcal, 1))
+                                segment(palette.protein, h * d.protein * 4 / max(d.kcal, 1))
+                            }
+                            .frame(height: 134, alignment: .bottom)
+                            .shadow(color: GlowStyle.on && i == sel ? palette.accent.opacity(0.6) : .clear, radius: 6)
+                            Text(date(fromKey: days[i]).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
+                                .font(.caption.weight(i == sel ? .bold : .regular)).foregroundStyle(i == sel ? .primary : .secondary)
+                        }
+                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(i == sel ? Color.primary.opacity(0.85) : .clear, lineWidth: 2))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Divider()
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(date(fromKey: days[sel]).formatted(.dateTime.weekday(.wide).locale(appLocale))).font(.caption).foregroundStyle(.secondary)
+                    Text(p.energy.format(s.kcal)).font(.number(22, weight: .semibold)).monospacedDigit()
+                }
+                Spacer()
+                ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(m.label).font(.caption).foregroundStyle(m.color)
+                        Text("\(number(m.value(s))) g").font(.headline).monospacedDigit()
+                    }
+                    .frame(minWidth: 62, alignment: .trailing)
+                }
+            }
+            Text("Based on an expenditure of \(p.energy.format(t.expenditure)) since \(relative(t.fromDay)).")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(16).modifier(CardSurface())
+    }
+
+    private func segment(_ c: Color, _ h: Double) -> some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(c.gradient).frame(width: 22, height: max(0, h))
+    }
+
+    private func checkInCard(_ g: Program) -> some View {
+        let due = ctx.dueCheckIn != nil
+        return HStack(spacing: 14) {
+            Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(due ? .white : palette.accent)
+                .frame(width: 50, height: 50).background(due ? palette.accent : palette.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(due ? "Check-in ready" : "Weekly check-in").font(.headline)
+                Text(due ? "Update your targets" : "Next: \(nextCheckIn(g))").font(.callout).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button(due ? "Check in" : "Early") { checkingIn = true }
+                .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(due ? palette.accent : Color.raisedBackground)
+                .foregroundStyle(due ? .white : .primary)
+        }
+        .padding(16).modifier(CardSurface())
+    }
+
+    // MARK: Settings rows
+
+    @ViewBuilder private func settings(_ p: Profile, _ g: Program, _ t: TargetSet) -> some View {
+        VStack(spacing: 0) {
+            rowButton("target", palette.good, "Goal", g.goalValue.label + " · " + goalDetail(g, p)) { editing = true }
+            rowButton("flag.checkered", palette.calories, "Goal weight", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalWeight = true }
+            rowButton("fork.knife", palette.fat, "Diet & protein", "\(g.dietValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg protein") { editing = true }
+            rowButton("calendar", palette.carbs, "Calorie distribution", p.hasDistribution ? "On: varies by day" : "Off: the same every day") { showingDistribution = true }
+            rowMenu("person.crop.circle.badge.checkmark", palette.accent, "Program style", g.mode == "coached" ? "Coached" : "Manual") {
+                Button("Coached: targets update at each check-in") { g.mode = "coached"; ctx.commit() }
+                Button("Manual: you set the targets") { manual = true }
+            }
+            rowMenu("clock.arrow.circlepath", palette.protein, "Check-in day", weekdayName(g.checkInWeekday)) {
+                ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in Button(weekdayName(d)) { g.checkInWeekday = d; ctx.commit() } }
+            }
+            if g.mode == "manual" {
+                rowButton("pencil", palette.accent, "Edit targets", "\(p.energy.format(t.targets.kcal)) a day") { manual = true }
+            }
+            rowLink("flame", palette.warn, "Expenditure settings", "Algorithm, starting estimate") { ExpenditureSettingsView() }
+            rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
+            rowLink("chart.line.uptrend.xyaxis", Color(hex: 0xA77BF3), "Weight trend settings", "How the trend is smoothed", last: true) { WeightTrendSettingsView() }
+        }
+        .modifier(CardSurface())
+    }
+
+    private func rowContent(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon).font(.body.weight(.semibold)).foregroundStyle(c).frame(width: 36, height: 36).background(c.opacity(0.15), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body)
+                Text(value).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) { if !last { Divider().padding(.leading, 64) } }
+    }
+
+    private func rowButton(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) { rowContent(icon, c, title, value, last: last) }.buttonStyle(.plain)
+    }
+
+    private func rowMenu<M: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, @ViewBuilder _ items: () -> M) -> some View {
+        Menu { items() } label: { rowContent(icon, c, title, value, last: false) }.menuStyle(.button).buttonStyle(.plain)
+    }
+
+    private func rowLink<D: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, @ViewBuilder _ dest: @escaping () -> D) -> some View {
+        NavigationLink { dest() } label: { rowContent(icon, c, title, value, last: last) }.buttonStyle(.plain)
     }
 
     private func nextCheckIn(_ g: Program) -> String {
