@@ -288,3 +288,10 @@ struct MacroBar: View {
         macro == .calories ? energy.format(v) : "\(number(v)) g"
     }
 }
+
+/// Pick a label style at run time (icon only on the phone, say).
+struct AnyLabelStyle: LabelStyle {
+    private let make: (Configuration) -> AnyView
+    init<S: LabelStyle>(_ style: S) { make = { AnyView(style.makeBody(configuration: $0)) } }
+    func makeBody(configuration: Configuration) -> some View { make(configuration) }
+}

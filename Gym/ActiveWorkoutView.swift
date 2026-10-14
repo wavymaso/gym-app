@@ -31,7 +31,6 @@ struct ActiveWorkoutView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                if let restEnds { RestBar(ends: restEnds, total: restTotal) { self.restEnds = $0 } }
                 ForEach(groups, id: \.key) { order, rows in
                     if let ex = ctx.exercise(rows[0].exerciseKey) {
                         ExerciseBlock(exercise: ex, rows: rows, workoutKey: workout.key, unit: unit, records: records,
@@ -40,14 +39,26 @@ struct ActiveWorkoutView: View {
                                       remove: { removeExercise(order) })
                     }
                 }
-                Button { picking = true } label: { Label("Add exercise", systemImage: "plus") }
-                    .controlSize(.large)
+                Button { picking = true } label: {
+                    Label("Add exercise", systemImage: "plus").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
             }
             .padding(pagePadding)
             .frame(maxWidth: 860, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .background(Color.pageBackground)
+        .safeAreaInset(edge: .bottom) {
+            if let restEnds {
+                RestBar(ends: restEnds, total: restTotal) { e in withAnimation(.snappy) { self.restEnds = e } }
+                    .padding(.horizontal, pagePadding).padding(.bottom, 8)
+                    .frame(maxWidth: 860)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .sheet(isPresented: $picking) {
             ExercisePicker { key in
                 ctx.addExercise(key, to: workout, order: (sets.map(\.exerciseOrder).max() ?? -1) + 1)
@@ -60,21 +71,46 @@ struct ActiveWorkoutView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
+        let unit = profiles.first?.weight ?? .kg
+        let done = sets.filter(\.done)
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center) {
                 TextField("Workout name", text: Binding(get: { workout.name }, set: { workout.name = $0; ctx.commit() }))
-                    .font(.title.bold()).textFieldStyle(.plain)
-                TimelineView(.periodic(from: .now, by: 1)) { _ in
-                    Text("\(clock(workout.duration)) · \(sets.filter(\.done).count) sets done")
-                        .monospacedDigit().foregroundStyle(.secondary)
+                    .font(.number(isPhone ? 26 : 30)).textFieldStyle(.plain)
+                Spacer()
+                Menu {
+                    Button("Discard workout…", role: .destructive) { confirmDiscard = true }
+                } label: {
+                    Image(systemName: "ellipsis").font(.body.weight(.bold)).frame(width: 34, height: 34)
+                        .background(Color.raisedBackground, in: Circle())
                 }
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                Button { ctx.finish(workout) } label: { Text("Finish").font(.headline).padding(.horizontal, 6) }
+                    .buttonStyle(.borderedProminent).tint(palette.good).controlSize(.large)
+                    .disabled(done.isEmpty)
             }
-            Spacer()
-            Button("Discard", role: .destructive) { confirmDiscard = true }
-            Button("Finish") { ctx.finish(workout) }
-                .buttonStyle(.borderedProminent).disabled(!sets.contains(where: \.done))
+            HStack(spacing: 0) {
+                TimelineView(.periodic(from: .now, by: 1)) { _ in
+                    stat(clock(workout.duration), "Time", color: palette.accent)
+                }
+                Spacer()
+                stat("\(done.count)/\(sets.count)", "Sets", color: palette.good)
+                Spacer()
+                stat("\(number(unit.fromKg(volume(done.map(\.lift)))))", "Volume \(unit.rawValue)", color: Macro.fat.color)
+                Spacer()
+                stat("\(records.values.filter { !$0.isEmpty }.count)", "PRs", color: Macro.protein.color)
+            }
         }
-        .controlSize(isPhone ? .regular : .large)
+        .padding(16)
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+    }
+
+    private func stat(_ value: String, _ label: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value).font(.number(20)).monospacedDigit().foregroundStyle(color)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     private func tick(_ row: WorkoutSet) {
@@ -115,16 +151,29 @@ private struct ExerciseBlock: View {
     let addSet: () -> Void
     let remove: () -> Void
     @Environment(\.modelContext) private var ctx
+    @State private var plates = false
 
     var body: some View {
         let previous = ctx.previousSets(of: exercise.key, before: workoutKey).filter { $0.kindValue.counts }
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 10) {
+                Text(String(exercise.name.prefix(1))).font(.headline).foregroundStyle(palette.accent)
+                    .frame(width: 34, height: 34).background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(exercise.name).font(.headline)
-                    Text(exercise.muscleValue.label).font(.caption).foregroundStyle(.secondary)
+                    Text("\(exercise.muscleValue.label) · \(rows.filter(\.done).count)/\(rows.count) sets").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                if exercise.equipmentValue == .barbell {
+                    Button { plates = true } label: {
+                        Label("Plates", systemImage: "line.3.horizontal.decrease").font(.caption.weight(.semibold))
+                            .labelStyle(isPhone ? AnyLabelStyle(.iconOnly) : AnyLabelStyle(.titleAndIcon))
+                    }
+                        .buttonStyle(.bordered).controlSize(.small).help("Plates to load")
+                        .popover(isPresented: $plates) {
+                            PlateCalculator(kg: rows.first { !$0.done }?.kg ?? rows.last?.kg ?? 20, unit: unit).appStyle()
+                        }
+                }
                 Menu {
                     Button("Remove exercise", role: .destructive, action: remove)
                 } label: { Image(systemName: "ellipsis.circle") }
@@ -164,9 +213,11 @@ private struct ExerciseBlock: View {
                                 .frame(width: 44)
                         }
                         HStack(spacing: 6) {
-                            Button { onDone(row) } label: {
-                                Image(systemName: row.done ? "checkmark.circle.fill" : "circle").font(.title3)
-                                    .foregroundStyle(row.done ? Macro.carbs.color : .secondary)
+                            Button { withAnimation(.snappy) { onDone(row) } } label: {
+                                Image(systemName: "checkmark").font(.callout.weight(.heavy))
+                                    .foregroundStyle(row.done ? .white : .secondary)
+                                    .frame(width: 32, height: 28)
+                                    .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(.plain)
                             if let r = records[row.persistentModelID], !r.isEmpty {
@@ -174,14 +225,18 @@ private struct ExerciseBlock: View {
                             }
                         }
                     }
-                    .opacity(row.done ? 0.75 : 1)
+                    .foregroundStyle(row.done ? palette.good : .primary)
                 }
             }
-            Button(action: addSet) { Label("Add set", systemImage: "plus") }.buttonStyle(.borderless).font(.callout)
+            Button(action: addSet) {
+                Label("Add set", systemImage: "plus").font(.callout.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 8)
+                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
         }
         .padding(16)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(.primary.opacity(0.06)))
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
     }
 
     private func previousText(_ prev: [WorkoutSet], workingIndex: Int, row: WorkoutSet) -> String {
@@ -234,18 +289,29 @@ struct RestBar: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
             let left = max(0, Int(ends.timeIntervalSince(ctx.date).rounded(.up)))
+            let color = left > 0 ? palette.accent : palette.good
             HStack(spacing: 14) {
-                Image(systemName: "timer").font(.title2)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(left > 0 ? "Rest \(clock(left))" : "Rest over — next set").font(.headline).monospacedDigit()
-                    ProgressView(value: Double(total - left), total: Double(max(total, 1)))
+                ZStack {
+                    Circle().stroke(color.opacity(0.2), lineWidth: 5)
+                    Circle().trim(from: 0, to: total > 0 ? Double(left) / Double(total) : 0)
+                        .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 0.5), value: left)
+                    Image(systemName: left > 0 ? "timer" : "checkmark").font(.callout.weight(.bold)).foregroundStyle(color)
                 }
-                Button("−15 s") { change(ends.addingTimeInterval(-15)) }
-                Button("+15 s") { change(ends.addingTimeInterval(15)) }
-                Button(left > 0 ? "Skip" : "Close") { change(nil) }
+                .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(left > 0 ? clock(left) : "Go!").font(.number(24)).monospacedDigit()
+                    Text(left > 0 ? "Rest" : "Rest over, next set").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("−15") { change(ends.addingTimeInterval(-15)) }.buttonStyle(.bordered)
+                Button("+15") { change(ends.addingTimeInterval(15)) }.buttonStyle(.bordered)
+                Button { change(nil) } label: { Image(systemName: "xmark") }.buttonStyle(.bordered)
             }
-            .padding(14)
-            .background((left > 0 ? Macro.calories.color : Macro.carbs.color).opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(color.opacity(0.5), lineWidth: 1.5))
+            .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
             .onChange(of: left == 0) { _, over in if over && !rang { rang = true; ring() } }
         }
     }
@@ -343,5 +409,64 @@ struct NewExerciseView: View {
         #if os(macOS)
         .frame(width: 400, height: 260)
         #endif
+    }
+}
+
+/// Which plates to put on each side of the bar for a weight.
+struct PlateCalculator: View {
+    let kg: Double
+    let unit: WeightUnit
+    @AppStorage("barKg") private var bar: Double = 20
+
+    static let plates: [Double] = [25, 20, 15, 10, 5, 2.5, 1.25]
+
+    var body: some View {
+        let side = Self.perSide(total: kg, bar: bar)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(trimmed(unit.fromKg(kg))) \(unit.rawValue)").font(.number(26))
+                Text("on a \(trimmed(bar)) kg bar").foregroundStyle(.secondary)
+            }
+            if side.plates.isEmpty {
+                Text(kg <= bar ? "Just the bar." : "Can't make this exactly.").foregroundStyle(.secondary)
+            } else {
+                HStack(alignment: .center, spacing: 3) {
+                    Rectangle().fill(.secondary).frame(width: 30, height: 8)
+                    ForEach(Array(side.plates.enumerated()), id: \.offset) { _, p in
+                        RoundedRectangle(cornerRadius: 3).fill(color(p))
+                            .frame(width: p >= 10 ? 14 : 10, height: 34 + p * 2.6)
+                            .overlay { Text(trimmed(p)).font(.system(size: 8, weight: .bold)).rotationEffect(.degrees(-90)).foregroundStyle(.white).fixedSize() }
+                    }
+                }
+                .frame(height: 104)
+                Text("Each side: " + side.plates.map { trimmed($0) }.joined(separator: " + ") + " kg").font(.callout.weight(.semibold))
+                if side.left > 0.01 { Text("\(trimmed(side.left * 2)) kg short of the target").font(.caption).foregroundStyle(palette.warn) }
+            }
+            Picker("Bar", selection: $bar) {
+                Text("20 kg bar").tag(20.0); Text("15 kg bar").tag(15.0); Text("10 kg bar").tag(10.0)
+            }
+            .pickerStyle(.segmented).labelsHidden()
+        }
+        .padding(18)
+        .frame(width: 320)
+        .presentationCompactAdaptation(.popover)
+    }
+
+    static func perSide(total: Double, bar: Double) -> (plates: [Double], left: Double) {
+        var left = max(0, (total - bar) / 2)
+        var out: [Double] = []
+        for p in plates { while left >= p - 0.001 { out.append(p); left -= p } }
+        return (out, left)
+    }
+
+    private func color(_ p: Double) -> Color {
+        switch p {
+        case 25: return Color(hex: 0xE5383B)
+        case 20: return Color(hex: 0x3A6FF7)
+        case 15: return Color(hex: 0xF2C12E)
+        case 10: return Color(hex: 0x2BB673)
+        case 5: return Color(hex: 0xF5F5F5).mix(with: .gray, by: 0.3)
+        default: return Color(hex: 0x6B6B76)
+        }
     }
 }

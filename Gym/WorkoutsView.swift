@@ -14,39 +14,49 @@ struct WorkoutsView: View {
     @State private var newRoutine = false
     @State private var showing: Workout?
 
+    @State private var summary: Workout?
+    @State private var lastActiveKey: String?
+
     var body: some View {
-        if let w = active.first {
-            ActiveWorkoutView(workout: w).navigationTitle("Workout")
-        } else {
-            overview
+        Group {
+            if let w = active.first {
+                ActiveWorkoutView(workout: w).navigationTitle("Workout")
+                    #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                    #endif
+            } else {
+                overview
+            }
         }
+        .onChange(of: active.first?.key, initial: true) { old, new in
+            // A workout just finished: show how it went.
+            if new == nil, let k = lastActiveKey, let w = finished.first(where: { $0.key == k }) { summary = w }
+            lastActiveKey = new
+        }
+        .sheet(item: $summary) { WorkoutSummary(workout: $0) }
+    }
+
+    private var nextRoutine: Routine? {
+        guard !routines.isEmpty else { return nil }
+        if let lastKey = finished.first(where: { $0.routineKey != nil })?.routineKey, let i = routines.firstIndex(where: { $0.key == lastKey }) {
+            return routines[(i + 1) % routines.count]
+        }
+        return routines.first
     }
 
     private var overview: some View {
         let unit = profiles.first?.weight ?? .kg
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Button { ctx.startWorkout(routine: nil) } label: { Label("Start empty workout", systemImage: "play.fill") }
-                        .buttonStyle(.borderedProminent)
-                    Spacer()
-                    Button { newRoutine = true } label: { Label("New routine", systemImage: "plus") }
-                }
-                .controlSize(.large)
+                hero
                 if !routines.isEmpty {
-                    Card(title: "Routines", systemImage: "list.bullet.rectangle") {
-                        ForEach(routines) { r in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(r.name).font(.headline)
-                                    Text(routineSummary(r)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                                }
-                                Spacer()
-                                Button("Edit") { editingRoutine = r }
-                                Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent)
-                            }
-                            if r.id != routines.last?.id { Divider() }
-                        }
+                    HStack {
+                        Text("Routines").font(.title3.bold())
+                        Spacer()
+                        Button { newRoutine = true } label: { Label("New", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
+                    }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 150 : 190), spacing: 12)], spacing: 12) {
+                        ForEach(routines) { r in routineCard(r) }
                     }
                 }
                 WeekCard()
@@ -54,10 +64,15 @@ struct WorkoutsView: View {
                     ContentUnavailableView("No workouts yet", systemImage: "dumbbell",
                                            description: Text("Start an empty workout, or make a routine like Push / Pull / Legs first."))
                 } else {
-                    Card(title: "History", systemImage: "clock.arrow.circlepath") {
-                        ForEach(finished.prefix(50)) { w in
-                            Button { showing = w } label: { WorkoutRow(workout: w, unit: unit) }.buttonStyle(.plain)
-                            if w.id != finished.prefix(50).last?.id { Divider() }
+                    Text("History").font(.title3.bold()).padding(.top, 4)
+                    let months = Dictionary(grouping: finished.prefix(120), by: { monthKey($0.start) }).sorted { $0.key > $1.key }
+                    ForEach(months, id: \.key) { _, ws in
+                        Card(title: ws[0].start.formatted(.dateTime.month(.wide).year().locale(appLocale)), systemImage: "calendar",
+                             accessory: AnyView(Text("\(ws.count) workouts").font(.caption).foregroundStyle(.secondary))) {
+                            ForEach(ws) { w in
+                                Button { showing = w } label: { WorkoutRow(workout: w, unit: unit) }.buttonStyle(.plain)
+                                if w.id != ws.last?.id { Divider() }
+                            }
                         }
                     }
                 }
@@ -73,10 +88,155 @@ struct WorkoutsView: View {
         .sheet(item: $showing) { WorkoutDetail(workout: $0) }
     }
 
+    /// The big "start" card: your next routine, or an empty workout.
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let r = nextRoutine {
+                Text("UP NEXT").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
+                Text(r.name).font(.number(34)).foregroundStyle(.white)
+                Text(routineSummary(r)).font(.callout).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
+                HStack(spacing: 10) {
+                    Button { ctx.startWorkout(routine: r) } label: {
+                        Label("Start \(r.name)", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.black)
+                    }
+                    .buttonStyle(.plain)
+                    Button { ctx.startWorkout(routine: nil) } label: {
+                        Text("Empty").font(.headline).padding(.horizontal, 18).padding(.vertical, 12)
+                            .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                Text("READY WHEN YOU ARE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
+                Text("Start training").font(.number(34)).foregroundStyle(.white)
+                HStack(spacing: 10) {
+                    Button { ctx.startWorkout(routine: nil) } label: {
+                        Label("Empty workout", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.black)
+                    }
+                    .buttonStyle(.plain)
+                    Button { newRoutine = true } label: {
+                        Text("New routine").font(.headline).padding(.horizontal, 18).padding(.vertical, 12)
+                            .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [Macro.protein.color, Macro.protein.color.mix(with: palette.accent, by: 0.55)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func routineCard(_ r: Routine) -> some View {
+        let count = routineCount(r)
+        let last = finished.first { $0.routineKey == r.key || $0.name == r.name }
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(r.name).font(.headline).lineLimit(1)
+            Text("\(count) exercises").font(.caption).foregroundStyle(.secondary)
+            Text(last.map { "Last \(relative($0.day))" } ?? "Not done yet").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent).controlSize(.small)
+                Spacer()
+                Button { editingRoutine = r } label: { Image(systemName: "pencil") }.buttonStyle(.borderless)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+        .contextMenu {
+            Button("Start") { ctx.startWorkout(routine: r) }
+            Button("Edit…") { editingRoutine = r }
+        }
+    }
+
+    private func routineCount(_ r: Routine) -> Int {
+        let key = r.key
+        return (try? ctx.fetchCount(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == key }))) ?? 0
+    }
+
+    private func monthKey(_ d: Date) -> String { String(dayKey(d).prefix(7)) }
+
     private func routineSummary(_ r: Routine) -> String {
         let key = r.key
         let items = (try? ctx.fetch(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == key }, sortBy: [SortDescriptor(\.order)]))) ?? []
         return items.compactMap { ctx.exercise($0.exerciseKey)?.name }.joined(separator: ", ")
+    }
+}
+
+/// Straight after finishing: how the workout went, and any records.
+struct WorkoutSummary: View {
+    let workout: Workout
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    @Query private var profiles: [Profile]
+
+    var body: some View {
+        let unit = profiles.first?.weight ?? .kg
+        let sets = ctx.sets(of: workout.key).filter(\.done)
+        let prs = records(sets)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(palette.good)
+                        .padding(.top, 10)
+                    Text("Workout complete").font(.number(28))
+                    Text(workout.name).font(.headline).foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        tile(clock(workout.duration), "Time", palette.accent)
+                        tile("\(sets.filter { $0.kindValue.counts }.count)", "Sets", palette.good)
+                        tile(number(unit.fromKg(volume(sets.map(\.lift)))), "Volume \(unit.rawValue)", Macro.fat.color)
+                    }
+                    if !prs.isEmpty {
+                        Card(title: "New records", systemImage: "trophy.fill") {
+                            ForEach(prs, id: \.0) { name, what in
+                                HStack {
+                                    Text(name).font(.body.weight(.medium))
+                                    Spacer()
+                                    Text(what.joined(separator: " · ")).font(.callout).foregroundStyle(Macro.fat.color)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(pagePadding)
+            }
+            .background(Color.pageBackground)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 480, height: 520)
+        #endif
+    }
+
+    private func tile(_ value: String, _ label: String, _ color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.number(22)).monospacedDigit().foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 14)
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// Per exercise, the records set today (best of each kind).
+    private func records(_ sets: [WorkoutSet]) -> [(String, [String])] {
+        var out: [(String, [String])] = []
+        for (key, rows) in Dictionary(grouping: sets, by: \.exerciseKey) {
+            let before = ctx.history(of: key, excluding: workout.key).map(\.lift)
+            var found: [String] = []
+            var earlier: [LiftSet] = []
+            for r in rows.sorted(by: { $0.setOrder < $1.setOrder }) {
+                for rec in newRecords(r.lift, before: before + earlier) where !found.contains(rec) { found.append(rec) }
+                earlier.append(r.lift)
+            }
+            if !found.isEmpty, let name = ctx.exercise(key)?.name { out.append((name, found)) }
+        }
+        return out.sorted { $0.0 < $1.0 }
     }
 }
 
@@ -125,14 +285,28 @@ struct WeekCard: View {
                 Text("Sets you finish this week show up here by muscle. Helper muscles count as half a set.")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                Chart(rows) { m in
-                    BarMark(x: .value("Sets", counts[m] ?? 0), y: .value("Muscle", m.label))
-                        .foregroundStyle(Macro.calories.color)
-                        .annotation(position: .trailing) { Text(number(counts[m] ?? 0, digits: (counts[m] ?? 0).truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1)).font(.caption) }
+                let top = max(20, rows.map { counts[$0] ?? 0 }.max() ?? 0)
+                VStack(spacing: 10) {
+                    ForEach(rows) { m in
+                        let n = counts[m] ?? 0
+                        HStack(spacing: 10) {
+                            Text(m.label).font(.callout).frame(width: isPhone ? 86 : 110, alignment: .leading).lineLimit(1)
+                            GeometryReader { g in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Color.raisedBackground)
+                                    // 10–20 working sets a week: the usual target zone
+                                    Rectangle().fill(palette.good.opacity(0.12)).frame(width: g.size.width * 10 / top).offset(x: g.size.width * 10 / top)
+                                    Capsule().fill(n >= 10 ? palette.good : palette.accent).frame(width: max(8, g.size.width * min(n, top) / top))
+                                }
+                                .clipShape(Capsule())
+                            }
+                            .frame(height: 10)
+                            Text(number(n, digits: n.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1)).font(.callout.weight(.semibold)).monospacedDigit()
+                                .frame(width: 34, alignment: .trailing)
+                        }
+                    }
                 }
-                .chartXAxis(.hidden)
-                .frame(height: CGFloat(rows.count) * 26 + 10)
-                Text("Working sets; helper muscles count as half.").font(.caption).foregroundStyle(.secondary)
+                Text("Working sets; helper muscles count as half. Shaded: 10–20 a week, a common target.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
