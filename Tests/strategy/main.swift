@@ -64,5 +64,21 @@ check(!ctx.partialDays.contains(d), "and counts again")
 let est = ctx.entries(on: d).first { $0.name.hasPrefix("Unlogged") }!.nutrients
 check(abs(est.protein / est.kcal - 50.0 / 800) < 0.01, "estimate in the day's own macro proportions")
 
+// Refeeds and diet breaks
+let prof = Profile(sex: .male, birthDate: Date(timeIntervalSince1970: 0), heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal)
+prof.refeedWeekday = 7; prof.refeedExtraKcal = 600            // Saturday
+let base = Targets(kcal: 2200, protein: 190, fat: 65, carbs: 200)
+let week = (0..<7).map { addDays("2026-10-12", $0) }          // Monday to Sunday
+let adjusted = week.map { prof.refeed(base, on: $0) }
+check(abs(adjusted.reduce(0) { $0 + $1.kcal } - 7 * 2200) < 1, "refeed keeps the week's calories")
+check(adjusted[5].carbs == 350 && adjusted[5].protein == 190, "Saturday: +150 g carbs, same protein")
+check(abs(adjusted[0].kcal - 2100) < 0.5, "other days give back 100 kcal each")
+prof.dietBreakStart = "2026-10-20"; prof.dietBreakEnd = "2026-11-02"
+check(prof.inDietBreak("2026-10-25") && !prof.inDietBreak("2026-11-03") && !prof.inDietBreak("2026-10-19"), "diet break dates")
+let m = maintenance(base, expenditure: 2750)
+check(m.kcal == 2750 && m.protein == 190, "diet break: maintenance calories, same protein (\(m.kcal))")
+check(abs(m.fat * 9 / (m.fat * 9 + m.carbs * 4) - 585.0 / (585 + 800)) < 0.01, "and the same carb/fat split")
+check(weekStart("2026-10-18") == "2026-10-12" && weekStart("2026-10-12") == "2026-10-12", "weeks start on Monday")
+
 print(failed == 0 ? "ALL PASSED" : "\(failed) FAILED")
 exit(failed == 0 ? 0 : 1)

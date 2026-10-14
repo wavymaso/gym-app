@@ -27,6 +27,8 @@ struct StrategyView: View {
 
     @State private var selectedDay = dayKey()
     @State private var collaborative = false
+    @State private var refeeding = false
+    @State private var breaking = false
     @State private var editingFloor = false
 
     private func styleText(_ m: String) -> String {
@@ -66,6 +68,8 @@ struct StrategyView: View {
         .sheet(isPresented: $checkingIn) { CheckInView() }
         .sheet(isPresented: $manual) { ManualTargetsView() }
         .sheet(isPresented: $collaborative) { ManualTargetsView(mode: "collaborative") }
+        .sheet(isPresented: $refeeding) { if let p = profiles.first { RefeedSheet(profile: p) } }
+        .sheet(isPresented: $breaking) { if let p = profiles.first { DietBreakSheet(profile: p) } }
         .sheet(isPresented: $editingFloor) { if let p = profiles.first { CalorieFloorSheet(profile: p) } }
         .sheet(isPresented: $editingGoalWeight) { if let p = profiles.first { GoalWeightSheet(profile: p) } }
         .sheet(isPresented: $showingDistribution) {
@@ -126,7 +130,7 @@ struct StrategyView: View {
             }
             HStack(spacing: 8) {
                 chip(goalDetail(g, p))
-                chip(styleText(g.mode))
+                chip(p.inDietBreak(dayKey()) ? "Diet break" : styleText(g.mode))
                 chip(g.dietValue.label)
             }
             if let goal = p.goalWeightKg, let now {
@@ -281,6 +285,12 @@ struct StrategyView: View {
             if g.mode == "collaborative" {
                 rowButton("pencil", palette.accent, "Your macros", "P \(number(t.targets.protein)) · F \(number(t.targets.fat)) · C \(number(t.targets.carbs))") { collaborative = true }
             }
+            rowButton("arrow.up.circle", palette.carbs, "Refeed day",
+                      p.refeedWeekday > 0 ? "\(weekdayName(p.refeedWeekday)) · +\(number(p.refeedExtraKcal / 4)) g carbs" : "Off") { refeeding = true }
+            rowButton("pause.circle", palette.good, "Diet break",
+                      p.inDietBreak(dayKey()) ? "On until \(date(fromKey: p.dietBreakEnd).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))"
+                      : (!p.dietBreakStart.isEmpty && p.dietBreakStart > dayKey() ? "Planned from \(date(fromKey: p.dietBreakStart).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))"
+                         : "A week or two at maintenance")) { breaking = true }
             rowLink("flame", palette.warn, "Expenditure settings", "Algorithm, starting estimate") { ExpenditureSettingsView() }
             rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
             rowLink("chart.line.uptrend.xyaxis", Color(hex: 0xA77BF3), "Weight trend settings", "How the trend is smoothed", last: true) { WeightTrendSettingsView() }

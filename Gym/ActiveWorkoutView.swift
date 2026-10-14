@@ -13,6 +13,8 @@ struct ActiveWorkoutView: View {
     @Query private var profiles: [Profile]
     @Query private var sets: [WorkoutSet]
     @State private var restEnds: Date?
+    @State private var restNext = ""
+    @State private var restSet = ""
     @State private var restTotal = 120
     @State private var picking = false
     @State private var confirmDiscard = false
@@ -53,6 +55,12 @@ struct ActiveWorkoutView: View {
         .pageBackground()
         .sensoryFeedback(.success, trigger: sets.filter(\.done).count) { old, new in new > old }
         .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 0)
+                .onChange(of: restEnds) { _, e in
+                    #if os(iOS)
+                    RestLive.show(ends: e, total: restTotal, workout: workout.name, next: restNext, setText: restSet)
+                    #endif
+                }
             if let restEnds {
                 RestBar(ends: restEnds, total: restTotal) { e in withAnimation(.snappy) { self.restEnds = e } }
                     .padding(.horizontal, pagePadding).padding(.bottom, 8)
@@ -126,6 +134,12 @@ struct ActiveWorkoutView: View {
                 restEnds = nil
             } else {
                 restTotal = row.restSeconds
+                let same = sets.filter { $0.exerciseKey == row.exerciseKey && $0.kindValue != .warmup }.sorted { $0.setOrder < $1.setOrder }
+                let doneCount = same.filter(\.done).count
+                if let nextOpen = sets.filter({ !$0.done }).sorted(by: { ($0.exerciseOrder, $0.setOrder) < ($1.exerciseOrder, $1.setOrder) }).first {
+                    restNext = ctx.exercise(nextOpen.exerciseKey)?.name ?? ""
+                } else { restNext = "" }
+                restSet = "\(ctx.exercise(row.exerciseKey)?.name ?? "") set \(doneCount) of \(same.count) done"
                 restEnds = Date().addingTimeInterval(TimeInterval(row.restSeconds))
             }
         } else {

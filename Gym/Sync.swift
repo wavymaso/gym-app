@@ -38,7 +38,8 @@ extension Syncable {
 /// Every kind of record that syncs, in the order they're applied.
 let syncTypes: [any Syncable.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self, Food.self, RecipeIngredient.self,
                                       FoodEntry.self, Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self,
-                                      WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self, Measurement.self, ProgressPhoto.self]
+                                      WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self, Measurement.self, ProgressPhoto.self,
+                                      Supplement.self, SupplementTake.self]
 
 extension Notification.Name {
     static let gymDidCommit = Notification.Name("gymDidCommit")
@@ -179,7 +180,8 @@ extension Profile: Syncable {
          "highDayExtra": highDayExtra, "fastDays": fastDays, "fastKcal": fastKcal,
          "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
          "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
-         "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal]
+         "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal,
+         "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
@@ -192,6 +194,8 @@ extension Profile: Syncable {
         nutrientGoals = d.str("nutrientGoals"); weeklyBudget = d.bool("weeklyBudget")
         if let t = d["trainingType"] as? String, !t.isEmpty { trainingType = t }
         calorieFloorKcal = d.num("calorieFloorKcal")
+        refeedWeekday = d.int("refeedWeekday"); refeedExtraKcal = d.num("refeedExtraKcal")
+        dietBreakStart = d.str("dietBreakStart"); dietBreakEnd = d.str("dietBreakEnd")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
 }
@@ -355,6 +359,25 @@ extension Measurement: Syncable {
     func encode() -> [String: Any] { ["day": day, "site": site, "cm": cm] }
     func decode(_ d: [String: Any]) { day = d.str("day"); site = d.str("site"); cm = d.num("cm") }
     static func blank() -> Self { Self(day: "", site: .waist, cm: 0) }
+}
+
+extension Supplement: Syncable {
+    static var syncType: String { "supplement" }
+    var naturalID: String { "supp:\(key)" }
+    func encode() -> [String: Any] { ["key": key, "name": name, "dose": dose, "emoji": emoji, "timing": timing, "order": order, "active": active] }
+    func decode(_ d: [String: Any]) {
+        key = d.str("key"); name = d.str("name"); dose = d.str("dose"); emoji = d.str("emoji"); timing = d.str("timing")
+        order = d.int("order"); active = d.bool("active")
+    }
+    static func blank() -> Self { Self(name: "", dose: "", emoji: "", order: 0) }
+}
+
+extension SupplementTake: Syncable {
+    static var syncType: String { "supplementTake" }
+    var naturalID: String { "take:\(day):\(supplementKey)" }       // once per supplement per day
+    func encode() -> [String: Any] { ["day": day, "supplementKey": supplementKey] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); supplementKey = d.str("supplementKey") }
+    static func blank() -> Self { Self(day: "", supplementKey: "") }
 }
 
 extension ProgressPhoto: Syncable {

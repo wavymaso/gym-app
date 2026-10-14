@@ -393,6 +393,11 @@ func addDemoProfile(_ ctx: ModelContext) {
         first.forEach { $0.done = true; $0.kg += 2.5 }
         ctx.supersetWithNext(order: 2, in: w)                    // lateral raises + triceps pushdowns
     }
+    // Supplements, with a streak
+    for (i, x) in supplementSuggestions.prefix(3).enumerated() {
+        let s = Supplement(name: x.0, dose: x.1, emoji: x.2, timing: x.3, order: i); ctx.insert(s)
+        for d in 0..<(i == 0 ? 12 : 3) where !(i == 1 && d == 0) { ctx.insert(SupplementTake(day: addDays(dayKey(), -d), supplementKey: s.key)) }
+    }
     // Tape measurements: 6 weeks ago and this week
     ctx.saveMeasurements([.waist: 86.5, .chest: 101, .neck: 38.5, .armR: 36, .thighR: 58], day: addDays(dayKey(), -42))
     ctx.saveMeasurements([.waist: 83.8, .chest: 101.5, .neck: 38.2, .armR: 36.6, .thighR: 58.4], day: addDays(dayKey(), -2))

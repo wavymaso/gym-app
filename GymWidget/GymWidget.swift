@@ -169,5 +169,8 @@ struct CaloriesWidget: Widget {
 
 @main
 struct GymWidgets: WidgetBundle {
-    var body: some Widget { CaloriesWidget() }
+    var body: some Widget {
+        CaloriesWidget()
+        RestLiveActivity()
+    }
 }

@@ -250,6 +250,10 @@ extension ModelContext {
         guard let set = targets(on: day) else { return nil }
         let p = try? fetch(FetchDescriptor<Profile>()).first
         var t = p?.adjust(set.targets, on: day) ?? set.targets
+        if let p {
+            if p.inDietBreak(day) { return maintenance(set.targets, expenditure: set.expenditure) }
+            t = p.refeed(t, on: day)
+        }
         guard p?.weeklyBudget == true else { return t }
         let n = dayNumber(day), monday = dayKey(number: n - ((n + 3) % 7 + 7) % 7)
         let sunday = addDays(monday, 6)

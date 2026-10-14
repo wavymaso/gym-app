@@ -231,10 +231,15 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 5
+    static let version = 6
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("timer", "Rest timer on your lock screen", "Counts down on the lock screen and Dynamic Island, and alerts you when rest is over."),
+        ("pills.fill", "Supplements", "Tick off creatine and the rest each day and keep the streak (Dashboard → Habits)."),
+        ("figure.strengthtraining.traditional", "Strength retention & deloads", "Your main lifts against body weight while you cut, and a deload when they slip (Training)."),
+        ("arrow.up.circle", "Refeeds & diet breaks", "A weekly high-carb day and planned weeks at maintenance (Strategy). Plus Collaborative mode and smoother check-ins."),
+        ("fork.knife", "Protein per meal", "How evenly your protein is spread, against about 0,4 g per kg per meal."),
         ("square.stack.3d.up.fill", "A new way to log food", "One sheet: Scan · Search · AI · Quick Add · Library. Add foods to a cart, then Log Foods. The food screen shows its impact on today's targets and has a number pad with units."),
         ("chart.bar.xaxis", "Dashboard, MacroFactor style", "Swipe the top card for the weekly nutrition grid. Insight cards with sparklines, and Search for a food right above the tab bar."),
         ("sparkles", "Glass and Maximal", "Settings → Appearance: a Liquid Glass theme, and a Maximal style with glow."),

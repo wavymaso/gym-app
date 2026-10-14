@@ -537,6 +537,7 @@ struct DayDetailsSheet: View {
                         if style == .timeline { Toggle("Show empty hours", isOn: $showEmptyHours) }
                     }
                     DayNoteCard(day: day)
+                    ProteinMealsCard(days: [day])
                     NutrientPanel(total: entries.reduce(Nutrients.zero) { $0 + $1.nutrients }, entries: entries)
                 }
                 .padding(16)

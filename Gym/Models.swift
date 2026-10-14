@@ -32,6 +32,10 @@ import SwiftData
     var weeklyBudget: Bool = false           // carry under/over-eating into the rest of the week
     var trainingType: String = "resistance"  // none | aerobic | resistance: how much protein you need
     var calorieFloorKcal: Double = 0         // coached: never below this (0 = 1500 men, 1200 women)
+    var refeedWeekday: Int = 0               // a weekly high-carb day (Calendar weekday; 0 = none)
+    var refeedExtraKcal: Double = 0          // all carbs, taken back evenly from the other days
+    var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)
+    var dietBreakEnd: String = ""
 
     init(sex: Sex, birthDate: Date, heightCm: Double, activity: Activity, weightUnit: WeightUnit, energyUnit: EnergyUnit) {
         self.sex = sex.rawValue; self.birthDate = birthDate; self.heightCm = heightCm; self.activity = activity.rawValue
@@ -112,7 +116,7 @@ let allModels: [any PersistentModel.Type] = [Profile.self, Program.self, TargetS
                                              Food.self, RecipeIngredient.self, FoodEntry.self,
                                              Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self, Tombstone.self,
                                              WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self,
-                                             Measurement.self, ProgressPhoto.self]
+                                             Measurement.self, ProgressPhoto.self, Supplement.self, SupplementTake.self]
 
 // MARK: - Looking things up
 
@@ -216,4 +220,42 @@ func nutrientTarget(_ key: String, kcal: Double, sex: Sex, profile: Profile?) ->
         let m = Micro.all.first { $0.key == key }
         return (own ?? m?.target(sex) ?? 0, m?.isLimit ?? false)
     }
+}
+
+// MARK: - Refeeds and diet breaks (Strategy)
+
+extension Profile {
+    func inDietBreak(_ day: String) -> Bool {
+        !dietBreakStart.isEmpty && !dietBreakEnd.isEmpty && day >= dietBreakStart && day <= dietBreakEnd
+    }
+
+    /// The weekly refeed: that day gets `refeedExtraKcal` more, all carbs; the other six days give
+    /// it back evenly (carbs first), so the week's total and the rate of loss stay the same.
+    func refeed(_ t: Targets, on day: String) -> Targets {
+        guard refeedWeekday > 0, refeedExtraKcal > 0 else { return t }
+        let wd = Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: day))
+        var out = t
+        if wd == refeedWeekday {
+            out.kcal += refeedExtraKcal; out.carbs += refeedExtraKcal / 4
+        } else {
+            let take = refeedExtraKcal / 6
+            out.kcal -= take; out.carbs -= take / 4
+            if out.carbs < 0 { out.fat = max(0, out.fat + out.carbs * 4 / 9); out.carbs = 0 }
+        }
+        return out
+    }
+}
+
+/// A diet break: eat at your expenditure, protein unchanged, the rest in the program's carb/fat split.
+func maintenance(_ t: Targets, expenditure: Double) -> Targets {
+    let kcal = roundTo(max(expenditure, t.kcal), 10)
+    let rest = max(0, kcal - t.protein * 4)
+    let fatShare = t.fat * 9 / max(t.fat * 9 + t.carbs * 4, 1)
+    return Targets(kcal: kcal, protein: t.protein, fat: (rest * fatShare / 9).rounded(), carbs: (rest * (1 - fatShare) / 4).rounded())
+}
+
+/// Monday of a day's week.
+func weekStart(_ day: String) -> String {
+    let n = dayNumber(day)
+    return dayKey(number: n - ((n + 3) % 7 + 7) % 7)
 }

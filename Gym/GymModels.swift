@@ -222,12 +222,14 @@ extension ModelContext {
 
     /// The built-in exercise library, added once.
     func seedExercises() {
-        let builtins = (try? fetchCount(FetchDescriptor<Exercise>(predicate: #Predicate { !$0.isCustom }))) ?? 0
-        guard builtins == 0 else { return }
-        for (slug, name, muscle, secondary, equipment) in exerciseLibrary {
+        // Add whatever's missing (the library grows with updates; built-ins match across devices by key).
+        let have = Set(((try? fetch(FetchDescriptor<Exercise>(predicate: #Predicate { !$0.isCustom }))) ?? []).map(\.key))
+        var added = 0
+        for (slug, name, muscle, secondary, equipment) in exerciseLibrary + exerciseLibraryMore where !have.contains("builtin:\(slug)") {
             insert(Exercise(key: "builtin:\(slug)", name: name, muscle: muscle, secondary: secondary, equipment: equipment, isCustom: false))
+            added += 1
         }
-        commit()
+        if added > 0 { commit() }
     }
 }
 
@@ -337,3 +339,113 @@ extension ModelContext {
         return ws.first { $0.key != workoutKey && !($0.notesByExercise[exerciseKey] ?? "").isEmpty }?.notesByExercise[exerciseKey]
     }
 }
+
+/// More of what bodybuilders actually do: machines, cables, unilateral and isolation work.
+let exerciseLibraryMore: [(String, String, Muscle, [Muscle], Equipment)] = [
+    // Chest
+    ("decline-bench-press", "Decline bench press", .chest, [.triceps], .barbell),
+    ("incline-chest-press-machine", "Incline chest press (machine)", .chest, [.shoulders, .triceps], .machine),
+    ("smith-incline-press", "Smith machine incline press", .chest, [.shoulders, .triceps], .machine),
+    ("smith-bench-press", "Smith machine bench press", .chest, [.triceps, .shoulders], .machine),
+    ("pec-deck", "Pec deck", .chest, [], .machine),
+    ("low-to-high-cable-fly", "Low-to-high cable fly", .chest, [.shoulders], .cable),
+    ("high-to-low-cable-fly", "High-to-low cable fly", .chest, [], .cable),
+    ("db-fly", "Dumbbell fly", .chest, [], .dumbbell),
+    ("incline-db-fly", "Incline dumbbell fly", .chest, [.shoulders], .dumbbell),
+    ("weighted-dip", "Weighted dip", .chest, [.triceps], .other),
+    ("hammer-strength-press", "Hammer Strength chest press", .chest, [.triceps], .machine),
+    ("deficit-push-up", "Deficit push-up", .chest, [.triceps], .bodyweight),
+    // Back
+    ("weighted-pull-up", "Weighted pull-up", .back, [.biceps], .other),
+    ("neutral-grip-pulldown", "Neutral-grip pulldown", .back, [.biceps], .cable),
+    ("single-arm-pulldown", "Single-arm cable pulldown", .back, [.biceps], .cable),
+    ("straight-arm-pulldown", "Straight-arm pulldown", .back, [], .cable),
+    ("chest-supported-row", "Chest-supported row", .back, [.biceps], .dumbbell),
+    ("pendlay-row", "Pendlay row", .back, [.biceps], .barbell),
+    ("seal-row", "Seal row", .back, [.biceps], .barbell),
+    ("meadows-row", "Meadows row", .back, [.biceps], .barbell),
+    ("single-arm-cable-row", "Single-arm cable row", .back, [.biceps], .cable),
+    ("hammer-strength-row", "Hammer Strength row", .back, [.biceps], .machine),
+    ("high-row-machine", "High row (machine)", .back, [.biceps], .machine),
+    ("rack-pull", "Rack pull", .back, [.glutes, .forearms], .barbell),
+    ("pullover-machine", "Pullover (machine)", .back, [.chest], .machine),
+    ("db-pullover", "Dumbbell pullover", .back, [.chest], .dumbbell),
+    ("barbell-shrug", "Barbell shrug", .back, [.forearms], .barbell),
+    ("db-shrug", "Dumbbell shrug", .back, [.forearms], .dumbbell),
+    ("assisted-pull-up", "Assisted pull-up (machine)", .back, [.biceps], .machine),
+    ("inverted-row", "Inverted row", .back, [.biceps], .bodyweight),
+    // Shoulders
+    ("seated-db-press", "Seated dumbbell press", .shoulders, [.triceps], .dumbbell),
+    ("arnold-press", "Arnold press", .shoulders, [.triceps], .dumbbell),
+    ("smith-shoulder-press", "Smith machine shoulder press", .shoulders, [.triceps], .machine),
+    ("push-press", "Push press", .shoulders, [.triceps, .quads], .barbell),
+    ("lateral-raise-machine", "Lateral raise (machine)", .shoulders, [], .machine),
+    ("lean-away-lateral-raise", "Lean-away lateral raise", .shoulders, [], .dumbbell),
+    ("y-raise", "Cable Y-raise", .shoulders, [], .cable),
+    ("rear-delt-machine", "Reverse pec deck", .shoulders, [.back], .machine),
+    ("cable-rear-delt-fly", "Cable rear delt fly", .shoulders, [.back], .cable),
+    ("front-raise", "Front raise", .shoulders, [], .dumbbell),
+    ("upright-row", "Upright row", .shoulders, [.back], .barbell),
+    ("cable-upright-row", "Cable upright row", .shoulders, [.back], .cable),
+    // Biceps
+    ("ez-bar-curl", "EZ-bar curl", .biceps, [.forearms], .barbell),
+    ("incline-db-curl", "Incline dumbbell curl", .biceps, [], .dumbbell),
+    ("bayesian-curl", "Bayesian cable curl", .biceps, [], .cable),
+    ("spider-curl", "Spider curl", .biceps, [], .dumbbell),
+    ("concentration-curl", "Concentration curl", .biceps, [], .dumbbell),
+    ("preacher-curl-machine", "Preacher curl (machine)", .biceps, [], .machine),
+    ("cable-hammer-curl", "Rope hammer curl", .biceps, [.forearms], .cable),
+    ("reverse-curl", "Reverse curl", .forearms, [.biceps], .barbell),
+    // Triceps
+    ("rope-pushdown", "Rope pushdown", .triceps, [], .cable),
+    ("single-arm-pushdown", "Single-arm pushdown", .triceps, [], .cable),
+    ("cable-overhead-extension", "Cable overhead extension", .triceps, [], .cable),
+    ("db-overhead-extension", "Dumbbell overhead extension", .triceps, [], .dumbbell),
+    ("jm-press", "JM press", .triceps, [.chest], .barbell),
+    ("dip-machine", "Dip (machine)", .triceps, [.chest], .machine),
+    ("triceps-extension-machine", "Triceps extension (machine)", .triceps, [], .machine),
+    ("kickback", "Triceps kickback", .triceps, [], .dumbbell),
+    // Quads
+    ("smith-squat", "Smith machine squat", .quads, [.glutes], .machine),
+    ("pendulum-squat", "Pendulum squat", .quads, [.glutes], .machine),
+    ("belt-squat", "Belt squat", .quads, [.glutes], .machine),
+    ("v-squat", "V-squat", .quads, [.glutes], .machine),
+    ("high-bar-squat", "High-bar squat", .quads, [.glutes], .barbell),
+    ("safety-bar-squat", "Safety bar squat", .quads, [.glutes, .back], .barbell),
+    ("single-leg-press", "Single-leg press", .quads, [.glutes], .machine),
+    ("single-leg-extension", "Single-leg extension", .quads, [], .machine),
+    ("sissy-squat", "Sissy squat", .quads, [], .bodyweight),
+    ("walking-lunge", "Walking lunge", .quads, [.glutes], .dumbbell),
+    ("step-up", "Step-up", .quads, [.glutes], .dumbbell),
+    ("reverse-lunge", "Reverse lunge", .quads, [.glutes], .dumbbell),
+    // Hamstrings and glutes
+    ("stiff-leg-deadlift", "Stiff-leg deadlift", .hamstrings, [.glutes, .back], .barbell),
+    ("db-romanian-deadlift", "Dumbbell Romanian deadlift", .hamstrings, [.glutes], .dumbbell),
+    ("single-leg-rdl", "Single-leg Romanian deadlift", .hamstrings, [.glutes], .dumbbell),
+    ("nordic-curl", "Nordic curl", .hamstrings, [], .bodyweight),
+    ("standing-leg-curl", "Standing leg curl", .hamstrings, [], .machine),
+    ("glute-ham-raise", "Glute-ham raise", .hamstrings, [.glutes], .bodyweight),
+    ("good-morning", "Good morning", .hamstrings, [.back, .glutes], .barbell),
+    ("45-back-extension", "45° back extension", .glutes, [.hamstrings, .back], .bodyweight),
+    ("hip-thrust-machine", "Hip thrust (machine)", .glutes, [.hamstrings], .machine),
+    ("glute-bridge", "Glute bridge", .glutes, [.hamstrings], .barbell),
+    ("cable-pull-through", "Cable pull-through", .glutes, [.hamstrings], .cable),
+    ("hip-adduction", "Hip adduction", .quads, [], .machine),
+    ("sumo-deadlift", "Sumo deadlift", .glutes, [.quads, .back], .barbell),
+    // Calves
+    ("leg-press-calf-raise", "Calf raise on leg press", .calves, [], .machine),
+    ("smith-calf-raise", "Smith machine calf raise", .calves, [], .machine),
+    ("single-leg-calf-raise", "Single-leg calf raise", .calves, [], .dumbbell),
+    // Abs
+    ("ab-crunch-machine", "Crunch (machine)", .abs, [], .machine),
+    ("decline-crunch", "Decline crunch", .abs, [], .bodyweight),
+    ("captains-chair-raise", "Captain's chair knee raise", .abs, [], .bodyweight),
+    ("pallof-press", "Pallof press", .abs, [], .cable),
+    ("cable-woodchop", "Cable woodchop", .abs, [], .cable),
+    ("weighted-plank", "Weighted plank", .abs, [], .other),
+    // Cardio
+    ("stairmaster", "Stairmaster", .cardio, [], .machine),
+    ("incline-walk", "Incline treadmill walk", .cardio, [], .machine),
+    ("rowing-machine", "Rowing machine", .cardio, [.back], .machine),
+    ("elliptical", "Elliptical", .cardio, [], .machine),
+]

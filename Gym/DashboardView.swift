@@ -228,6 +228,9 @@ struct DashboardView: View {
                                     energy: p.energy)
             }
         case "score": HabitCard()
+        case "supplements": SupplementsCard()
+        case "proteinMeals": ProteinMealsCard(days: (1...7).map { addDays(dayKey(), -$0) })
+        case "strength": StrengthRetentionCard(unit: p.weight)
         case "weighIn": HabitDotsCard(title: "Weigh-ins", color: DashItem.color("weighIn"), done: Set(weights.map(\.day)))
         case "foodLogging": HabitDotsCard(title: "Food logging", color: DashItem.color("foodLogging"), done: Set(loggedDays.map(\.day)))
         default: EmptyView()

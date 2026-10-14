@@ -22,20 +22,28 @@ struct DashLayout: Codable, Equatable {
         var all: [String] {
             switch self {
             case .nutrition: return ["macros", "calories", "protein", "fat", "carbs", "fiber", "sugar", "satFat", "sodium", "water"] + Micro.all.map(\.key)
-            case .insights: return ["expenditure", "weight", "energyBalance", "goal", "week", "training", "activity"]
-            case .habits: return ["score", "weighIn", "foodLogging"]
+            case .insights: return ["expenditure", "weight", "energyBalance", "goal", "proteinMeals", "strength", "week", "training", "activity"]
+            case .habits: return ["supplements", "score", "weighIn", "foodLogging"]
             }
         }
     }
 
     static let standard = DashLayout(sections: [
         Section(kind: .nutrition, items: ["macros", "calories", "fiber", "sodium"]),
-        Section(kind: .insights, items: ["expenditure", "weight", "energyBalance", "goal", "training", "week", "activity"]),
-        Section(kind: .habits, items: ["score", "weighIn", "foodLogging"]),
+        Section(kind: .insights, items: ["expenditure", "weight", "energyBalance", "goal", "proteinMeals", "strength", "training", "week", "activity"]),
+        Section(kind: .habits, items: ["supplements", "score", "weighIn", "foodLogging"]),
     ])
 
     static func load(_ s: String) -> DashLayout {
-        guard let d = s.data(using: .utf8), let l = try? JSONDecoder().decode(DashLayout.self, from: d), l.sections.count == 3 else { return standard }
+        guard let d = s.data(using: .utf8), var l = try? JSONDecoder().decode(DashLayout.self, from: d), l.sections.count == 3 else { return standard }
+        // New items reach layouts saved before they existed (until you save your own layout).
+        if !UserDefaults.standard.bool(forKey: "dashAddedSupplements") {
+            for (kind, item, at) in [(Kind.habits, "supplements", 0), (Kind.insights, "proteinMeals", 4), (Kind.insights, "strength", 5)] {
+                if let i = l.sections.firstIndex(where: { $0.kind == kind }), !l.sections[i].items.contains(item) {
+                    l.sections[i].items.insert(item, at: min(at, l.sections[i].items.count))
+                }
+            }
+        }
         return l
     }
 
@@ -50,7 +58,7 @@ enum DashItem {
                 "sugar": "Sugar", "satFat": "Saturated fat", "sodium": "Sodium", "water": "Water",
                 "expenditure": "Expenditure", "weight": "Weight Trend", "energyBalance": "Energy Balance", "goal": "Goal Progress",
                 "week": "Last 7 days", "training": "Training this week", "activity": "Water & activity",
-                "score": "Habit score", "weighIn": "Weigh-In", "foodLogging": "Food Logging"][id] ?? id
+                "score": "Habit score", "weighIn": "Weigh-In", "foodLogging": "Food Logging", "supplements": "Supplements", "proteinMeals": "Protein per meal", "strength": "Strength retention"][id] ?? id
     }
 
     static func color(_ id: String) -> Color {
@@ -133,7 +141,7 @@ struct CustomizeDashboardView: View {
             .navigationTitle("Customize Dashboard")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { saved = layout.json; dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { saved = layout.json; UserDefaults.standard.set(true, forKey: "dashAddedSupplements"); dismiss() } }
             }
             .sheet(item: $adding) { kind in
                 AddRemoveItemsView(kind: kind, selected: Binding(

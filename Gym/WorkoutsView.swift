@@ -1,6 +1,7 @@
 import Charts
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 /// Start a workout (empty or from a routine), see this week's training, and your history.
 /// While a workout is going, this page shows it.
@@ -31,6 +32,10 @@ struct WorkoutsView: View {
         .onChange(of: active.first?.key, initial: true) { old, new in
             // A workout just finished: show how it went.
             if new == nil, let k = lastActiveKey, let w = finished.first(where: { $0.key == k }) { summary = w }
+            #if os(iOS)
+            if new == nil { RestLive.end() }
+            else { Task { _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) } }
+            #endif
             lastActiveKey = new
         }
         .sheet(item: $summary) { WorkoutSummary(workout: $0) }
@@ -65,6 +70,7 @@ struct WorkoutsView: View {
                     .modifier(CardSurface())
                 }
                 WeekCard()
+                StrengthRetentionCard(unit: unit)
                 StrengthCard(unit: unit)
                 if finished.isEmpty {
                     ContentUnavailableView("No workouts yet", systemImage: "dumbbell",
