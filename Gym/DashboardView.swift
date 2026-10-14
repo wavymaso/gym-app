@@ -12,7 +12,7 @@ struct DashboardView: View {
     @Query(filter: #Predicate<Program> { $0.isActive }) private var programs: [Program]
     @Query private var weekEntries: [FoodEntry]
     @Query private var loggedDays: [FoodEntry]
-    @AppStorage("dashCards") private var layout = DashCard.defaultLayout
+    @AppStorage("dashLayout") private var layoutJSON = ""
     @State private var sheet: DashSheet? = {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "checkIn") { return .checkIn }       // testing only
@@ -40,28 +40,19 @@ struct DashboardView: View {
                 header
                 if let t = target(on: dayKey()), let p = profile {
                     if ctx.dueCheckIn != nil { checkInBanner }
-                    let today = weekEntries.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }.targets
-                    TodayRings(eaten: today, target: p.adjust(t.targets, on: dayKey()), energy: p.energy)
+                    let todayN = loggedDays.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }
+                    let tt = p.adjust(t.targets, on: dayKey())
+                    heroWidgets(todayN, tt, p)
                     quickActions
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 280), spacing: 16, alignment: .top)], spacing: 16) {
-                        ForEach(DashCard.shown(layout)) { c in
-                            switch c {
-                            case .habits: HabitCard()
-                            case .activity: ActivityCard()
-                            case .week: WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
-                            case .training: TrainingCard()
-                            case .weight: weightCard(p)
-                            case .expenditure: expenditureCard(t, p)
-                            case .goal: if let g = programs.first { goalCard(g, p) }
-                            }
-                        }
+                    ForEach(DashLayout.load(layoutJSON).sections) { sec in
+                        if !sec.items.isEmpty { section(sec, todayN, tt, t, p) }
                     }
-                    Button { sheet = .layout } label: { Label("Edit dashboard", systemImage: "slider.horizontal.3").font(.callout) }
-                        .buttonStyle(.borderless).frame(maxWidth: .infinity)
+                    Button { sheet = .layout } label: { Label("Customize dashboard", systemImage: "slider.horizontal.3").font(.callout.weight(.semibold)) }
+                        .buttonStyle(.bordered).buttonBorderShape(.capsule).frame(maxWidth: .infinity).padding(.top, 4)
                 }
             }
             .padding(pagePadding)
-            .frame(maxWidth: 1000, alignment: .leading)
+            .frame(maxWidth: isPhone ? 1000 : 1180, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .debugScrollAnchor()
@@ -76,7 +67,7 @@ struct DashboardView: View {
             case .quickAdd: QuickAddView(day: dayKey(), entry: nil)
             case .weighIn: WeighInSheet()
             case .checkIn: CheckInView()
-            case .layout: DashboardLayoutSheet()
+            case .layout: CustomizeDashboardView()
             }
         }
     }
@@ -150,6 +141,70 @@ struct DashboardView: View {
             QuickAction(title: "Quick add", icon: "bolt.fill", color: Macro.fat.color) { sheet = .quickAdd }
             QuickAction(title: "Weigh in", icon: "scalemass.fill", color: Macro.carbs.color) { sheet = .weighIn }
             QuickAction(title: "Train", icon: "dumbbell.fill", color: Macro.protein.color) { openPage(.workouts) }
+        }
+    }
+
+    // MARK: Top widgets and sections
+
+    /// Daily nutrition, the week against targets, and energy balance: swipe between them on the
+    /// phone; on the Mac, the rings across the top and the other two side by side.
+    @ViewBuilder private func heroWidgets(_ eaten: Nutrients, _ t: Targets, _ p: Profile) -> some View {
+        let rings = TodayRings(eaten: eaten.targets, target: t, energy: p.energy)
+        let week = Card(title: "Nutrition & targets", systemImage: "calendar") {
+            WeekTargetsWidget(entries: loggedDays, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
+        }
+        let balance = Card(title: "Energy balance", systemImage: "plusminus") {
+            EnergyBalanceWidget(intake: ctx.dailyIntake(), target: { d in target(on: d).map { p.adjust($0.targets, on: d).kcal } },
+                                expenditure: Dictionary(ctx.expenditureEstimates().map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a }),
+                                energy: p.energy)
+        }
+        if isPhone {
+            TabView {
+                rings.padding(.horizontal, 2)
+                week.padding(.horizontal, 2)
+                balance.padding(.horizontal, 2)
+            }
+            #if os(iOS)
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            #endif
+            .frame(height: 400)
+        } else {
+            rings
+            HStack(alignment: .top, spacing: 16) { week; balance }
+        }
+    }
+
+    @ViewBuilder private func section(_ sec: DashLayout.Section, _ eaten: Nutrients, _ t: Targets, _ set: TargetSet, _ p: Profile) -> some View {
+        switch sec.kind {
+        case .nutrition:
+            NutritionSection(items: sec.items, remaining: sec.remaining, eaten: eaten, target: t, energy: p.energy,
+                             waterMl: ctx.water(on: dayKey()).reduce(0) { $0 + $1.ml }, waterGoal: ctx.waterGoalMl, sex: p.sexValue)
+        case .insights, .habits:
+            Text(sec.kind.label).font(.title3.bold()).padding(.top, 6)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 320), spacing: 16, alignment: .top)], spacing: 16) {
+                ForEach(sec.items, id: \.self) { id in card(id, set, p) }
+            }
+        }
+    }
+
+    @ViewBuilder private func card(_ id: String, _ t: TargetSet, _ p: Profile) -> some View {
+        switch id {
+        case "expenditure": expenditureCard(t, p)
+        case "weight": weightCard(p)
+        case "goal": if let g = programs.first { goalCard(g, p) }
+        case "week": WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
+        case "training": TrainingCard()
+        case "activity": ActivityCard()
+        case "energyBalance":
+            Card(title: "Energy balance", systemImage: "plusminus") {
+                EnergyBalanceWidget(intake: ctx.dailyIntake(), target: { d in target(on: d).map { p.adjust($0.targets, on: d).kcal } },
+                                    expenditure: Dictionary(ctx.expenditureEstimates().map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a }),
+                                    energy: p.energy)
+            }
+        case "score": HabitCard()
+        case "weighIn": HabitDotsCard(title: "Weigh-ins", color: DashItem.color("weighIn"), done: Set(weights.map(\.day)))
+        case "foodLogging": HabitDotsCard(title: "Food logging", color: DashItem.color("foodLogging"), done: Set(loggedDays.map(\.day)))
+        default: EmptyView()
         }
     }
 
@@ -582,88 +637,66 @@ struct Sparkline: View {
     }
 }
 
-/// The dashboard's cards below the rings, in your order; "-" in front hides one.
-enum DashCard: String, CaseIterable, Identifiable {
-    case habits, activity, week, training, weight, expenditure, goal
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .habits: return "Habit score"
-        case .activity: return "Water & activity"
-        case .week: return "Last 7 days"
-        case .training: return "Training this week"
-        case .weight: return "Trend weight"
-        case .expenditure: return "Expenditure"
-        case .goal: return "Goal"
-        }
-    }
-    var icon: String {
-        switch self {
-        case .habits: return "checkmark.seal"
-        case .activity: return "drop.fill"
-        case .week: return "chart.bar"
-        case .training: return "dumbbell"
-        case .weight: return "scalemass"
-        case .expenditure: return "flame"
-        case .goal: return "target"
-        }
-    }
-
-    static let defaultLayout = allCases.map(\.rawValue).joined(separator: ",")
-
-    /// Every card in saved order (new ones at the end), with whether it's shown.
-    static func parse(_ s: String) -> [(card: DashCard, on: Bool)] {
-        var out: [(DashCard, Bool)] = s.split(separator: ",").compactMap { t in
-            let hidden = t.hasPrefix("-")
-            return DashCard(rawValue: String(hidden ? t.dropFirst() : t)).map { ($0, !hidden) }
-        }
-        for c in allCases where !out.contains(where: { $0.0 == c }) { out.append((c, true)) }
-        return out
-    }
-
-    static func shown(_ s: String) -> [DashCard] { parse(s).filter(\.on).map(\.card) }
-
-    static func serialise(_ items: [(card: DashCard, on: Bool)]) -> String {
-        items.map { ($0.on ? "" : "-") + $0.card.rawValue }.joined(separator: ",")
-    }
-}
-
-/// Show, hide and reorder the dashboard cards.
-struct DashboardLayoutSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("dashCards") private var layout = DashCard.defaultLayout
-    @State private var items: [Item] = []
-
-    struct Item: Identifiable { let card: DashCard; var on: Bool; var id: String { card.rawValue } }
+/// Monday to Sunday: calories each day against that day's target, today outlined, and the week's totals.
+struct WeekTargetsWidget: View {
+    let entries: [FoodEntry]
+    let target: (String) -> Targets?
+    let energy: EnergyUnit
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach($items) { $it in
-                        Toggle(isOn: $it.on) { Label(it.card.label, systemImage: it.card.icon) }
+        let monday = dayKey(mondayThisWeek())
+        let days = (0..<7).map { addDays(monday, $0) }
+        let byDay = Dictionary(grouping: entries.filter { $0.day >= monday }, by: \.day).mapValues { $0.reduce(Nutrients.zero) { $0 + $1.nutrients } }
+        let weekEaten = days.reduce(0.0) { $0 + (byDay[$1]?.kcal ?? 0) }
+        let weekTarget = days.reduce(0.0) { $0 + (target($1)?.kcal ?? 0) }
+        let today = byDay[dayKey()] ?? .zero, tt = target(dayKey())
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .bottom, spacing: 6) {
+                ForEach(days, id: \.self) { d in
+                    let k = byDay[d]?.kcal ?? 0, t = target(d)?.kcal ?? 0
+                    let top = max(days.compactMap { target($0)?.kcal }.max() ?? 1, 1) * 1.2
+                    VStack(spacing: 5) {
+                        GeometryReader { g in
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 5).fill(Color.raisedBackground).frame(height: g.size.height * t / top)
+                                RoundedRectangle(cornerRadius: 5).fill(k >= t * 0.98 && t > 0 ? Macro.calories.color : Macro.calories.color.opacity(0.7))
+                                    .frame(height: g.size.height * min(k, top) / top)
+                                Rectangle().fill(k >= t && t > 0 ? Color.primary : Color.primary.opacity(0.35)).frame(height: 2)
+                                    .offset(y: -g.size.height * t / top + 1).opacity(t > 0 ? 1 : 0)
+                            }
+                            .frame(width: g.size.width, height: g.size.height, alignment: .bottom)
+                        }
+                        .padding(3)
+                        .overlay { if d == dayKey() { RoundedRectangle(cornerRadius: 7).stroke(palette.accent, lineWidth: 1.5) } }
+                        Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
+                            .font(.caption2.weight(d == dayKey() ? .bold : .regular)).foregroundStyle(d == dayKey() ? .primary : .secondary)
                     }
-                    .onMove { items.move(fromOffsets: $0, toOffset: $1) }
-                } footer: {
-                    Text("Drag to reorder\(isPhone ? " (tap Edit first)" : ""). The rings and quick buttons always stay at the top.")
-                }
-                Section { Button("Reset to default") { items = DashCard.parse(DashCard.defaultLayout).map { Item(card: $0.card, on: $0.on) } } }
-            }
-            .themedList()
-            .navigationTitle("Dashboard")
-            .toolbar {
-                #if os(iOS)
-                ToolbarItem(placement: .topBarLeading) { EditButton() }
-                #endif
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { layout = DashCard.serialise(items.map { ($0.card, $0.on) }); dismiss() }
                 }
             }
-            .onAppear { items = DashCard.parse(layout).map { Item(card: $0.card, on: $0.on) } }
+            .frame(height: 150)
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("This week").font(.caption).foregroundStyle(.secondary)
+                    Text("\(number(energy.fromKcal(weekEaten))) / \(energy.format(weekTarget))").font(.number(15, weight: .semibold)).monospacedDigit()
+                }
+                Spacer()
+                if let tt {
+                    HStack(spacing: 10) {
+                        mini("flame.fill", today.kcal, tt.kcal, Macro.calories.color)
+                        mini("P", today.protein, tt.protein, Macro.protein.color)
+                        mini("F", today.fat, tt.fat, Macro.fat.color)
+                        mini("C", today.carbs, tt.carbs, Macro.carbs.color)
+                    }
+                }
+            }
         }
-        .appStyle()
-        #if os(macOS)
-        .frame(width: 380, height: 460)
-        #endif
+    }
+
+    private func mini(_ label: String, _ v: Double, _ t: Double, _ c: Color) -> some View {
+        VStack(spacing: 0) {
+            if label.count > 1 { Image(systemName: label).font(.caption2).foregroundStyle(c) } else { Text(label).font(.caption2.weight(.bold)).foregroundStyle(c) }
+            Text(number(v)).font(.caption.weight(.bold)).monospacedDigit()
+            Text(number(t)).font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+        }
     }
 }
