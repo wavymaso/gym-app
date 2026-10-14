@@ -34,7 +34,8 @@ struct FoodLogView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 WeekStrip(day: $day)
-                DayLog(day: day, energy: energy, target: ctx.targets(on: day), style: $style) { sheet = $0 }
+                DayLog(day: day, energy: energy, target: ctx.targets(on: day).map { t in profiles.first.map { $0.adjust(t.targets, on: day) } ?? t.targets },
+                       style: $style) { sheet = $0 }
             }
             .padding(pagePadding)
             .frame(maxWidth: 820, alignment: .leading)
@@ -99,6 +100,7 @@ struct WeekStrip: View {
     @Binding var day: String
     @Query private var entries: [FoodEntry]
     @Query(sort: \TargetSet.fromDay, order: .reverse) private var targetSets: [TargetSet]
+    @Query private var profiles: [Profile]
     let monday: String
 
     init(day: Binding<String>) {
@@ -125,7 +127,8 @@ struct WeekStrip: View {
             HStack(spacing: 4) {
                 ForEach(0..<7, id: \.self) { i in
                     let d = addDays(monday, i)
-                    let t = targetSets.first { $0.fromDay <= d }?.kcal ?? 0
+                    let base = targetSets.first { $0.fromDay <= d }?.targets
+                    let t = base.map { b in profiles.first.map { $0.adjust(b, on: d) } ?? b }?.kcal ?? 0
                     Button { withAnimation(.snappy) { day = d } } label: {
                         VStack(spacing: 6) {
                             Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
@@ -169,11 +172,11 @@ struct DayLog: View {
     @Query private var entries: [FoodEntry]
     let day: String
     let energy: EnergyUnit
-    let target: TargetSet?
+    let target: Targets?
     @Binding var style: FoodLogView.LogStyle
     let open: (FoodLogView.LogSheet) -> Void
 
-    init(day: String, energy: EnergyUnit, target: TargetSet?, style: Binding<FoodLogView.LogStyle>, open: @escaping (FoodLogView.LogSheet) -> Void) {
+    init(day: String, energy: EnergyUnit, target: Targets?, style: Binding<FoodLogView.LogStyle>, open: @escaping (FoodLogView.LogSheet) -> Void) {
         _entries = Query(filter: #Predicate<FoodEntry> { $0.day == day }, sort: \FoodEntry.time)
         self.day = day; self.energy = energy; self.target = target; _style = style; self.open = open
     }
@@ -211,7 +214,7 @@ struct DayLog: View {
 
     private func summary(_ total: Nutrients) -> some View {
         Card(title: "") {
-            if let t = target?.targets {
+            if let t = target {
                 HStack(spacing: 18) {
                     ZStack {
                         Ring(progress: t.kcal > 0 ? total.kcal / t.kcal : 0, color: Macro.calories.color, lineWidth: 10)

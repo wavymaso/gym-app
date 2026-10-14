@@ -40,11 +40,11 @@ struct DashboardView: View {
                 if let t = target(on: dayKey()), let p = profile {
                     if ctx.dueCheckIn != nil { checkInBanner }
                     let today = weekEntries.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }.targets
-                    TodayRings(eaten: today, target: t.targets, energy: p.energy)
+                    TodayRings(eaten: today, target: p.adjust(t.targets, on: dayKey()), energy: p.energy)
                     quickActions
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 280), spacing: 16, alignment: .top)], spacing: 16) {
                         ActivityCard()
-                        WeekNutritionCard(entries: weekEntries, target: target(on:), energy: p.energy)
+                        WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
                         TrainingCard()
                         weightCard(p)
                         expenditureCard(t, p)
@@ -333,7 +333,7 @@ struct Delta: View {
 /// The last seven days: calories against target, and averages.
 struct WeekNutritionCard: View {
     let entries: [FoodEntry]
-    let target: (String) -> TargetSet?
+    let target: (String) -> Targets?
     let energy: EnergyUnit
 
     var body: some View {

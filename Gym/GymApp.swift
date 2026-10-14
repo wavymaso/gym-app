@@ -235,6 +235,7 @@ func addDemoProfile(_ ctx: ModelContext) {
     let born = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2003, month: 5, day: 10))!
     let profile = Profile(sex: .male, birthDate: born, heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal)
     profile.goalWeightKg = 75
+    profile.highDays = "2,4,6"; profile.highDayExtra = 300          // Push / Pull / Legs days get more
     ctx.insert(profile)
     ctx.insert(WeightEntry(kg: 78.4))
     let exp = startingExpenditure(sex: .male, weightKg: 78.4, heightCm: 180, age: age(born: born), activity: .moderate)

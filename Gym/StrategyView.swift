@@ -53,7 +53,13 @@ struct StrategyView: View {
                         }
                         Text("Since \(relative(t.fromDay)), based on an expenditure of \(p.energy.format(t.expenditure)).")
                             .font(.callout).foregroundStyle(.secondary)
+                        if p.hasDistribution {
+                            let today = p.adjust(t.targets, on: dayKey())
+                            Text("That's your daily average. Today: \(p.energy.format(today.kcal)), \(number(today.carbs)) g carbs.")
+                                .font(.callout.weight(.semibold)).foregroundStyle(palette.accent)
+                        }
                     }
+                    DistributionCard(profile: p, targets: t.targets)
                     Card(title: "Weekly check-in", systemImage: "calendar.badge.clock") {
                         Picker("Targets", selection: Binding(get: { g.mode }, set: { m in
                             if m == "manual" { manual = true } else { g.mode = "coached"; ctx.commit(); checkingIn = true }
@@ -221,5 +227,97 @@ struct GoalWeightSheet: View {
         #if os(macOS)
         .frame(width: 420, height: 280)
         #endif
+    }
+}
+
+/// More calories on training days (and/or fasting days), the same over the week.
+struct DistributionCard: View {
+    let profile: Profile
+    let targets: Targets
+    @Environment(\.modelContext) private var ctx
+    @Query(filter: #Predicate<Workout> { $0.end != nil }, sort: \Workout.start, order: .reverse) private var workouts: [Workout]
+
+    private let order = [2, 3, 4, 5, 6, 7, 1]                    // Monday first
+
+    var body: some View {
+        Card(title: "Calorie distribution", systemImage: "calendar") {
+            Text("Eat more on training days and less on the others; your week's calories stay the same.")
+                .font(.callout).foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                ForEach(order, id: \.self) { wd in
+                    let high = profile.highDaySet.contains(wd), fast = profile.fastDaySet.contains(wd)
+                    let day = dayFor(weekday: wd)
+                    let k = profile.adjust(targets, on: day).kcal
+                    Menu {
+                        Button { set(wd, high: true, fast: false) } label: { Label("Training day (more)", systemImage: "dumbbell") }
+                        Button { set(wd, high: false, fast: false) } label: { Label("Normal day", systemImage: "circle") }
+                        Button { set(wd, high: false, fast: true) } label: { Label("Fasting day", systemImage: "moon.zzz") }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(String(weekdayName(wd).prefix(1))).font(.caption.weight(.bold))
+                            Image(systemName: fast ? "moon.zzz.fill" : high ? "dumbbell.fill" : "circle").font(.caption)
+                            Text(number(profile.energy.fromKcal(k))).font(.caption2).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                        }
+                        .foregroundStyle(fast ? Color.secondary : high ? Color.white : Color.primary)
+                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .background(high ? palette.accent : (fast ? Color.raisedBackground.opacity(0.6) : Color.raisedBackground),
+                                    in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+                }
+            }
+            if !profile.highDaySet.isEmpty {
+                Stepper(value: Binding(get: { profile.highDayExtra }, set: { profile.highDayExtra = max(0, $0); ctx.commit() }), in: 0...1000, step: 50) {
+                    LabeledContent("Extra on training days", value: profile.energy.format(profile.highDayExtra))
+                }
+            }
+            if !profile.fastDaySet.isEmpty {
+                Stepper(value: Binding(get: { profile.fastKcal }, set: { profile.fastKcal = max(0, $0); ctx.commit() }), in: 0...1500, step: 50) {
+                    LabeledContent("Fasting day target", value: profile.energy.format(profile.fastKcal))
+                }
+            }
+            HStack {
+                if let usual = usualTrainingDays, usual != profile.highDaySet {
+                    Button("Use my training days (\(usual.sorted { order.firstIndex(of: $0)! < order.firstIndex(of: $1)! }.map { String(weekdayName($0).prefix(3)) }.joined(separator: ", ")))") {
+                        profile.highDays = usual.map(String.init).joined(separator: ",")
+                        if profile.highDayExtra == 0 { profile.highDayExtra = 250 }
+                        profile.fastDays = profile.fastDaySet.subtracting(usual).map(String.init).joined(separator: ",")
+                        ctx.commit()
+                    }
+                    .buttonStyle(.bordered).controlSize(.small)
+                }
+                Spacer()
+                if profile.hasDistribution {
+                    Button("Same every day") { profile.highDays = ""; profile.fastDays = ""; ctx.commit() }.buttonStyle(.borderless).controlSize(.small)
+                }
+            }
+            Text("Tap a day to change it. Extra calories come as carbs; protein stays the same every day.").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func set(_ wd: Int, high: Bool, fast: Bool) {
+        var h = profile.highDaySet, f = profile.fastDaySet
+        h.remove(wd); f.remove(wd)
+        if high { h.insert(wd) }
+        if fast { f.insert(wd) }
+        profile.highDays = h.sorted().map(String.init).joined(separator: ",")
+        profile.fastDays = f.sorted().map(String.init).joined(separator: ",")
+        if high && profile.highDayExtra == 0 { profile.highDayExtra = 250 }
+        ctx.commit()
+    }
+
+    /// Weekdays you trained on at least twice in the last 4 weeks.
+    private var usualTrainingDays: Set<Int>? {
+        let from = Calendar.current.date(byAdding: .day, value: -28, to: Date())!
+        let cal = Calendar(identifier: .gregorian)
+        let counts = Dictionary(grouping: workouts.filter { $0.start >= from }) { cal.component(.weekday, from: $0.start) }.mapValues(\.count)
+        let days = Set(counts.filter { $0.value >= 2 }.keys)
+        return days.isEmpty || days.count >= 7 ? nil : days
+    }
+
+    /// A day key in the current week with this weekday (only its weekday matters).
+    private func dayFor(weekday: Int) -> String {
+        let today = Calendar(identifier: .gregorian).component(.weekday, from: Date())
+        return addDays(dayKey(), weekday - today)
     }
 }

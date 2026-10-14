@@ -16,6 +16,10 @@ import SwiftData
     var energyUnit: String
     var createdAt: Date
     var goalWeightKg: Double? = nil           // optional: where you'd like your trend weight to end up
+    var highDays: String = ""                 // calorie distribution: Calendar weekdays ("2,4,6") that get more
+    var highDayExtra: Double = 0              // kcal added on those days (taken evenly from the others)
+    var fastDays: String = ""                 // weekdays with a fixed low target (fasting days)
+    var fastKcal: Double = 600
 
     init(sex: Sex, birthDate: Date, heightCm: Double, activity: Activity, weightUnit: WeightUnit, energyUnit: EnergyUnit) {
         self.sex = sex.rawValue; self.birthDate = birthDate; self.heightCm = heightCm; self.activity = activity.rawValue
@@ -134,4 +138,43 @@ extension ModelContext {
         insert(TargetSet(targets: t, expenditure: expenditure, reason: reason))
         commit()
     }
+}
+
+// MARK: - Calorie distribution (different days, the same week)
+
+extension Profile {
+    var highDaySet: Set<Int> { Set(highDays.split(separator: ",").compactMap { Int($0) }) }
+    var fastDaySet: Set<Int> { Set(fastDays.split(separator: ",").compactMap { Int($0) }) }
+    var hasDistribution: Bool { (!highDaySet.isEmpty && highDayExtra > 0) || !fastDaySet.isEmpty }
+
+    /// A day's targets after the weekly distribution (Calendar weekday of `day`).
+    func adjust(_ t: Targets, on day: String) -> Targets {
+        distribute(t, weekday: Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: day)),
+                   high: highDaySet, extra: highDayExtra, fast: fastDaySet, fastKcal: fastKcal)
+    }
+}
+
+/// Keeps the week's calories the same as 7 × the daily target:
+/// fasting days get `fastKcal` (all macros scaled down), training days get `extra` more than
+/// the remaining days, which share what's left. Off fasting days protein stays put; the
+/// difference is carbs first, then fat.
+func distribute(_ t: Targets, weekday: Int, high: Set<Int>, extra: Double, fast: Set<Int> = [], fastKcal: Double = 600) -> Targets {
+    let fastDays = fast.subtracting([]), highDays = high.subtracting(fast)
+    guard !fastDays.isEmpty || (extra > 0 && !highDays.isEmpty), fastDays.count < 7 else { return t }
+    if fastDays.contains(weekday) {
+        let f = t.kcal > 0 ? min(1, fastKcal / t.kcal) : 1
+        return Targets(kcal: t.kcal * f, protein: t.protein * f, fat: t.fat * f, carbs: t.carbs * f)
+    }
+    let others = 7 - fastDays.count
+    let e = highDays.count < others ? extra : 0                  // every remaining day "high" = no difference
+    let base = (7 * t.kcal - Double(fastDays.count) * min(fastKcal, t.kcal) - Double(highDays.count) * e) / Double(others)
+    let delta = (highDays.contains(weekday) ? base + e : base) - t.kcal
+    var out = t
+    out.kcal += delta
+    out.carbs += delta / 4
+    if out.carbs < 0 {
+        out.fat = max(0, out.fat + out.carbs * 4 / 9)
+        out.carbs = 0
+    }
+    return out
 }

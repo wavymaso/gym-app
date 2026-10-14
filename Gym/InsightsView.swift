@@ -13,7 +13,7 @@ struct InsightsView: View {
 
     var body: some View {
         let energy = profiles.first?.energy ?? .kcal
-        let d = InsightData(ctx: ctx, entries: entries, targetSets: targetSets, days: range.days)
+        let d = InsightData(ctx: ctx, entries: entries, targetSets: targetSets, days: range.days, profile: profiles.first)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Picker("", selection: $range) { ForEach(InsightRange.allCases, id: \.self) { Text($0.label).tag($0) } }
@@ -128,8 +128,10 @@ struct InsightData {
     let expenditure: [ExpenditurePoint]
     let rollingIntake: [DayValue]
     private let sets: [TargetSet]
+    private let profile: Profile?
 
-    init(ctx: ModelContext, entries: [FoodEntry], targetSets: [TargetSet], days n: Int) {
+    init(ctx: ModelContext, entries: [FoodEntry], targetSets: [TargetSet], days n: Int, profile: Profile? = nil) {
+        self.profile = profile
         let today = dayKey()
         let first = addDays(today, -(n - 1))
         let span = days(from: first, through: today)
@@ -145,7 +147,10 @@ struct InsightData {
         }
     }
 
-    func target(_ day: String) -> Targets? { sets.last { $0.fromDay <= day }?.targets }
+    func target(_ day: String) -> Targets? {
+        guard let t = sets.last(where: { $0.fromDay <= day })?.targets else { return nil }
+        return profile?.adjust(t, on: day) ?? t
+    }
 
     var avg: Nutrients? {
         logged.isEmpty ? nil : logged.reduce(Nutrients.zero) { $0 + $1.n }.scaled(1 / Double(logged.count))
