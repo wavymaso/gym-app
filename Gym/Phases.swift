@@ -152,3 +152,28 @@ extension ModelContext {
         return out
     }
 }
+
+// MARK: - Your own plan per weekday (collaborative and manual programs)
+
+extension Profile {
+    /// Calendar weekday (1 = Sunday) → targets for that day.
+    var weekPlan: [Int: Targets] {
+        get {
+            let raw = (try? JSONDecoder().decode([String: Targets].self, from: Data(dayPlan.utf8))) ?? [:]
+            return Dictionary(uniqueKeysWithValues: raw.compactMap { k, v in Int(k).map { ($0, v) } })
+        }
+        set {
+            dayPlan = newValue.isEmpty ? "" : (try? JSONEncoder().encode(Dictionary(uniqueKeysWithValues: newValue.map { (String($0.key), $0.value) })))
+                .map { String(decoding: $0, as: UTF8.self) } ?? ""
+        }
+    }
+}
+
+extension ModelContext {
+    /// A check-in moved the calories (collaborative): every day keeps its share of the week and its
+    /// own protein and carb/fat split.
+    func rescaleWeekPlan(from oldKcal: Double, to newKcal: Double) {
+        guard let p = profile, oldKcal > 0, !p.weekPlan.isEmpty else { return }
+        p.weekPlan = p.weekPlan.mapValues { rescaled($0, toKcal: roundTo($0.kcal * newKcal / oldKcal, 10)) }
+    }
+}

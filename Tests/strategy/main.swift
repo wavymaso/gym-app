@@ -129,5 +129,21 @@ check(!c2.phaseDone, "maintenance not done yet")
 pr.shadowEntries += [ShadowEntry(day: dayKey(), currentKcal: 2500, proposedKcal: 2400, rawKcal: 2300, expenditure: 2700, weekChangeKg: -0.4)]
 check(pr.shadowEntries.count == 1 && pr.shadowEntries[0].proposedKcal == 2400, "shadow check-ins are logged")
 
+// Per-day plan (collaborative): used for its weekday, rescaled at a check-in
+let c3 = ModelContext(try! ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+let p3 = Profile(sex: .male, birthDate: Date(timeIntervalSince1970: 0), heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal)
+c3.insert(p3)
+c3.startProgram(goal: .lose, ratePercent: 0.5, diet: .balanced, protein: .high, weightKg: 90, expenditure: 2800, sex: .male, reason: "goal")
+c3.activeProgram?.mode = "collaborative"
+let monday = addDays(weekStart(dayKey()), 7)
+p3.weekPlan = [2: Targets(kcal: 2600, protein: 190, fat: 70, carbs: 302)]
+c3.commit()
+check(c3.dayTargets(on: monday)?.kcal == 2600, "Monday uses your own plan")
+check(c3.dayTargets(on: addDays(monday, 1))?.kcal != 2600, "other days use the program")
+let base3 = c3.targets()!.targets.kcal
+c3.finishCheckIn(apply: Targets(kcal: base3 * 1.1, protein: 190, fat: 70, carbs: 300), expenditure: 2900)
+let mon = p3.weekPlan[2]!
+check(abs(mon.kcal - roundTo(2600 * 1.1, 10)) < 1 && mon.protein == 190, "check-in rescales the plan, protein kept (\(mon.kcal))")
+
 print(failed == 0 ? "ALL PASSED" : "\(failed) FAILED")
 exit(failed == 0 ? 0 : 1)

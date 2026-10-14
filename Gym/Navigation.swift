@@ -196,10 +196,13 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 10
+    static let version = 11
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("target", "Edit Goal", "Strategy → Edit Goal: drag a ruler to your target weight, set the rate, see your budget and end date, then review."),
+        ("calendar", "Edit Program, day by day", "Collaborative or manual: set each day's calories, protein and carb/fat split, or all days at once with the lock."),
+        ("list.bullet.rectangle", "The numbers under every chart", "Detail screens now list each day's value by month, with how it changed."),
         ("hand.point.up.left", "Touch any chart", "Hold and drag on any graph to see that day's values."),
         ("chart.bar.xaxis", "Calories & Macros, Scale Weight", "New dashboard cards with full history screens; tap “Calories & macros history” under Nutrition too."),
         ("target", "Strategy has its own tab", "Countdown to check-in, your program and goal, goal history, and every coaching setting in one place."),

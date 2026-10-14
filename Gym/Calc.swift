@@ -166,7 +166,7 @@ func weeklyChangeKg(goal: GoalType, ratePercent: Double, weightKg: Double) -> Do
     goal.sign * ratePercent / 100 * weightKg
 }
 
-struct Targets: Equatable {
+struct Targets: Equatable, Codable {
     var kcal: Double
     var protein: Double
     var fat: Double

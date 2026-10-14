@@ -251,7 +251,10 @@ extension ModelContext {
 
     /// Apply (or skip) a check-in.
     func finishCheckIn(apply targets: Targets?, expenditure: Double) {
-        if let targets { insert(TargetSet(targets: targets, expenditure: expenditure, reason: "check-in")) }
+        if let targets {
+            if activeProgram?.mode == "collaborative", let old = self.targets()?.targets.kcal { rescaleWeekPlan(from: old, to: targets.kcal) }
+            insert(TargetSet(targets: targets, expenditure: expenditure, reason: "check-in"))
+        }
         activeProgram?.lastCheckIn = dayKey()
         commit()
     }
@@ -303,6 +306,9 @@ extension ModelContext {
         var t = p?.adjust(set.targets, on: day) ?? set.targets
         if let p {
             if p.inDietBreak(day) { return maintenance(set.targets, expenditure: set.expenditure) }
+            // Your own day-by-day plan (collaborative or manual) replaces the distribution.
+            if activeProgram?.mode != "coached",
+               let own = p.weekPlan[Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: day))] { return own }
             t = p.refeed(t, on: day)
         }
         guard p?.weeklyBudget == true else { return t }

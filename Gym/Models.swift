@@ -40,6 +40,7 @@ import SwiftData
     var phaseQueue: String = ""              // the phases after this one (JSON [PhaseStep])
     var shadowMode: Bool = false             // check-ins calculate but don't change targets
     var shadowLog: String = ""               // what the coach would have done (JSON [ShadowEntry])
+    var dayPlan: String = ""                 // collaborative/manual: your own targets per weekday (JSON [weekday: Targets])
     var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)
     var dietBreakEnd: String = ""
 

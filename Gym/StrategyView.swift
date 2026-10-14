@@ -26,6 +26,7 @@ struct StrategyView: View {
     }
 
     @State private var selectedDay = dayKey()
+    @State private var editingGoalFlow = false
     @Query(sort: \Program.startDay, order: .reverse) private var allPrograms: [Program]
     @State private var collaborative = false
     @State private var refeeding = false
@@ -74,8 +75,14 @@ struct StrategyView: View {
         #endif
         .sheet(isPresented: $editing) { GoalEditor() }
         .sheet(isPresented: $checkingIn) { CheckInView() }
-        .sheet(isPresented: $manual) { ManualTargetsView() }
-        .sheet(isPresented: $collaborative) { ManualTargetsView(mode: "collaborative") }
+        .sheet(isPresented: $manual) { ProgramEditor(mode: "manual") }
+        .sheet(isPresented: $collaborative) { ProgramEditor(mode: "collaborative") }
+        .sheet(isPresented: $editingGoalFlow) { EditGoalFlow() }
+        #if DEBUG
+        .onAppear {       // testing only: -strategySheet goal | program
+            switch UserDefaults.standard.string(forKey: "strategySheet") { case "goal": editingGoalFlow = true; case "program": collaborative = true; default: break }
+        }
+        #endif
         .sheet(isPresented: $refeeding) { if let p = profiles.first { RefeedSheet(profile: p) } }
         .sheet(isPresented: $planning) { if let p = profiles.first { PhasePlanSheet(profile: p) } }
         .sheet(isPresented: $shadowing) { if let p = profiles.first { ShadowSheet(profile: p) } }
@@ -277,7 +284,7 @@ struct StrategyView: View {
             .frame(width: 230, height: 230)
             .animation(.snappy, value: progress)
             HStack(spacing: 28) {
-                Button { editing = true } label: { Label("Goal", systemImage: "target").font(.headline) }
+                Button { editingGoalFlow = true } label: { Label("Goal", systemImage: "target").font(.headline) }
                 Button { checkingIn = true } label: {
                     Label(due ? "Check in now" : "Check-in", systemImage: "calendar.badge.checkmark").font(.headline)
                 }
@@ -327,7 +334,7 @@ struct StrategyView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     pill("plus", "New Goal") { editing = true }
-                    pill("pencil", "Edit Goal") { editingGoalWeight = true }
+                    pill("pencil", "Edit Goal") { editingGoalFlow = true }
                     pill("flag.2.crossed", "Phase Plan") { planning = true }
                 }
             }
@@ -400,7 +407,7 @@ struct StrategyView: View {
         let phaseText = [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ")
         category("Goal & targets", "What you're aiming for") {
             rowButton("target", palette.good, "Goal", g.goalValue.label + " · " + goalDetail(g, p)) { editing = true }
-            rowButton("flag.checkered", palette.calories, "Goal weight", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalWeight = true }
+            rowButton("flag.checkered", palette.calories, "Goal weight & rate", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalFlow = true }
             rowButton("fork.knife", palette.fat, "Diet & protein", "\(g.dietValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg protein") { editing = true }
             rowMenu("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein",
                     last: g.mode == "coached") {

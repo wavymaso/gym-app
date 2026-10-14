@@ -98,7 +98,7 @@ struct DashboardView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "flame.fill").foregroundStyle(palette.warn)
                     Text("\(s)").font(.number(17)).monospacedDigit()
-                    Text("day streak").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    if !isPhone { Text("day streak").font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
                 }
                 .padding(.horizontal, 12).padding(.vertical, 7)
                 .background(Color.cardBackground, in: Capsule())

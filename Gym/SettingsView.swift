@@ -62,7 +62,7 @@ struct SettingsView: View {
             }
         }
         .pageBackground()
-        .navigationTitle("Settings")
+        .navigationTitle(isPhone ? "More" : "Settings")
         #if os(iOS)
         .toolbar(.hidden, for: .navigationBar)
         #endif

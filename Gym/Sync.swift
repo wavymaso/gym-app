@@ -182,7 +182,7 @@ extension Profile: Syncable {
          "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
          "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal,
          "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "refeedSince": refeedSince,
-         "scales": scales, "phaseEnd": phaseEnd, "phaseQueue": phaseQueue, "shadowMode": shadowMode, "shadowLog": shadowLog, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
+         "scales": scales, "phaseEnd": phaseEnd, "phaseQueue": phaseQueue, "shadowMode": shadowMode, "shadowLog": shadowLog, "dayPlan": dayPlan, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
@@ -197,7 +197,7 @@ extension Profile: Syncable {
         calorieFloorKcal = d.num("calorieFloorKcal")
         refeedWeekday = d.int("refeedWeekday"); refeedExtraKcal = d.num("refeedExtraKcal"); refeedSince = d.str("refeedSince")
         scales = d.str("scales"); phaseEnd = d.str("phaseEnd"); phaseQueue = d.str("phaseQueue")
-        shadowMode = d.bool("shadowMode"); shadowLog = d.str("shadowLog")
+        shadowMode = d.bool("shadowMode"); shadowLog = d.str("shadowLog"); dayPlan = d.str("dayPlan")
         scaleOffsets = scaleOffsetMap
         dietBreakStart = d.str("dietBreakStart"); dietBreakEnd = d.str("dietBreakEnd")
     }
