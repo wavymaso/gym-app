@@ -1,25 +1,28 @@
 import SwiftData
 import SwiftUI
 
-/// One day of eating: totals against your targets, then a timeline of what you ate.
+/// One day of eating: a week strip, the day's rings, then meals (or a timeline).
 struct FoodLogView: View {
     @Environment(\.modelContext) private var ctx
     @Query private var profiles: [Profile]
     @State private var day = dayKey()
+    @AppStorage("foodLogStyle") private var style: LogStyle = .meals
     @State private var sheet: LogSheet? = {
         #if DEBUG
-        if UserDefaults.standard.string(forKey: "searchQuery") != nil { return .add }      // testing only
+        if UserDefaults.standard.string(forKey: "searchQuery") != nil { return .add(nil) }      // testing only
         #endif
         return nil
     }()
 
+    enum LogStyle: String, CaseIterable { case meals, timeline }
+
     enum LogSheet: Identifiable {
-        case add, quickAdd, copy
+        case add(Date?), quickAdd(Date?), copy
         case edit(FoodEntry)
         var id: String {
             switch self {
-            case .add: return "add"
-            case .quickAdd: return "quick"
+            case .add(let t): return "add\(t?.timeIntervalSince1970 ?? 0)"
+            case .quickAdd(let t): return "quick\(t?.timeIntervalSince1970 ?? 0)"
             case .copy: return "copy"
             case .edit(let e): return "edit-\(e.persistentModelID.hashValue)"
             }
@@ -30,8 +33,8 @@ struct FoodLogView: View {
         let energy = profiles.first?.energy ?? .kcal
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                DayPicker(day: $day)
-                DayEntries(day: day, energy: energy, target: ctx.targets(on: day)) { sheet = .edit($0) }
+                WeekStrip(day: $day)
+                DayLog(day: day, energy: energy, target: ctx.targets(on: day), style: $style) { sheet = $0 }
             }
             .padding(pagePadding)
             .frame(maxWidth: 820, alignment: .leading)
@@ -39,24 +42,24 @@ struct FoodLogView: View {
         }
         .background(Color.pageBackground)
         .navigationTitle("Food log")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
             ToolbarItemGroup {
                 Menu {
-                    Button("Copy yesterday") {
-                        let y = dayKey(Calendar.current.date(byAdding: .day, value: -1, to: date(fromKey: day))!)
-                        _ = ctx.copyEntries(from: y, to: day)
-                    }
+                    Button("Copy yesterday") { _ = ctx.copyEntries(from: addDays(day, -1), to: day) }
                     Button("Copy from a day…") { sheet = .copy }
                 } label: { Label("Copy", systemImage: "doc.on.doc") }
-                Button { sheet = .quickAdd } label: { Label("Quick add", systemImage: "bolt") }
-                Button { sheet = .add } label: { Label("Add food", systemImage: "plus") }
+                Button { sheet = .quickAdd(nil) } label: { Label("Quick add", systemImage: "bolt") }
+                Button { sheet = .add(nil) } label: { Label("Add food", systemImage: "plus") }
                     .keyboardShortcut("n")
             }
         }
         .sheet(item: $sheet) { s in
             switch s {
-            case .add: AddFoodView(mode: .log(day: day))
-            case .quickAdd: QuickAddView(day: day, entry: nil)
+            case .add(let t): AddFoodView(mode: .log(day: day, time: t))
+            case .quickAdd(let t): QuickAddView(day: day, entry: nil, at: t)
             case .copy: CopyDayView(target: day)
             case .edit(let e):
                 if e.isQuickAdd { QuickAddView(day: day, entry: e) } else { EntryEditor(entry: e) }
@@ -65,95 +68,294 @@ struct FoodLogView: View {
     }
 }
 
-/// ‹ Wednesday 14 October › with a Today button.
-struct DayPicker: View {
-    @Binding var day: String
+/// Meals are times of day (Spanish hours), so every entry has one without choosing.
+enum Meal: Int, CaseIterable, Identifiable {
+    case breakfast, lunch, snack, dinner
+    var id: Int { rawValue }
 
-    var body: some View {
-        HStack(spacing: 8) {
-            Button { move(-1) } label: { Image(systemName: "chevron.left") }
-            Text(label).font(.title2.bold()).frame(minWidth: isPhone ? nil : 230).lineLimit(1).minimumScaleFactor(0.7)
-            Button { move(1) } label: { Image(systemName: "chevron.right") }
-            Spacer()
-            DatePicker("Day", selection: Binding(get: { date(fromKey: day) }, set: { day = dayKey($0) }), displayedComponents: .date)
-                .labelsHidden()
-            if day != dayKey() { Button("Today") { day = dayKey() } }
-        }
-        .buttonStyle(.borderless)
+    var label: String { ["Breakfast", "Lunch", "Merienda", "Dinner"][rawValue] }
+    var icon: String { ["sunrise.fill", "sun.max.fill", "cup.and.saucer.fill", "moon.stars.fill"][rawValue] }
+    var color: Color { [palette.fat, palette.calories, palette.carbs, palette.protein][rawValue] }
+    /// Starts at (minutes after midnight): 05:00, 11:30, 17:00, 20:30.
+    var start: Int { [300, 690, 1020, 1230][rawValue] }
+    /// When something added to this meal is timed: 08:30, 14:30, 18:00, 21:30.
+    var usual: (Int, Int) { [(8, 30), (14, 30), (18, 0), (21, 30)][rawValue] }
+
+    init(time: Date) {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: time)
+        let m = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        self = Meal.allCases.last { m >= $0.start } ?? .dinner        // after midnight still counts as dinner
     }
 
-    private var label: String {
+    /// The time for a new entry in this meal: now, if it's this meal now and the day is today; else its usual time.
+    func time(on day: String) -> Date {
+        if day == dayKey(), Meal(time: Date()) == self { return Date() }
+        return Calendar.current.date(bySettingHour: usual.0, minute: usual.1, second: 0, of: date(fromKey: day)) ?? Date()
+    }
+}
+
+/// Monday to Sunday around the chosen day, each with a little calorie ring.
+struct WeekStrip: View {
+    @Binding var day: String
+    @Query private var entries: [FoodEntry]
+    @Query(sort: \TargetSet.fromDay, order: .reverse) private var targetSets: [TargetSet]
+    let monday: String
+
+    init(day: Binding<String>) {
+        _day = day
+        var cal = Calendar(identifier: .gregorian); cal.firstWeekday = 2
+        let m = dayKey(cal.dateInterval(of: .weekOfYear, for: date(fromKey: day.wrappedValue))?.start ?? Date())
+        let sunday = addDays(m, 6)
+        monday = m
+        _entries = Query(filter: #Predicate<FoodEntry> { $0.day >= m && $0.day <= sunday })
+    }
+
+    var body: some View {
+        let kcal = Dictionary(grouping: entries, by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
+        VStack(spacing: 10) {
+            HStack {
+                Text(title).font(.number(isPhone ? 24 : 26)).lineLimit(1).minimumScaleFactor(0.7)
+                Spacer()
+                if day != dayKey() {
+                    Button("Today") { withAnimation { day = dayKey() } }.buttonStyle(.bordered).controlSize(.small)
+                }
+                Button { move(-7) } label: { Image(systemName: "chevron.left") }.buttonStyle(.borderless)
+                Button { move(7) } label: { Image(systemName: "chevron.right") }.buttonStyle(.borderless)
+            }
+            HStack(spacing: 4) {
+                ForEach(0..<7, id: \.self) { i in
+                    let d = addDays(monday, i)
+                    let t = targetSets.first { $0.fromDay <= d }?.kcal ?? 0
+                    Button { withAnimation(.snappy) { day = d } } label: {
+                        VStack(spacing: 6) {
+                            Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
+                                .font(.caption2.weight(.semibold)).foregroundStyle(d == day ? .white.opacity(0.85) : .secondary)
+                            ZStack {
+                                Ring(progress: t > 0 ? (kcal[d] ?? 0) / t : 0, color: d == day ? .white : Macro.calories.color, lineWidth: 3.5)
+                                Text(date(fromKey: d).formatted(.dateTime.day().locale(appLocale)))
+                                    .font(.caption.weight(.bold)).monospacedDigit()
+                                    .foregroundStyle(d == day ? .white : (d == dayKey() ? palette.accent : .primary))
+                            }
+                            .frame(width: 34, height: 34)
+                        }
+                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .background(d == day ? palette.accent : .clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(d > dayKey() ? 0.45 : 1)
+                }
+            }
+            .padding(6)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(palette.stroke))
+        }
+    }
+
+    private var title: String {
         let d = date(fromKey: day)
         if Calendar.current.isDateInToday(d) { return "Today" }
         if Calendar.current.isDateInYesterday(d) { return "Yesterday" }
         if Calendar.current.isDateInTomorrow(d) { return "Tomorrow" }
-        return d.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale))
+        return d.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))
     }
 
-    private func move(_ n: Int) {
-        day = dayKey(Calendar.current.date(byAdding: .day, value: n, to: date(fromKey: day))!)
-    }
+    private func move(_ n: Int) { withAnimation(.snappy) { day = addDays(day, n) } }
 }
 
-/// The day's totals and timeline (its own view so the query follows the chosen day).
-struct DayEntries: View {
+/// The day's rings and entries (its own view so the query follows the chosen day).
+struct DayLog: View {
     @Environment(\.modelContext) private var ctx
     @Query private var entries: [FoodEntry]
+    let day: String
     let energy: EnergyUnit
     let target: TargetSet?
-    let open: (FoodEntry) -> Void
+    @Binding var style: FoodLogView.LogStyle
+    let open: (FoodLogView.LogSheet) -> Void
 
-    init(day: String, energy: EnergyUnit, target: TargetSet?, open: @escaping (FoodEntry) -> Void) {
+    init(day: String, energy: EnergyUnit, target: TargetSet?, style: Binding<FoodLogView.LogStyle>, open: @escaping (FoodLogView.LogSheet) -> Void) {
         _entries = Query(filter: #Predicate<FoodEntry> { $0.day == day }, sort: \FoodEntry.time)
-        self.energy = energy; self.target = target; self.open = open
+        self.day = day; self.energy = energy; self.target = target; _style = style; self.open = open
     }
 
     var body: some View {
         let total = entries.reduce(Nutrients.zero) { $0 + $1.nutrients }
-        Card(title: "Totals", systemImage: "chart.bar") {
+        summary(total)
+        Picker("View", selection: $style.animation(.snappy)) {
+            Text("Meals").tag(FoodLogView.LogStyle.meals)
+            Text("Timeline").tag(FoodLogView.LogStyle.timeline)
+        }
+        .pickerStyle(.segmented).labelsHidden()
+        if style == .timeline {
+            if entries.isEmpty {
+                ContentUnavailableView("Nothing logged", systemImage: "fork.knife",
+                                       description: Text("Add a food (⌘N), a quick add, or copy another day."))
+                    .padding(.top, 20)
+            } else {
+                rows(entries, showTime: true)
+            }
+        } else {
+            let imported = entries.filter { $0.foodKey == "import" }
+            let own = entries.filter { $0.foodKey != "import" }
+            if !imported.isEmpty {
+                section(title: "Imported", icon: "square.and.arrow.down.fill", color: .secondary, items: imported, meal: nil)
+            }
+            ForEach(Meal.allCases) { m in
+                section(title: m.label, icon: m.icon, color: m.color, items: own.filter { Meal(time: $0.time) == m }, meal: m)
+            }
+        }
+    }
+
+    // MARK: Pieces
+
+    private func summary(_ total: Nutrients) -> some View {
+        Card(title: "") {
             if let t = target?.targets {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(number(energy.fromKcal(total.kcal))).font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit()
-                    Text("/ \(energy.format(t.kcal))").font(.title3).foregroundStyle(.secondary)
-                    Spacer()
-                    let left = t.kcal - total.kcal
-                    Text(left >= 0 ? "\(energy.format(left)) left" : "\(energy.format(-left)) over")
-                        .foregroundStyle(left >= 0 ? Color.secondary : Macro.protein.color)
-                }
-                adaptiveStack {
-                    ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
-                        MacroBar(macro: m, eaten: m.value(total.targets), target: m.value(t), energy: energy)
+                HStack(spacing: 18) {
+                    ZStack {
+                        Ring(progress: t.kcal > 0 ? total.kcal / t.kcal : 0, color: Macro.calories.color, lineWidth: 10)
+                        VStack(spacing: 0) {
+                            let left = t.kcal - total.kcal
+                            Text(number(energy.fromKcal(abs(left)))).font(.number(22)).monospacedDigit().minimumScaleFactor(0.6)
+                            Text(left >= 0 ? "left" : "over").font(.caption2.weight(.semibold)).foregroundStyle(left >= 0 ? Color.secondary : palette.warn)
+                        }
+                        .padding(12)
+                    }
+                    .frame(width: 104, height: 104)
+                    VStack(spacing: 10) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(number(energy.fromKcal(total.kcal))).font(.number(20)).monospacedDigit()
+                            Text("/ \(energy.format(t.kcal))").font(.callout).foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                        ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
+                            CompactMacroBar(macro: m, eaten: m.value(total.targets), target: m.value(t))
+                        }
                     }
                 }
             } else {
-                Text("\(energy.format(total.kcal)) eaten").font(.title2.bold())
+                Text("\(energy.format(total.kcal)) eaten").font(.number(22))
             }
         }
-        if entries.isEmpty {
-            ContentUnavailableView("Nothing logged", systemImage: "fork.knife",
-                                   description: Text("Add a food (⌘N), a quick add, or copy another day."))
-                .padding(.top, 30)
-        } else {
-            VStack(spacing: 0) {
-                ForEach(entries) { e in
-                    EntryRow(entry: e, energy: energy)
-                        .contentShape(Rectangle())
-                        .onTapGesture { open(e) }
-                        .contextMenu {
-                            Button("Edit…") { open(e) }
-                            Button("Duplicate") {
-                                ctx.insert(FoodEntry(day: e.day, time: e.time, name: e.name, brand: e.brand, foodKey: e.foodKey,
-                                                     amount: e.amount, unit: e.unit, grams: e.grams, nutrients: e.nutrients))
-                                ctx.commit()
-                            }
+    }
+
+    private func section(title: String, icon: String, color: Color, items: [FoodEntry], meal: Meal?) -> some View {
+        let n = items.reduce(Nutrients.zero) { $0 + $1.nutrients }
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.callout).foregroundStyle(color)
+                    .frame(width: 30, height: 30).background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: 9))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.headline)
+                    if !items.isEmpty {
+                        Text("\(energy.format(n.kcal)) · P \(number(n.protein)) · F \(number(n.fat)) · C \(number(n.carbs))")
+                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    }
+                }
+                Spacer()
+                if let meal {
+                    Menu {
+                        Button { open(.add(meal.time(on: day))) } label: { Label("Add food", systemImage: "plus") }
+                        Button { open(.quickAdd(meal.time(on: day))) } label: { Label("Quick add", systemImage: "bolt") }
+                        if !items.isEmpty && day != dayKey() {
                             Divider()
-                            Button("Delete", role: .destructive) { ctx.delete(e); ctx.commit() }
+                            Button { copy(items, to: dayKey(), meal: meal) } label: { Label("Copy to today", systemImage: "doc.on.doc") }
                         }
-                    if e.id != entries.last?.id { Divider().padding(.leading, 70) }
+                        if !items.isEmpty {
+                            Button { copy(items, to: addDays(day, 1), meal: meal) } label: { Label("Copy to the next day", systemImage: "arrow.right.doc.on.clipboard") }
+                        }
+                    } label: {
+                        Image(systemName: "plus").font(.body.weight(.bold)).foregroundStyle(palette.accent)
+                            .frame(width: 32, height: 32).background(palette.accent.opacity(0.14), in: Circle())
+                    } primaryAction: {
+                        open(.add(meal.time(on: day)))
+                    }
+                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
                 }
             }
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(.primary.opacity(0.06)))
+            .padding(14)
+            if !items.isEmpty {
+                Divider().padding(.leading, 14)
+                rows(items, showTime: false, framed: false)
+            }
+        }
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+    }
+
+    @ViewBuilder private func rows(_ list: [FoodEntry], showTime: Bool, framed: Bool = true) -> some View {
+        let content = VStack(spacing: 0) {
+            ForEach(list) { e in
+                EntryRow(entry: e, energy: energy, showTime: showTime)
+                    .contentShape(Rectangle())
+                    .onTapGesture { open(.edit(e)) }
+                    .contextMenu {
+                        Button("Edit…") { open(.edit(e)) }
+                        Button("Duplicate") {
+                            ctx.insert(FoodEntry(day: e.day, time: e.time, name: e.name, brand: e.brand, foodKey: e.foodKey,
+                                                 amount: e.amount, unit: e.unit, grams: e.grams, nutrients: e.nutrients))
+                            ctx.commit()
+                        }
+                        Menu("Move to") {
+                            ForEach(Meal.allCases) { m in
+                                Button(m.label) {
+                                    let u = m.usual
+                                    e.time = Calendar.current.date(bySettingHour: u.0, minute: u.1, second: 0, of: date(fromKey: e.day)) ?? e.time
+                                    ctx.commit()
+                                }
+                                .disabled(Meal(time: e.time) == m)
+                            }
+                        }
+                        Divider()
+                        Button("Delete", role: .destructive) { withAnimation { ctx.delete(e); ctx.commit() } }
+                    }
+                if e.id != list.last?.id { Divider().padding(.leading, showTime ? 70 : 14) }
+            }
+        }
+        if framed {
+            content
+                .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        } else {
+            content
+        }
+    }
+
+    /// Copy a meal's entries to another day, at the same times.
+    private func copy(_ items: [FoodEntry], to target: String, meal: Meal) {
+        let cal = Calendar.current
+        for e in items {
+            let hm = cal.dateComponents([.hour, .minute], from: e.time)
+            let t = cal.date(bySettingHour: hm.hour ?? 12, minute: hm.minute ?? 0, second: 0, of: date(fromKey: target)) ?? e.time
+            ctx.insert(FoodEntry(day: target, time: t, name: e.name, brand: e.brand, foodKey: e.foodKey, amount: e.amount, unit: e.unit,
+                                 grams: e.grams, nutrients: e.nutrients))
+        }
+        ctx.commit()
+    }
+}
+
+/// "Protein ▬▬▬▬░░ 76/188" on one line.
+struct CompactMacroBar: View {
+    let macro: Macro
+    let eaten: Double
+    let target: Double
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(macro.label).font(.caption.weight(.semibold)).frame(width: 52, alignment: .leading)
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(macro.color.opacity(0.16))
+                    Capsule().fill(macro.color).frame(width: max(8, g.size.width * min(1, target > 0 ? eaten / target : 0)))
+                        .opacity(eaten > 0 ? 1 : 0)
+                }
+            }
+            .frame(height: 8)
+            HStack(spacing: 0) {
+                Text(number(eaten)).fontWeight(.semibold)
+                Text("/\(number(target))").foregroundStyle(.secondary)
+            }
+            .font(.caption).monospacedDigit().frame(width: 64, alignment: .trailing)
         }
     }
 }
@@ -161,11 +363,14 @@ struct DayEntries: View {
 struct EntryRow: View {
     let entry: FoodEntry
     let energy: EnergyUnit
+    var showTime = true
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            Text(entry.time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(appLocale)))
-                .font(.callout.monospacedDigit()).foregroundStyle(.secondary).frame(width: 44, alignment: .leading)
+            if showTime {
+                Text(entry.time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(appLocale)))
+                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary).frame(width: 44, alignment: .leading)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.name).font(.body.weight(.medium)).lineLimit(1)
                 Text([entry.brand, entry.amountText].compactMap { $0 }.joined(separator: " · "))

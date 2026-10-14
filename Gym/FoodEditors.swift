@@ -36,6 +36,7 @@ private func time(_ t: Date, on day: String) -> Date {
 struct QuickAddView: View {
     let day: String
     let entry: FoodEntry?
+    var at: Date? = nil                       // adding to a meal: its time
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
@@ -83,7 +84,7 @@ struct QuickAddView: View {
                 kcal = text(e.nutrients.kcal); protein = text(e.nutrients.protein); fat = text(e.nutrients.fat); carbs = text(e.nutrients.carbs)
                 when = e.time
             } else {
-                when = defaultTime(for: day)
+                when = at ?? defaultTime(for: day)
             }
         }
     }

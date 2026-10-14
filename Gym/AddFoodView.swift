@@ -4,7 +4,7 @@ import SwiftUI
 /// Find a food (your own, USDA, Open Food Facts, or a barcode), then choose how much.
 struct AddFoodView: View {
     enum Mode {
-        case log(day: String)
+        case log(day: String, time: Date? = nil)   // time: when adding to a meal
         case pick((Food, Double) -> Void)          // recipes: hand back a food and grams
     }
 
@@ -354,7 +354,7 @@ struct FoodAmountView: View {
             let (a, u) = food.suggestedAmount
             amountText = number(a, digits: a == a.rounded() ? 0 : 1)
             unit = u
-            if case .log(let day) = mode { time = defaultTime(for: day) }
+            if case .log(let day, let at) = mode { time = at ?? defaultTime(for: day) }
         }
     }
 
@@ -366,7 +366,7 @@ struct FoodAmountView: View {
             ctx.commit()
         } else {
             switch mode {
-            case .log(let day):
+            case .log(let day, _):
                 let t = Calendar.current.date(bySettingHour: Calendar.current.component(.hour, from: time),
                                               minute: Calendar.current.component(.minute, from: time), second: 0, of: date(fromKey: day)) ?? time
                 ctx.log(food, amount: amount, unit: unit, day: day, time: t)
