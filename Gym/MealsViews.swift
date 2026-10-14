@@ -9,11 +9,14 @@ struct DayNoteCard: View {
     @Environment(\.modelContext) private var ctx
     @Query private var notes: [DayNote]
     @State private var text = ""
+    @State private var estimate = ""
     @FocusState private var focused: Bool
+    @Query private var entries: [FoodEntry]
 
     init(day: String) {
         self.day = day
         _notes = Query(filter: #Predicate<DayNote> { $0.day == day })
+        _entries = Query(filter: #Predicate<FoodEntry> { $0.day == day })
     }
 
     var body: some View {
@@ -31,6 +34,26 @@ struct DayNoteCard: View {
                     Text("Partially logged").font(.subheadline.weight(.semibold))
                     Text("Leaves this day out of your expenditure, so a patchy day can't skew it.").font(.caption).foregroundStyle(.secondary)
                 }
+            }
+            if n?.partial == true {
+                let logged = entries.reduce(0) { $0 + $1.nutrients.kcal }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Better: guess the whole day").font(.subheadline.weight(.semibold))
+                    HStack {
+                        TextField("e.g. \(number(max(logged * 1.4, 1800)))", text: $estimate).textFieldStyle(.roundedBorder)
+                            #if os(iOS)
+                            .keyboardType(.numberPad)
+                            #endif
+                        Text("kcal").foregroundStyle(.secondary)
+                        Button("Fill in") {
+                            if let v = parseNumber(estimate), v > 0 { ctx.estimateDay(day, totalKcal: v); estimate = "" }
+                        }
+                        .buttonStyle(.borderedProminent).disabled((parseNumber(estimate) ?? 0) <= logged)
+                    }
+                    Text("You've logged \(number(logged)) kcal. The rest goes in as one estimate and the day counts again. A rough guess is fine: for a 3000 kcal day, anything from 2100 to 3900 keeps your expenditure honest.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.top, 4)
             }
         }
         .onAppear { text = n?.text ?? "" }

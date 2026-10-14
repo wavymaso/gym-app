@@ -26,6 +26,16 @@ struct StrategyView: View {
     }
 
     @State private var selectedDay = dayKey()
+    @State private var collaborative = false
+    @State private var editingFloor = false
+
+    private func styleText(_ m: String) -> String {
+        switch m {
+        case "collaborative": return "Collaborative"
+        case "manual": return "Manual"
+        default: return "Coached"
+        }
+    }
     @State private var showingDistribution = false
 
     var body: some View {
@@ -55,6 +65,8 @@ struct StrategyView: View {
         .sheet(isPresented: $editing) { GoalEditor() }
         .sheet(isPresented: $checkingIn) { CheckInView() }
         .sheet(isPresented: $manual) { ManualTargetsView() }
+        .sheet(isPresented: $collaborative) { ManualTargetsView(mode: "collaborative") }
+        .sheet(isPresented: $editingFloor) { if let p = profiles.first { CalorieFloorSheet(profile: p) } }
         .sheet(isPresented: $editingGoalWeight) { if let p = profiles.first { GoalWeightSheet(profile: p) } }
         .sheet(isPresented: $showingDistribution) {
             NavigationStack {
@@ -114,7 +126,7 @@ struct StrategyView: View {
             }
             HStack(spacing: 8) {
                 chip(goalDetail(g, p))
-                chip(g.mode == "coached" ? "Coached" : "Manual")
+                chip(styleText(g.mode))
                 chip(g.dietValue.label)
             }
             if let goal = p.goalWeightKg, let now {
@@ -248,15 +260,26 @@ struct StrategyView: View {
             rowButton("flag.checkered", palette.calories, "Goal weight", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalWeight = true }
             rowButton("fork.knife", palette.fat, "Diet & protein", "\(g.dietValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg protein") { editing = true }
             rowButton("calendar", palette.carbs, "Calorie distribution", p.hasDistribution ? "On: varies by day" : "Off: the same every day") { showingDistribution = true }
-            rowMenu("person.crop.circle.badge.checkmark", palette.accent, "Program style", g.mode == "coached" ? "Coached" : "Manual") {
-                Button("Coached: targets update at each check-in") { g.mode = "coached"; ctx.commit() }
-                Button("Manual: you set the targets") { manual = true }
+            rowMenu("person.crop.circle.badge.checkmark", palette.accent, "Program style", styleText(g.mode)) {
+                Button("Coached: the app sets everything, with guardrails") { g.mode = "coached"; ctx.commit() }
+                Button("Collaborative: your macros, the app's weekly calories") { collaborative = true }
+                Button("Manual: fixed targets you set") { manual = true }
+            }
+            rowMenu("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein") {
+                ForEach(TrainingType.allCases) { t in Button(t.label) { p.trainingType = t.rawValue; ctx.commit() } }
+            }
+            if g.mode == "coached" {
+                rowButton("shield.lefthalf.filled", palette.good, "Calorie floor",
+                          "Never below \(p.energy.format(p.calorieFloorKcal > 0 ? p.calorieFloorKcal : calorieFloor(p.sexValue))) · fat minimum on") { editingFloor = true }
             }
             rowMenu("clock.arrow.circlepath", palette.protein, "Check-in day", weekdayName(g.checkInWeekday)) {
                 ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in Button(weekdayName(d)) { g.checkInWeekday = d; ctx.commit() } }
             }
             if g.mode == "manual" {
                 rowButton("pencil", palette.accent, "Edit targets", "\(p.energy.format(t.targets.kcal)) a day") { manual = true }
+            }
+            if g.mode == "collaborative" {
+                rowButton("pencil", palette.accent, "Your macros", "P \(number(t.targets.protein)) · F \(number(t.targets.fat)) · C \(number(t.targets.carbs))") { collaborative = true }
             }
             rowLink("flame", palette.warn, "Expenditure settings", "Algorithm, starting estimate") { ExpenditureSettingsView() }
             rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
@@ -343,7 +366,8 @@ struct GoalEditor: View {
     /// Keep the current expenditure estimate: only the goal changes.
     private var newTargets: Targets {
         makeTargets(expenditure: expenditure, weightKg: draft.weightKg ?? 70, sex: draft.sex, goal: draft.goal,
-                    ratePercent: draft.ratePercent, diet: draft.diet, protein: draft.protein)
+                    ratePercent: draft.ratePercent, diet: draft.diet, protein: draft.protein,
+                    body: ctx.bodyInfo(guardrails: (ctx.activeProgram?.mode ?? "coached") == "coached"))
     }
 
     private func load() {
@@ -513,5 +537,42 @@ struct DistributionCard: View {
     private func dayFor(weekday: Int) -> String {
         let today = Calendar(identifier: .gregorian).component(.weekday, from: Date())
         return addDays(dayKey(), weekday - today)
+    }
+}
+
+/// Coached guardrail: the lowest daily target you'll be given.
+struct CalorieFloorSheet: View {
+    let profile: Profile
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack {
+                        TextField(number(calorieFloor(profile.sexValue)), text: $text)
+                            #if os(iOS)
+                            .keyboardType(.numberPad)
+                            #endif
+                        Text(profile.energy.rawValue).foregroundStyle(.secondary)
+                    }
+                } footer: {
+                    Text("Coached targets never go below this, and fat stays above the minimum for normal hormone function. Leave it empty for the default (\(number(calorieFloor(profile.sexValue))) kcal). Collaborative and manual have no guardrails.")
+                }
+            }
+            .themedForm()
+            .navigationTitle("Calorie floor")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { profile.calorieFloorKcal = profile.energy.toKcal(parseNumber(text) ?? 0); ctx.commit(); dismiss() }
+                }
+            }
+        }
+        .appStyle()
+        .presentationDetents([.medium])
+        .onAppear { if profile.calorieFloorKcal > 0 { text = number(profile.energy.fromKcal(profile.calorieFloorKcal)) } }
     }
 }

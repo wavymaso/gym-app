@@ -113,6 +113,52 @@ struct CheckInSummary {
     let trackedDays: Int
     let current: Targets
     let proposed: Targets?          // nil in manual mode
+    var raw: Targets? = nil         // what the numbers alone say, before smoothing
+}
+
+extension ModelContext {
+    /// Lean mass (from a recent body-fat reading or tape measurements), height, training and floor.
+    func bodyInfo(guardrails: Bool) -> BodyInfo? {
+        guard let p = profile else { return nil }
+        var lean: Double?
+        let since = addDays(dayKey(), -90)
+        if let w = ((try? fetch(FetchDescriptor<WeightEntry>(predicate: #Predicate { $0.day >= since && $0.bodyFatPercent != nil },
+                                                            sortBy: [SortDescriptor(\.day, order: .reverse)]))) ?? []).first,
+           let bf = w.bodyFatPercent, bf > 3, bf < 60 {
+            lean = w.kg * (1 - bf / 100)
+        } else {
+            let tape = (try? fetch(FetchDescriptor<Measurement>(predicate: #Predicate { $0.day >= since }, sortBy: [SortDescriptor(\.day)]))) ?? []
+            func last(_ s: BodySite) -> Double? { tape.last { $0.site == s.rawValue }?.cm }
+            if let bf = navyBodyFat(sex: p.sexValue, heightCm: p.heightCm, waist: last(.waist), neck: last(.neck), hips: last(.hips)),
+               let kg = trendSeries(weightValues, through: dayKey()).last?.trend {
+                lean = kg * (1 - bf / 100)
+            }
+        }
+        return BodyInfo(leanKg: lean, heightCm: p.heightCm, training: TrainingType(rawValue: p.trainingType) ?? .resistance,
+                        floorKcal: p.calorieFloorKcal > 0 ? p.calorieFloorKcal : nil, guardrails: guardrails)
+    }
+}
+
+/// A check-in's change, informed but not decided by the new numbers: small changes go straight
+/// through, bigger ones move 60% of the way (at most 200 kcal a week). Protein only moves when it
+/// really changed; carbs and fat take the rest, in the diet's proportions.
+func smoothed(current: Targets, raw: Targets, minFat: Double?) -> Targets {
+    let d = raw.kcal - current.kcal
+    let kcal = abs(d) <= 50 ? raw.kcal : roundTo(current.kcal + max(-200, min(200, d * 0.6)), 10)
+    let protein = abs(raw.protein - current.protein) < 10 ? current.protein : raw.protein
+    let rest = max(0, kcal - protein * 4)
+    let fatShare = raw.fat * 9 / max(raw.fat * 9 + raw.carbs * 4, 1)
+    var fat = rest * fatShare / 9
+    if let m = minFat, fat < m { fat = min(m, rest / 9) }
+    let carbs = max(0, (rest - fat * 9) / 4)
+    return Targets(kcal: kcal, protein: protein, fat: fat.rounded(), carbs: carbs.rounded())
+}
+
+/// Collaborative: the new calories, keeping your own protein and your carb/fat split.
+func rescaled(_ mine: Targets, toKcal kcal: Double) -> Targets {
+    let rest = max(0, kcal - mine.protein * 4)
+    let fatShare = mine.fat * 9 / max(mine.fat * 9 + mine.carbs * 4, 1)
+    return Targets(kcal: kcal, protein: mine.protein, fat: (rest * fatShare / 9).rounded(), carbs: (rest * (1 - fatShare) / 4).rounded())
 }
 
 extension ModelContext {
@@ -139,13 +185,17 @@ extension ModelContext {
         let intake = dailyIntake()
         let logged = week.compactMap { intake[$0] }
         let weekAgo = series.count > 7 ? series[series.count - 8].trend : nil
-        let proposed = p.mode == "coached"
-            ? makeTargets(expenditure: exp, weightKg: trend, sex: profile.sexValue, goal: p.goalValue, ratePercent: p.ratePercent,
-                          diet: p.dietValue, protein: p.proteinValue)
-            : nil
+        let coached = p.mode == "coached"
+        let raw: Targets? = p.mode == "manual" ? nil
+            : makeTargets(expenditure: exp, weightKg: trend, sex: profile.sexValue, goal: p.goalValue, ratePercent: p.ratePercent,
+                          diet: p.dietValue, protein: p.proteinValue, body: bodyInfo(guardrails: coached))
+        let proposed: Targets? = raw.map { r in
+            coached ? smoothed(current: current.targets, raw: r, minFat: max(40, 0.5 * trend))
+                    : rescaled(current.targets, toKcal: smoothed(current: current.targets, raw: r, minFat: nil).kcal)
+        }
         return CheckInSummary(day: today, expenditure: exp, trendKg: trend, weekChangeKg: weekAgo.map { trend - $0 },
                               avgIntake: logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count),
-                              trackedDays: logged.count, current: current.targets, proposed: proposed)
+                              trackedDays: logged.count, current: current.targets, proposed: proposed, raw: raw)
     }
 
     /// Apply (or skip) a check-in.

@@ -177,12 +177,45 @@ struct Targets: Equatable {
 func calorieFloor(_ sex: Sex) -> Double { sex == .male ? 1500 : 1200 }
 
 /// Daily calories and macros for a goal, from the current expenditure.
+/// How you train: sets how much protein is worth eating.
+enum TrainingType: String, CaseIterable, Identifiable {
+    case none, aerobic, resistance
+    var id: String { rawValue }
+    var label: String { ["None", "Mostly cardio", "Lifting"][Self.allCases.firstIndex(of: self)!] }
+    var proteinFactor: Double { [0.75, 0.85, 1.0][Self.allCases.firstIndex(of: self)!] }
+}
+
+/// What, beyond weight, the targets depend on (all optional: without it, the simple rules apply).
+struct BodyInfo {
+    var leanKg: Double?                   // from a body-fat reading or tape estimate
+    var heightCm: Double = 0
+    var training: TrainingType = .resistance
+    var floorKcal: Double? = nil          // your own calorie floor
+    var guardrails = true                 // coached: calorie floor and fat minimum
+}
+
+extension ProteinLevel {
+    /// Grams per kg of lean mass (lifting; less for cardio or no training).
+    var gramsPerLeanKg: Double { [2.0, 2.4, 2.8, 3.2][Self.allCases.firstIndex(of: self)!] }
+}
+
+/// Protein for a level: by lean mass when known; otherwise by body weight, capped at the
+/// weight you'd be at a BMI of 27 so a heavier person isn't told to eat for their fat mass.
+func proteinGrams(_ level: ProteinLevel, weightKg: Double, body: BodyInfo?) -> Double {
+    guard let body else { return level.gramsPerKg * weightKg }
+    if let lean = body.leanKg, lean > 20 { return level.gramsPerLeanKg * lean * body.training.proteinFactor }
+    let h = body.heightCm / 100
+    let ref = h > 1 ? min(weightKg, 27 * h * h) : weightKg
+    return level.gramsPerKg * ref * body.training.proteinFactor
+}
+
 func makeTargets(expenditure: Double, weightKg: Double, sex: Sex, goal: GoalType, ratePercent: Double,
-                 diet: DietStyle, protein level: ProteinLevel) -> Targets {
+                 diet: DietStyle, protein level: ProteinLevel, body: BodyInfo? = nil) -> Targets {
     let dailyDelta = weeklyChangeKg(goal: goal, ratePercent: ratePercent, weightKg: weightKg) * kcalPerKg / 7
-    let kcal = roundTo(max(expenditure + dailyDelta, calorieFloor(sex)), 10)
+    let floor = body?.guardrails == false ? 800 : (body?.floorKcal ?? calorieFloor(sex))
+    let kcal = roundTo(max(expenditure + dailyDelta, floor), 10)
     // Protein first, but never more than 40% of calories.
-    let protein = min(roundTo(level.gramsPerKg * weightKg, 1), (kcal * 0.4 / 4).rounded(.down))
+    let protein = min(roundTo(proteinGrams(level, weightKg: weightKg, body: body), 1), (kcal * 0.4 / 4).rounded(.down))
     let rest = kcal - protein * 4
     var fat: Double, carbs: Double
     switch diet {
@@ -192,6 +225,11 @@ func makeTargets(expenditure: Double, weightKg: Double, sex: Sex, goal: GoalType
     case .lowCarb, .keto:
         carbs = min(diet == .keto ? 30 : kcal * 0.20 / 4, rest / 4)
         fat = (rest - carbs * 4) / 9
+    }
+    // Coached guardrail: enough fat for normal hormone function (0,5 g per kg, at least 40 g).
+    if body?.guardrails == true {
+        let minFat = max(40, 0.5 * weightKg)
+        if fat < minFat { fat = min(minFat, rest / 9); carbs = max(0, (rest - fat * 9) / 4) }
     }
     return Targets(kcal: kcal, protein: protein, fat: max(0, fat.rounded()), carbs: max(0, carbs.rounded()))
 }

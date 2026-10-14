@@ -10,6 +10,7 @@ struct NutrientPanel: View {
     var title = "Nutrients"
     @Query private var profiles: [Profile]
     @AppStorage("nutrientPanelOpen") private var open = true
+    @State private var sources = false
 
     var body: some View {
         let sex = profiles.first?.sexValue ?? .male
@@ -38,8 +39,11 @@ struct NutrientPanel: View {
                     Text("\(withMicros) of \(entries.count) foods have vitamin and mineral data, so real intake is likely higher.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                Button { sources = true } label: { Label("Top sources of any nutrient", systemImage: "list.number") }
+                    .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(entries.isEmpty)
             }
         }
+        .sheet(isPresented: $sources) { TopSourcesView(day: entries.map(\.day).max() ?? dayKey()) }
     }
 
     private func row(_ name: String, _ v: Double?, _ ref: Double, _ unit: String, limit: Bool) -> some View {
@@ -76,5 +80,83 @@ struct NutrientPanel: View {
         }
         .padding(8)
         .background(Color.raisedBackground.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+/// MacroFactor's "top contributors": for one nutrient, which foods gave you the most of it.
+struct TopSourcesView: View {
+    let day: String
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    @Query private var profiles: [Profile]
+    @State private var key = "protein"
+    @State private var days = 7
+
+    private var nutrients: [(key: String, label: String, unit: String)] {
+        [("kcal", "Calories", "kcal"), ("protein", "Protein", "g"), ("carbs", "Carbs", "g"), ("fat", "Fat", "g"),
+         ("fiber", "Fibre", "g"), ("sugar", "Sugar", "g"), ("satFat", "Saturated fat", "g"), ("sodium", "Sodium", "mg")]
+        + Micro.all.map { ($0.key, $0.label, $0.unit) }
+    }
+
+    private func value(_ n: Nutrients, _ k: String) -> Double {
+        switch k {
+        case "kcal": return n.kcal
+        case "protein": return n.protein
+        case "carbs": return n.carbs
+        case "fat": return n.fat
+        case "fiber": return n.fiber ?? 0
+        case "sugar": return n.sugar ?? 0
+        case "satFat": return n.satFat ?? 0
+        case "sodium": return n.sodium ?? 0
+        default: return n.micros?[k] ?? 0
+        }
+    }
+
+    var body: some View {
+        let from = addDays(day, -(days - 1))
+        let list = (try? ctx.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= from && $0.day <= day }))) ?? []
+        let byFood = Dictionary(grouping: list, by: \.name).mapValues { es in
+            (amount: es.reduce(0) { $0 + value($1.nutrients, key) }, times: es.count, brand: es.first?.brand)
+        }
+        let total = byFood.values.reduce(0) { $0 + $1.amount }
+        let ranked = byFood.filter { $0.value.amount > 0 }.sorted { $0.value.amount > $1.value.amount }
+        let unit = nutrients.first { $0.key == key }?.unit ?? ""
+        let color: Color = key == "protein" ? palette.protein : key == "fat" ? palette.fat : key == "carbs" ? palette.carbs : palette.calories
+        NavigationStack {
+            List {
+                Section {
+                    Picker("Nutrient", selection: $key) { ForEach(nutrients, id: \.key) { Text($0.label).tag($0.key) } }
+                    Picker("Period", selection: $days) { Text("This day").tag(1); Text("7 days").tag(7); Text("30 days").tag(30) }
+                        .pickerStyle(.segmented)
+                    LabeledContent("Total", value: "\(number(total / Double(days), digits: total / Double(days) < 10 ? 1 : 0)) \(unit) a day")
+                }
+                Section("Top sources") {
+                    if ranked.isEmpty { Text("Nothing logged with this nutrient in the period.").foregroundStyle(.secondary) }
+                    ForEach(Array(ranked.prefix(25).enumerated()), id: \.offset) { i, item in
+                        let share = total > 0 ? item.value.amount / total : 0
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("\(i + 1)").font(.caption.weight(.bold)).foregroundStyle(.secondary).frame(width: 20, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(item.key).lineLimit(1)
+                                    Text("\(item.value.times)× · \(item.value.brand ?? "")").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                }
+                                Spacer()
+                                Text("\(number(item.value.amount, digits: item.value.amount < 10 ? 1 : 0)) \(unit)").monospacedDigit()
+                                Text("\(Int(share * 100 + 0.5))%").font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(width: 40, alignment: .trailing)
+                            }
+                            GeometryReader { g in Capsule().fill(color).frame(width: max(4, g.size.width * share)) }.frame(height: 4).padding(.leading, 20)
+                        }
+                    }
+                }
+            }
+            .themedList()
+            .navigationTitle("Top sources")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+        .appStyle()
+        #if os(macOS)
+        .frame(width: 520, height: 640)
+        #endif
     }
 }

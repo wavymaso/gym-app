@@ -7,6 +7,9 @@ struct CheckInView: View {
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @Query private var profiles: [Profile]
+    @AppStorage("fastCheckIn") private var fast = false
+    @State private var estimates: [String: String] = [:]
+    @State private var refresh = 0
 
     var body: some View {
         let energy = profiles.first?.energy ?? .kcal
@@ -21,6 +24,7 @@ struct CheckInView: View {
                             tile("Average intake", s.avgIntake.map { energy.format($0) } ?? "–", "\(s.trackedDays) of 7 days logged")
                             tile("Expenditure", energy.format(s.expenditure), "Was \(energy.format(ctx.targets()?.expenditure ?? s.expenditure))")
                         }
+                        if !fast { partialModule(energy) }
                         if s.trackedDays < 4 {
                             Label("Only \(s.trackedDays) days logged this week, so the estimate barely moved. Logging most days makes check-ins accurate.",
                                   systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
@@ -32,6 +36,14 @@ struct CheckInView: View {
                                 compare(.protein, s.current, p, energy)
                                 compare(.fat, s.current, p, energy)
                                 compare(.carbs, s.current, p, energy)
+                                if let r = s.raw, abs(r.kcal - p.kcal) >= 10 {
+                                    Text("The numbers alone say \(energy.format(r.kcal)). Check-ins move part of the way so one odd week can't throw you off; it catches up over the next weeks.")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                if ctx.activeProgram?.mode == "collaborative" {
+                                    Text("Collaborative: calories follow your expenditure; protein and your carb/fat split stay yours.")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
                             }
                             HStack {
                                 Button("Keep current targets") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
@@ -54,12 +66,62 @@ struct CheckInView: View {
                 }
             }
             .navigationTitle("Weekly check-in")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Later") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Later") { dismiss() } }
+                ToolbarItem {
+                    Menu {
+                        Toggle("Fast check-in (skip coaching)", isOn: $fast)
+                    } label: { Label("Options", systemImage: "ellipsis.circle") }
+                }
+            }
+            .id(refresh)
         }
         .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 580, height: 640)
         #endif
+    }
+
+    /// Coaching: days last week that look half-logged. A guess of the whole day keeps the
+    /// expenditure (and next week's targets) honest; leaving them low drags both down.
+    @ViewBuilder private func partialModule(_ energy: EnergyUnit) -> some View {
+        let today = dayKey()
+        let week = (1...7).map { addDays(today, -$0) }.reversed()
+        let from = addDays(today, -7)
+        let byDay = Dictionary(grouping: ((try? ctx.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= from && $0.day < today }))) ?? []),
+                               by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
+        let logged = byDay.values.sorted()
+        let median = logged.isEmpty ? 0 : logged[logged.count / 2]
+        let partial = Set(ctx.partialDays)
+        let suspect = week.filter { d in
+            guard let k = byDay[d] else { return false }
+            return partial.contains(d) || (median > 0 && k < median * 0.6)
+        }
+        if !suspect.isEmpty {
+            Card(title: "Coach: any days half-logged?", systemImage: "questionmark.bubble") {
+                Text("These look light next to your usual day. If you ate more than you logged, guess the whole day: a rough number beats a low one, which would pull your expenditure and targets down.")
+                    .font(.callout).foregroundStyle(.secondary)
+                ForEach(suspect, id: \.self) { d in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(date(fromKey: d).formatted(.dateTime.weekday(.wide).day().locale(appLocale)))
+                            Text("\(energy.format(byDay[d] ?? 0)) logged\(partial.contains(d) ? " · marked partial" : "")").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        TextField("Whole day", text: Binding(get: { estimates[d] ?? "" }, set: { estimates[d] = $0 }))
+                            .multilineTextAlignment(.trailing).frame(width: 90).textFieldStyle(.roundedBorder)
+                            #if os(iOS)
+                            .keyboardType(.numberPad)
+                            #endif
+                        Button("Fix") {
+                            if let v = parseNumber(estimates[d] ?? ""), v > 0 { ctx.estimateDay(d, totalKcal: v); estimates[d] = nil; refresh += 1 }
+                        }
+                        .buttonStyle(.bordered).disabled((parseNumber(estimates[d] ?? "") ?? 0) <= (byDay[d] ?? 0))
+                    }
+                }
+                Text("They were fine? Ignore this, or turn on Fast check-in (⋯) to skip coaching.").font(.caption).foregroundStyle(.secondary)
+            }
+        }
     }
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {
@@ -86,6 +148,7 @@ struct CheckInView: View {
 
 /// Your own targets, instead of coached ones.
 struct ManualTargetsView: View {
+    var mode = "manual"                      // or "collaborative": your macros, the app's calories
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @State private var kcal = ""
@@ -133,7 +196,7 @@ struct ManualTargetsView: View {
     private func save() {
         let t = Targets(kcal: roundTo(fromMacros, 10), protein: parseNumber(protein) ?? 0, fat: parseNumber(fat) ?? 0, carbs: parseNumber(carbs) ?? 0)
         let exp = ctx.expenditureEstimates().last?.kcal ?? ctx.targets()?.expenditure ?? t.kcal
-        ctx.activeProgram?.mode = "manual"
+        ctx.activeProgram?.mode = mode
         ctx.insert(TargetSet(targets: t, expenditure: exp, reason: "manual"))
         ctx.commit()
         dismiss()

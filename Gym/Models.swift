@@ -30,6 +30,8 @@ import SwiftData
     var predictiveGoal: Bool = false
     var nutrientGoals: String = ""           // your own targets: "fiber=35;sodium=1800;iron=10"
     var weeklyBudget: Bool = false           // carry under/over-eating into the rest of the week
+    var trainingType: String = "resistance"  // none | aerobic | resistance: how much protein you need
+    var calorieFloorKcal: Double = 0         // coached: never below this (0 = 1500 men, 1200 women)
 
     init(sex: Sex, birthDate: Date, heightCm: Double, activity: Activity, weightUnit: WeightUnit, energyUnit: EnergyUnit) {
         self.sex = sex.rawValue; self.birthDate = birthDate; self.heightCm = heightCm; self.activity = activity.rawValue
@@ -143,9 +145,10 @@ extension ModelContext {
         let p = Program(goal: goal, ratePercent: ratePercent, diet: diet, protein: protein, startWeightKg: weightKg,
                         startExpenditure: expenditure)
         p.checkInWeekday = old.first?.checkInWeekday ?? 2      // keep your check-in day
+        if let m = old.first?.mode, m != "manual" { p.mode = m }   // and coached / collaborative
         insert(p)
         let t = makeTargets(expenditure: expenditure, weightKg: weightKg, sex: sex, goal: goal, ratePercent: ratePercent,
-                            diet: diet, protein: protein)
+                            diet: diet, protein: protein, body: bodyInfo(guardrails: p.mode == "coached"))
         insert(TargetSet(targets: t, expenditure: expenditure, reason: reason))
         commit()
     }

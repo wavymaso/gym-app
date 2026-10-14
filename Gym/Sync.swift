@@ -179,7 +179,7 @@ extension Profile: Syncable {
          "highDayExtra": highDayExtra, "fastDays": fastDays, "fastKcal": fastKcal,
          "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
          "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
-         "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget]
+         "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
@@ -190,6 +190,8 @@ extension Profile: Syncable {
         bmrEquation = d["bmrEquation"] == nil ? "mifflin" : d.str("bmrEquation"); expStaticKcal = d.num("expStaticKcal")
         expAlgorithm = d.str("expAlgorithm"); stepInformed = d.bool("stepInformed"); predictiveGoal = d.bool("predictiveGoal")
         nutrientGoals = d.str("nutrientGoals"); weeklyBudget = d.bool("weeklyBudget")
+        if let t = d["trainingType"] as? String, !t.isEmpty { trainingType = t }
+        calorieFloorKcal = d.num("calorieFloorKcal")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
 }

@@ -92,3 +92,24 @@ enum Meal: Int, CaseIterable, Identifiable {
         return Calendar.current.date(bySettingHour: usual.0, minute: usual.1, second: 0, of: date(fromKey: day)) ?? Date()
     }
 }
+
+extension ModelContext {
+    /// A half-logged day, fixed the MacroFactor way: your best guess of the whole day's calories.
+    /// The difference is logged as one quick add (macros in the day's own proportions), and the
+    /// day counts again. A rough guess is fine: it keeps the expenditure estimate honest.
+    @discardableResult
+    func estimateDay(_ day: String, totalKcal: Double) -> Double {
+        let logged = entries(on: day).reduce(Nutrients.zero) { $0 + $1.nutrients }
+        let missing = totalKcal - logged.kcal
+        if missing >= 20 {
+            let k = max(logged.kcal, 1)
+            let (p, f, c) = logged.kcal > 200 ? (logged.protein * 4 / k, logged.fat * 9 / k, logged.carbs * 4 / k) : (0.2, 0.35, 0.45)
+            let t = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: date(fromKey: day)) ?? Date()
+            insert(FoodEntry(day: day, time: t, name: "Unlogged food (estimate)", brand: nil, foodKey: nil, amount: 1, unit: "", grams: 0,
+                             nutrients: Nutrients(kcal: missing, protein: missing * p / 4, fat: missing * f / 9, carbs: missing * c / 4)))
+        }
+        note(on: day)?.partial = false
+        commit()
+        return max(0, missing)
+    }
+}
