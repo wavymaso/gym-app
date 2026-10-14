@@ -10,6 +10,7 @@ struct CheckInView: View {
     @AppStorage("fastCheckIn") private var fast = false
     @State private var estimates: [String: String] = [:]
     @State private var refresh = 0
+    @State private var confirmBig = false
 
     var body: some View {
         let energy = profiles.first?.energy ?? .kcal
@@ -36,10 +37,7 @@ struct CheckInView: View {
                                 compare(.protein, s.current, p, energy)
                                 compare(.fat, s.current, p, energy)
                                 compare(.carbs, s.current, p, energy)
-                                if let r = s.raw, abs(r.kcal - p.kcal) >= 10 {
-                                    Text("The numbers alone say \(energy.format(r.kcal)). Check-ins move part of the way so one odd week can't throw you off; it catches up over the next weeks.")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
+                                Label(s.why(unit, energy), systemImage: "info.circle").font(.caption).foregroundStyle(.secondary)
                                 if ctx.activeProgram?.mode == "collaborative" {
                                     Text("Collaborative: calories follow your expenditure; protein and your carb/fat split stay yours.")
                                         .font(.caption).foregroundStyle(.secondary)
@@ -48,8 +46,16 @@ struct CheckInView: View {
                             HStack {
                                 Button("Keep current targets") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
                                 Spacer()
-                                Button("Apply new targets") { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
-                                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                                Button("Apply new targets") {
+                                    if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
+                                }
+                                .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                                .confirmationDialog("Expenditure moved \(energy.format(abs(s.expenditure - s.previousExpenditure))) since last time", isPresented: $confirmBig, titleVisibility: .visible) {
+                                    Button("Apply anyway") { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
+                                    Button("Keep current targets", role: .cancel) { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
+                                } message: {
+                                    Text("Real changes are slow. A jump this big is usually a half-logged day, a missed weigh-in or water. Check last week's log first.")
+                                }
                             }
                             .controlSize(.large)
                         } else {
@@ -90,12 +96,12 @@ struct CheckInView: View {
         let from = addDays(today, -7)
         let byDay = Dictionary(grouping: ((try? ctx.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= from && $0.day < today }))) ?? []),
                                by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
-        let logged = byDay.values.sorted()
-        let median = logged.isEmpty ? 0 : logged[logged.count / 2]
         let partial = Set(ctx.partialDays)
+        // Against that day's own target, so fasting days and refeeds aren't mistaken for gaps.
         let suspect = week.filter { d in
             guard let k = byDay[d] else { return false }
-            return partial.contains(d) || (median > 0 && k < median * 0.6)
+            let t = ctx.dayTargets(on: d)?.kcal ?? 0
+            return partial.contains(d) || (t > 0 && k < t * 0.6)
         }
         if !suspect.isEmpty {
             Card(title: "Coach: any days half-logged?", systemImage: "questionmark.bubble") {

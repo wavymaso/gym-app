@@ -34,6 +34,7 @@ import SwiftData
     var calorieFloorKcal: Double = 0         // coached: never below this (0 = 1500 men, 1200 women)
     var refeedWeekday: Int = 0               // a weekly high-carb day (Calendar weekday; 0 = none)
     var refeedExtraKcal: Double = 0          // all carbs, taken back evenly from the other days
+    var refeedSince: String = ""             // when refeeds started (their water swings are expected from then)
     var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)
     var dietBreakEnd: String = ""
 

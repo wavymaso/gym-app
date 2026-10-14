@@ -34,14 +34,31 @@ check(abs(kcalFromMacros(keto) - keto.kcal) < 15, "macros add up to the calories
 // Smoothing
 let cur = Targets(kcal: 2500, protein: 180, fat: 80, carbs: 263)
 let small = smoothed(current: cur, raw: Targets(kcal: 2540, protein: 182, fat: 82, carbs: 270), minFat: 40)
-check(small.kcal == 2540, "small changes go straight through")
+check(small.kcal == 2500, "within ±50 kcal nothing changes (deadband)")
 check(small.protein == 180, "protein holds when it barely changed")
 let big = smoothed(current: cur, raw: Targets(kcal: 2000, protein: 180, fat: 65, carbs: 180), minFat: 40)
-check(big.kcal == 2300, "a big drop moves at most 200 kcal (\(big.kcal))")
-check(big.protein == 180 && big.carbs < cur.carbs && big.fat < cur.fat, "carbs and fat take the change")
+check(big.kcal == 2350, "a big drop moves at most 150 kcal (\(big.kcal))")
+check(big.protein == 180 && big.carbs < cur.carbs && big.fat <= cur.fat + 2, "carbs (and fat) take the change, protein holds")
 check(abs(kcalFromMacros(big) - big.kcal) < 15, "smoothed macros add up")
 let mid = smoothed(current: cur, raw: Targets(kcal: 2700, protein: 180, fat: 88, carbs: 300), minFat: 40)
-check(mid.kcal == 2620, "60% of a 200 kcal rise (\(mid.kcal))")
+check(mid.kcal == 2640, "70% of a 200 kcal rise when sure (\(mid.kcal))")
+let unsure = smoothed(current: cur, raw: Targets(kcal: 2700, protein: 180, fat: 88, carbs: 300), minFat: 40, goal: .lose, confidence: 0)
+check(unsure.kcal == 2570, "35% when the estimate is unsure (\(unsure.kcal))")
+let bulkCut = smoothed(current: cur, raw: Targets(kcal: 2200, protein: 180, fat: 70, carbs: 220), minFat: 40, goal: .gain, confidence: 1)
+check(bulkCut.kcal == 2430, "on a bulk, at most 75 kcal down (\(bulkCut.kcal))")
+check(proteinGrams(.extraHigh, weightKg: 70, body: BodyInfo(leanKg: 66, heightCm: 175)) <= 2.6 * 70 + 0.01, "protein clamped to 2,6 g/kg body weight")
+
+// A refeed's water: a 1 kg jump flagged as a water event barely moves expenditure
+let span = (0..<60).map { addDays("2026-01-01", $0) }
+var flat = Dictionary(uniqueKeysWithValues: span.map { ($0, 2500.0) })
+var w = span.map { DayValue(day: $0, value: 80.0) }
+for i in 42...44 { w[i].value = 81.0 }                      // water after a big carb day
+flat["2026-02-11"] = 3200
+let plain = jointExpenditure(start: span[0], end: span.last!, initial: 2500, intake: flat, weights: w)
+var ws = JointSettings(); ws.waterEvents = ["2026-02-12"]
+let tagged = jointExpenditure(start: span[0], end: span.last!, initial: 2500, intake: flat, weights: w, settings: ws)
+let drop = { (r: [ExpenditurePoint]) in r[41].kcal - r[46].kcal }
+check(drop(tagged) < drop(plain) * 0.7, "a tagged water event moves expenditure less (\(Int(drop(plain))) → \(Int(drop(tagged))) kcal)")
 
 // Collaborative
 let collab = rescaled(Targets(kcal: 2400, protein: 200, fat: 60, carbs: 265), toKcal: 2600)

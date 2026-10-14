@@ -181,7 +181,7 @@ extension Profile: Syncable {
          "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
          "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
          "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal,
-         "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
+         "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "refeedSince": refeedSince, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
     }
     func decode(_ d: [String: Any]) {
         sex = d.str("sex"); birthDate = d.date("birthDate"); heightCm = d.num("heightCm"); activity = d.str("activity")
@@ -194,7 +194,7 @@ extension Profile: Syncable {
         nutrientGoals = d.str("nutrientGoals"); weeklyBudget = d.bool("weeklyBudget")
         if let t = d["trainingType"] as? String, !t.isEmpty { trainingType = t }
         calorieFloorKcal = d.num("calorieFloorKcal")
-        refeedWeekday = d.int("refeedWeekday"); refeedExtraKcal = d.num("refeedExtraKcal")
+        refeedWeekday = d.int("refeedWeekday"); refeedExtraKcal = d.num("refeedExtraKcal"); refeedSince = d.str("refeedSince")
         dietBreakStart = d.str("dietBreakStart"); dietBreakEnd = d.str("dietBreakEnd")
     }
     static func blank() -> Self { Self(sex: .male, birthDate: Date(), heightCm: 0, activity: .moderate, weightUnit: .kg, energyUnit: .kcal) }
@@ -393,7 +393,7 @@ extension ProgressPhoto: Syncable {
 extension DayNote: Syncable {
     static var syncType: String { "dayNote" }
     var naturalID: String { "note:\(day)" }                    // one per day
-    func encode() -> [String: Any] { ["day": day, "text": text, "partial": partial] }
-    func decode(_ d: [String: Any]) { day = d.str("day"); text = d.str("text"); partial = d.bool("partial") }
+    func encode() -> [String: Any] { ["day": day, "text": text, "partial": partial, "waterEvent": waterEvent] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); text = d.str("text"); partial = d.bool("partial"); waterEvent = d.bool("waterEvent") }
     static func blank() -> Self { Self(day: "") }
 }

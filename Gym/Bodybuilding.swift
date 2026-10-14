@@ -36,7 +36,10 @@ struct RefeedSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { profile.refeedWeekday = weekday; profile.refeedExtraKcal = weekday > 0 ? extra : 0; ctx.commit(); dismiss() }
+                    Button("Save") {
+                        if weekday > 0 && profile.refeedWeekday == 0 { profile.refeedSince = dayKey() }
+                        profile.refeedWeekday = weekday; profile.refeedExtraKcal = weekday > 0 ? extra : 0; ctx.commit(); dismiss()
+                    }
                 }
             }
         }

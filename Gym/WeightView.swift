@@ -98,11 +98,6 @@ struct WeightView: View {
     }
 }
 
-func signed(_ unit: WeightUnit, _ kg: Double) -> String {
-    let v = unit.fromKg(kg)
-    return (v > 0.005 ? "+" : v < -0.005 ? "−" : "") + "\(number(abs(v), digits: 2)) \(unit.rawValue)"
-}
-
 enum ChartRange: CaseIterable {
     case month, quarter, half, year, all
     var label: String { ["1M", "3M", "6M", "1Y", "All"][Self.allCases.firstIndex(of: self)!] }

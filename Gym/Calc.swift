@@ -203,7 +203,11 @@ extension ProteinLevel {
 /// weight you'd be at a BMI of 27 so a heavier person isn't told to eat for their fat mass.
 func proteinGrams(_ level: ProteinLevel, weightKg: Double, body: BodyInfo?) -> Double {
     guard let body else { return level.gramsPerKg * weightKg }
-    if let lean = body.leanKg, lean > 20 { return level.gramsPerLeanKg * lean * body.training.proteinFactor }
+    if let lean = body.leanKg, lean > 20 {
+        // A tape or scale body-fat reading is ±3–4 points: keep the result in a sane range of body weight.
+        let g = level.gramsPerLeanKg * lean * body.training.proteinFactor
+        return min(max(g, 1.5 * weightKg), 2.6 * weightKg)
+    }
     let h = body.heightCm / 100
     let ref = h > 1 ? min(weightKg, 27 * h * h) : weightKg
     return level.gramsPerKg * ref * body.training.proteinFactor
@@ -314,3 +318,9 @@ func percent(_ x: Double) -> String { "\(number(x, digits: x == x.rounded() ? 0 
 
 func dayKey(_ d: Date = Date()) -> String { dayFormatter.string(from: d) }
 func date(fromKey k: String) -> Date { dayFormatter.date(from: k) ?? Date() }
+
+/// "+0,35 kg", "−0,20 kg".
+func signed(_ unit: WeightUnit, _ kg: Double) -> String {
+    let v = unit.fromKg(kg)
+    return (v > 0.005 ? "+" : v < -0.005 ? "−" : "") + "\(number(abs(v), digits: 2)) \(unit.rawValue)"
+}

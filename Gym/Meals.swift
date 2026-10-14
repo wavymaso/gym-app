@@ -35,6 +35,7 @@ struct SavedItem: Codable, Hashable {
     var day: String
     var text: String
     var partial: Bool
+    var waterEvent: Bool = false            // salty meal, creatine start, travel, a big carb day: scale jump is water
 
     init(day: String, text: String = "", partial: Bool = false) { self.day = day; self.text = text; self.partial = partial }
 }

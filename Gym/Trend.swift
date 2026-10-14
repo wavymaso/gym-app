@@ -283,11 +283,15 @@ struct JointSettings {
     var startUncertainty = 350.0     // kcal (sd) of the starting estimate
     var expenditureDrift = 26.0      // kcal (sd) a day: how fast true expenditure can wander (tuned, Tests/expsim)
     var massNoise = 0.01             // kg (sd) a day of unexplained true-mass change
-    var unloggedMass = 0.09          // kg (sd) a day extra when nothing was logged (intake unknown)
+    var unloggedMass = 0.2           // kg (sd) a day extra when nothing was logged (intake unknown); tuned on real history (Tests/backtest)
     var waterPersistence = 0.7       // water weight carries over this much day to day
-    var waterSD = 0.6                // kg: typical size of water swings
+    var waterSD = 0.4                // kg: typical size of water swings (tuned on real history)
     var scaleNoise = 0.15            // kg: scale and timing noise on top
     var outlierZ = 2.5               // surprises bigger than this many sd count less
+    var gainDensity = kcalPerKg      // kcal per kg gained (part lean tissue, water, glycogen: less than fat)
+    var lossDensity = kcalPerKg      // kcal per kg lost
+    var waterEvents: Set<String> = []   // refeeds, diet-break starts, salty days: the scale jumps from water, not mass
+    var waterEventSD = 0.8           // kg: how big such a jump can be
 }
 
 /// Expenditure V2. `nudges` move the estimate on given days (the step and goal modifiers).
@@ -306,17 +310,20 @@ func jointExpenditure(start: String, end: String, initial: Double, intake: [Stri
     // State x = [mass, expenditure, water]; P its covariance.
     var x = [m0, initial, 0.0]
     var P = [[0.5, 0, 0], [0, s.startUncertainty * s.startUncertainty, 0], [0, 0, s.waterSD * s.waterSD]]
-    let r = kcalPerKg, phi = s.waterPersistence
+    let phi = s.waterPersistence
     let qWater = pow(s.waterSD, 2) * (1 - phi * phi)
     var out: [ExpenditurePoint] = []
     for i in 0..<all.count {
         if i > 0 {
             // Predict: mass changes by what you ate minus what you burnt; unlogged days add uncertainty.
             let I = eaten[i - 1]
+            let r = (I ?? x[1]) >= x[1] ? s.gainDensity : s.lossDensity
             let F = [[1, I == nil ? 0 : -1 / r, 0], [0, 1, 0], [0, 0, phi]]   // unknown intake: assumed to match expenditure
             x = [x[0] + ((I ?? x[1]) - x[1]) / r, x[1] + (nudges[all[i]] ?? 0), phi * x[2]]
             let mq = pow(s.massNoise, 2) + (I == nil ? pow(s.unloggedMass, 2) : 0)
-            P = add(mul(mul(F, P), transpose(F)), [[mq, 0, 0], [0, pow(s.expenditureDrift, 2), 0], [0, 0, qWater]])
+            // On a water event (and the day after) the water term may jump, so the scale jump lands there, not in mass.
+            let wq = qWater + (s.waterEvents.contains(all[i]) || s.waterEvents.contains(all[i - 1]) ? pow(s.waterEventSD, 2) : 0)
+            P = add(mul(mul(F, P), transpose(F)), [[mq, 0, 0], [0, pow(s.expenditureDrift, 2), 0], [0, 0, wq]])
         }
         if let y = weighed[i] {
             // Update with the weigh-in: y = mass + water + noise. Big surprises count less.

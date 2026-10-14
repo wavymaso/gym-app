@@ -67,6 +67,21 @@ extension ModelContext {
         return out
     }
 
+    /// Days the scale can jump from water rather than mass: refeeds, the start and end of a diet
+    /// break, and days you tagged (salty meal, creatine, travel).
+    func waterEvents(from start: String, to end: String) -> Set<String> {
+        var out = Set(((try? fetch(FetchDescriptor<DayNote>(predicate: #Predicate { $0.waterEvent }))) ?? []).map(\.day))
+        if let p = profile {
+            if p.refeedWeekday > 0 {
+                for d in days(from: max(start, p.refeedSince.isEmpty ? end : p.refeedSince), through: end)
+                where Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d)) == p.refeedWeekday { out.insert(addDays(d, 1)) }
+            }
+            if !p.dietBreakStart.isEmpty { out.insert(p.dietBreakStart); out.insert(addDays(p.dietBreakStart, 1)) }
+            if !p.dietBreakEnd.isEmpty { out.insert(addDays(p.dietBreakEnd, 1)); out.insert(addDays(p.dietBreakEnd, 2)) }
+        }
+        return out
+    }
+
     /// Daily expenditure estimates from the start through `day`.
     func expenditureEstimates(through day: String = dayKey()) -> [ExpenditurePoint] {
         // Several screens ask on every redraw; work it out once per change to your data.
@@ -77,8 +92,10 @@ extension ModelContext {
         var r: [ExpenditurePoint]
         let algorithm = ExpenditureAlgorithm(rawValue: p?.expAlgorithm ?? "") ?? .joint
         if algorithm == .joint {
+            var js = JointSettings()
+            js.waterEvents = waterEvents(from: s.day, to: day)
             r = jointExpenditure(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues,
-                                 nudges: expenditureNudges(from: s.day, to: day))
+                                 nudges: expenditureNudges(from: s.day, to: day), settings: js)
         } else {
             r = expenditureSeries(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues, settings: algorithm.v1Settings)
         }
@@ -114,6 +131,26 @@ struct CheckInSummary {
     let current: Targets
     let proposed: Targets?          // nil in manual mode
     var raw: Targets? = nil         // what the numbers alone say, before smoothing
+    var confidence: Double = 1      // how sure the expenditure estimate is (0–1)
+    var targetWeeklyKg: Double = 0  // the goal's rate
+
+    /// One line: why the targets change (or don't).
+    func why(_ unit: WeightUnit, _ energy: EnergyUnit) -> String {
+        var parts: [String] = []
+        if let w = weekChangeKg { parts.append("trend \(signed(unit, w))/wk vs goal \(signed(unit, targetWeeklyKg))") }
+        parts.append("expenditure \(energy.format(expenditure)) (\(Int(confidence * 100))% sure)")
+        if let r = raw, let p = proposed {
+            let d = r.kcal - current.kcal, a = p.kcal - current.kcal
+            if abs(d) <= 50 { parts.append("within ±50 kcal: no change") }
+            else if abs(a - d) >= 10 { parts.append("the numbers say \(d > 0 ? "+" : "−")\(number(abs(energy.fromKcal(d)))), applying \(a >= 0 ? "+" : "−")\(number(abs(energy.fromKcal(a))))\(abs(a) >= 150 || (a <= -75 && d < 0) ? " (weekly cap)" : "")") }
+            else { parts.append("\(a >= 0 ? "+" : "−")\(number(abs(energy.fromKcal(a)))) \(energy.rawValue)") }
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Real changes are slow: a big jump in expenditure is more likely a data problem. Confirm first.
+    var needsConfirmation: Bool { abs(expenditure - previousExpenditure) > 250 }
+    var previousExpenditure: Double = 0
 }
 
 extension ModelContext {
@@ -134,17 +171,26 @@ extension ModelContext {
                 lean = kg * (1 - bf / 100)
             }
         }
+        // The default floor is your BMR (at least 1200): right at both ends of a long cut, unlike a fixed number.
+        let kg = trendSeries(weightValues, through: dayKey()).last?.trend ?? 75
+        let floor = p.calorieFloorKcal > 0 ? p.calorieFloorKcal
+            : max(1200, roundTo(bmr(sex: p.sexValue, weightKg: kg, heightCm: p.heightCm, age: age(born: p.birthDate),
+                                    equation: lean != nil ? .katch : .mifflin, bodyFat: lean.map { (1 - $0 / kg) * 100 }), 10))
         return BodyInfo(leanKg: lean, heightCm: p.heightCm, training: TrainingType(rawValue: p.trainingType) ?? .resistance,
-                        floorKcal: p.calorieFloorKcal > 0 ? p.calorieFloorKcal : nil, guardrails: guardrails)
+                        floorKcal: floor, guardrails: guardrails)
     }
 }
 
-/// A check-in's change, informed but not decided by the new numbers: small changes go straight
-/// through, bigger ones move 60% of the way (at most 200 kcal a week). Protein only moves when it
-/// really changed; carbs and fat take the rest, in the diet's proportions.
-func smoothed(current: Targets, raw: Targets, minFat: Double?) -> Targets {
+/// A check-in's change, informed but not decided by the new numbers, so weekly coaching doesn't
+/// chase water: within ±50 kcal nothing changes (noise); otherwise it moves 35–70% of the way
+/// (more the surer the expenditure estimate is), at most 150 kcal, and on a bulk at most 75 kcal
+/// down (slow to cut a bulk that may just be water). Protein only moves when it really changed;
+/// carbs and fat take the rest, in the diet's proportions.
+func smoothed(current: Targets, raw: Targets, minFat: Double?, goal: GoalType = .maintain, confidence: Double = 1) -> Targets {
     let d = raw.kcal - current.kcal
-    let kcal = abs(d) <= 50 ? raw.kcal : roundTo(current.kcal + max(-200, min(200, d * 0.6)), 10)
+    let step = d * (0.35 + 0.35 * max(0, min(1, confidence)))
+    let down = goal == .gain ? 75.0 : 150.0
+    let kcal = abs(d) <= 50 ? current.kcal : roundTo(current.kcal + max(-down, min(150, step)), 10)
     let protein = abs(raw.protein - current.protein) < 10 ? current.protein : raw.protein
     let rest = max(0, kcal - protein * 4)
     let fatShare = raw.fat * 9 / max(raw.fat * 9 + raw.carbs * 4, 1)
@@ -189,13 +235,16 @@ extension ModelContext {
         let raw: Targets? = p.mode == "manual" ? nil
             : makeTargets(expenditure: exp, weightKg: trend, sex: profile.sexValue, goal: p.goalValue, ratePercent: p.ratePercent,
                           diet: p.dietValue, protein: p.proteinValue, body: bodyInfo(guardrails: coached))
+        let conf = expenditureEstimates(through: today).last?.confidence ?? 0
         let proposed: Targets? = raw.map { r in
-            coached ? smoothed(current: current.targets, raw: r, minFat: max(40, 0.5 * trend))
-                    : rescaled(current.targets, toKcal: smoothed(current: current.targets, raw: r, minFat: nil).kcal)
+            coached ? smoothed(current: current.targets, raw: r, minFat: max(40, 0.5 * trend), goal: p.goalValue, confidence: conf)
+                    : rescaled(current.targets, toKcal: smoothed(current: current.targets, raw: r, minFat: nil, goal: p.goalValue, confidence: conf).kcal)
         }
         return CheckInSummary(day: today, expenditure: exp, trendKg: trend, weekChangeKg: weekAgo.map { trend - $0 },
                               avgIntake: logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count),
-                              trackedDays: logged.count, current: current.targets, proposed: proposed, raw: raw)
+                              trackedDays: logged.count, current: current.targets, proposed: proposed, raw: raw, confidence: conf,
+                              targetWeeklyKg: weeklyChangeKg(goal: p.goalValue, ratePercent: p.ratePercent, weightKg: trend),
+                              previousExpenditure: current.expenditure)
     }
 
     /// Apply (or skip) a check-in.

@@ -35,6 +35,15 @@ struct DayNoteCard: View {
                     Text("Leaves this day out of your expenditure, so a patchy day can't skew it.").font(.caption).foregroundStyle(.secondary)
                 }
             }
+            Toggle(isOn: Binding(get: { n?.waterEvent ?? false }, set: { v in
+                let note = n ?? { let x = DayNote(day: day); ctx.insert(x); return x }()
+                note.waterEvent = v; ctx.commit()
+            })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Water event").font(.subheadline.weight(.semibold))
+                    Text("Very salty or carb-heavy day, started creatine, travel, illness: the next weigh-ins count less towards expenditure.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             if n?.partial == true {
                 let logged = entries.reduce(0) { $0 + $1.nutrients.kcal }
                 VStack(alignment: .leading, spacing: 8) {
