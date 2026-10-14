@@ -46,6 +46,7 @@ struct AddFoodView: View {
     @State private var scanningLabel = false
     @State private var newRecipe = false
     @State private var scanning = false
+    @State private var recipeLink = false
     @State private var photo: PhotoLogView.Start?
     @FocusState private var focused: Bool
 
@@ -58,14 +59,21 @@ struct AddFoodView: View {
                 .sheet(item: $editingFood) { CustomFoodView(food: $0) }
                 .sheet(item: $editingRecipe) { RecipeView(recipe: $0) }
                 .onAppear { if let q = initialQuery, query.isEmpty { query = q }; if embedded == .library { tab = .recent } }
+                .sheet(isPresented: $recipeLink) { RecipeView(recipe: nil, startImport: true) }
                 .task(id: query) { await search() }
         } else {
             standalone
         }
     }
 
+    /// Inside the logger the top only holds the tabs (Library) or store chips (while typing).
+    private var showsTop: Bool {
+        embedded == nil || embedded == .library || (LocalFoods.shared.available && !query.trimmingCharacters(in: .whitespaces).isEmpty)
+    }
+
     private var panel: some View {
         VStack(spacing: 0) {
+            if showsTop {
             VStack(spacing: 10) {
                 if embedded == nil {
                     HStack(spacing: 8) {
@@ -103,9 +111,18 @@ struct AddFoodView: View {
                     }
                 }
             }
-            .padding(16)
-            .pageBackground()
+            .padding(.horizontal, 16).padding(.vertical, embedded == nil ? 16 : 10)
+            .background { if embedded == nil { Color.pageBackground } }
+            }
             List {
+                if embedded == .library {
+                    Button { recipeLink = true } label: {
+                        Label("Recipe from a TikTok or Instagram link", systemImage: "link")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Color.clear)
+                }
                 switch tab {
                 case .search: searchResults
                 case .recent: localList(foods.filter { $0.lastUsed != nil }.prefix(60).map { $0 }, empty: "Foods you log appear here.")

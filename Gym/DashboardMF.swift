@@ -224,6 +224,7 @@ struct ShortcutsSheet: View {
                         dismiss()
                     }
                     row("Scan a label", "text.viewfinder", palette.fat) { pick(.label) }
+                    row("Recipe from a link", "link", Color(hex: 0xFF5C86)) { pick(.recipeLink) }
                     row("Start a workout", "dumbbell.fill", palette.protein) { dismiss(); train() }
                 }
             }

@@ -226,6 +226,7 @@ struct CustomFoodView: View {
 /// Ingredients by weight; logged in servings.
 struct RecipeView: View {
     let recipe: Food?
+    var startImport = false                       // open straight on "Import a recipe" (link from the clipboard)
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
     @Query private var profiles: [Profile]
@@ -419,6 +420,15 @@ struct RecipeView: View {
     }
 
     private func load() {
+        if startImport, recipe == nil, items.isEmpty, pending.isEmpty, !importing {
+            #if os(iOS)
+            if let u = UIPasteboard.general.url { link = u.absoluteString }
+            else if let s = UIPasteboard.general.string, s.contains("http") { link = s.trimmingCharacters(in: .whitespacesAndNewlines) }
+            #else
+            if let s = NSPasteboard.general.string(forType: .string), s.contains("http") { link = s.trimmingCharacters(in: .whitespacesAndNewlines) }
+            #endif
+            importing = true
+        }
         guard let r = recipe, items.isEmpty else { return }
         name = r.name
         servings = text(r.recipeServings ?? 1)

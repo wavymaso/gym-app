@@ -6,7 +6,7 @@ import SwiftUI
 
 /// What the + button can do.
 enum QuickSheet: String, Identifiable {
-    case food, scan, label, quickAdd, weighIn, water, photo, describe
+    case food, scan, label, quickAdd, weighIn, water, photo, describe, recipeLink
     var id: String { rawValue }
 }
 
@@ -75,6 +75,7 @@ struct QuickActionsSheet: View {
     case .water: WaterAmountSheet()
     case .photo: FoodLogger(day: dayKey(), start: .ai, startCamera: true)
     case .describe: FoodLogger(day: dayKey(), start: .ai, describe: true)
+    case .recipeLink: RecipeView(recipe: nil, startImport: true)
     }
 }
 
