@@ -124,6 +124,7 @@ import SwiftData
             macCursor = now - 60                                    // a little overlap; applying twice changes nothing
             pushedUntil = started.timeIntervalSince1970
             lastSync = Date(); defaults.set(lastSync, forKey: "lastMacSync")
+            if !records.isEmpty || !((json["records"] as? [Any])?.isEmpty ?? true) { WidgetData.changed(ctx) }
             error = nil
         } catch {
             self.error = (error as? SyncError)?.text ?? "Couldn't reach \(macName). It syncs next time the Mac is on with Gym open and Tailscale connected."

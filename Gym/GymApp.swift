@@ -79,7 +79,10 @@ struct Root: View {
         }
         .onChange(of: phase, initial: true) { _, p in
             if p != .active, ctx.hasChanges { ctx.commit() }       // nothing typed is lost when the app goes away
-            if p == .background || p == .inactive { Task { await Reminders.reschedule(ctx) } }
+            if p == .background || p == .inactive {
+                Task { await Reminders.reschedule(ctx) }
+                WidgetData.write(ctx)
+            }
             #if os(iOS)
             if p == .active {
                 SyncClient.shared.context = ctx; SyncClient.shared.start()
@@ -88,7 +91,10 @@ struct Root: View {
             #endif
         }
         #if os(iOS)
-        .onReceive(NotificationCenter.default.publisher(for: .gymDidCommit)) { _ in SyncClient.shared.changed() }
+        .onReceive(NotificationCenter.default.publisher(for: .gymDidCommit)) { _ in
+            SyncClient.shared.changed()
+            WidgetData.changed(ctx)
+        }
         #else
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
             if ctx.hasChanges { ctx.commit() }
