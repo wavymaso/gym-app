@@ -37,6 +37,7 @@ struct SetupView: View {
         #endif
     }()
     private let steps = 7
+    @State private var connecting = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -59,6 +60,9 @@ struct SetupView: View {
             }
             HStack {
                 if step > 0 { Button("Back") { withAnimation { step -= 1 } } }
+                #if os(iOS)
+                if step == 0 { Button("Use my Mac's data") { connecting = true } }
+                #endif
                 Spacer()
                 Button(step == steps - 1 ? "Start" : "Continue") {
                     if step == steps - 1 { finish() } else { withAnimation { step += 1 } }
@@ -73,6 +77,9 @@ struct SetupView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color.pageBackground)
+        #if os(iOS)
+        .sheet(isPresented: $connecting) { ConnectMacView().environment(\.locale, appLocale) }
+        #endif
     }
 
     private func finish() {

@@ -11,6 +11,11 @@ struct SettingsView: View {
     var body: some View {
         Form {
             if let p = profiles.first {
+                #if os(macOS)
+                SyncSection()
+                #else
+                MacSyncSection()
+                #endif
                 Section("Units") {
                     Picker("Weight", selection: binding(p, \.weightUnit)) {
                         Text("Kilograms (kg)").tag("kg")
@@ -71,5 +76,11 @@ struct SettingsView: View {
     private func reset() {
         for m in allModels { try? ctx.delete(model: m) }
         ctx.commit()
+        // The other device keeps its copy: it has to connect again, and takes this one's (empty) data or gives it its own.
+        #if os(macOS)
+        if SyncServer.shared.enabled { SyncServer.shared.newCode() }
+        #else
+        SyncClient.shared.disconnect()
+        #endif
     }
 }

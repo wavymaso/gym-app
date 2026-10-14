@@ -38,7 +38,20 @@ let syncPort: UInt16 = 8010
         let c = String((0..<8).map { _ in letters.randomElement()! })
         let pretty = "\(c.prefix(4))-\(c.suffix(4))"
         UserDefaults.standard.set(pretty, forKey: "syncCode")
+        objectWillChange.send()
         return pretty
+    }
+
+    /// Sync on or off, remembered between launches.
+    var enabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "syncEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "syncEnabled"); newValue ? start() : stop(); objectWillChange.send() }
+    }
+
+    /// The address the iPhone uses (Tailscale Serve publishes the server there).
+    var address: String {
+        get { UserDefaults.standard.string(forKey: "syncAddress") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "syncAddress"); objectWillChange.send() }
     }
 
     func start() {
@@ -99,7 +112,7 @@ let syncPort: UInt16 = 8010
         if r.headers["authorization"] != "Bearer \(code)" {
             status = 401; json = ["error": "Wrong pairing code. Check it on the Mac: Gym → Settings → iPhone sync."]
         } else if r.method == "GET" && r.path == "/gym/ping" {
-            json = ["ok": true, "name": Host.current().localizedName ?? "Mac"]
+            json = ["ok": true, "name": Host.current().localizedName ?? "Mac", "hasData": context?.hasSyncedData ?? false]
         } else if r.method == "POST" && r.path == "/gym/sync", let ctx = context,
                   let body = (try? JSONSerialization.jsonObject(with: r.body)) as? [String: Any] {
             json = handleSync(body, ctx: ctx)

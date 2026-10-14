@@ -92,6 +92,7 @@ extension ModelContext {
 
     /// Apply the other device's changes. Newer edits win; nothing here is re-stamped.
     func applySync(records: [[String: Any]], deleted: [[String: Any]]) {
+        if hasChanges { commit() }                              // an edit still on screen gets stamped first, not lost
         let byType = Dictionary(grouping: records) { $0["type"] as? String ?? "" }
         let tombs = (try? fetch(FetchDescriptor<Tombstone>())) ?? []
         func apply<T: Syncable>(_ t: T.Type) {

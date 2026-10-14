@@ -10,6 +10,8 @@ import VisionKit
 #if os(iOS)
 /// Point the camera at a barcode; hands back the number once.
 struct BarcodeScanner: View {
+    var title = "Scan a barcode"
+    var qr = false                                    // the Mac's pairing code instead of food barcodes
     let found: (String) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -17,13 +19,13 @@ struct BarcodeScanner: View {
         NavigationStack {
             Group {
                 if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
-                    ScannerView { code in found(code); dismiss() }.ignoresSafeArea()
+                    ScannerView(qr: qr) { code in found(code); dismiss() }.ignoresSafeArea()
                 } else {
                     ContentUnavailableView("Camera not available", systemImage: "camera",
                                            description: Text("Allow camera access for Gym in Settings → Privacy & Security → Camera."))
                 }
             }
-            .navigationTitle("Scan a barcode")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
@@ -31,10 +33,11 @@ struct BarcodeScanner: View {
 }
 
 private struct ScannerView: UIViewControllerRepresentable {
+    let qr: Bool
     let found: (String) -> Void
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
-        let vc = DataScannerViewController(recognizedDataTypes: [.barcode(symbologies: [.ean13, .ean8, .upce, .code128])],
+        let vc = DataScannerViewController(recognizedDataTypes: [.barcode(symbologies: qr ? [.qr] : [.ean13, .ean8, .upce, .code128])],
                                            qualityLevel: .balanced, isHighlightingEnabled: true)
         vc.delegate = context.coordinator
         return vc

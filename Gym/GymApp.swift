@@ -11,7 +11,10 @@ struct GymApp: App {
         #else
         let inMemory = false
         #endif
-        return try! ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory))
+        let c = try! ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory))
+        c.mainContext.autosaveEnabled = false        // every save goes through commit(), which stamps changes for sync
+        c.mainContext.backfillSyncIDs()              // records from before sync existed
+        return c
     }()
 
     var body: some Scene {
@@ -32,6 +35,7 @@ struct GymApp: App {
 /// Setup on first launch, the app after that.
 struct Root: View {
     @Environment(\.modelContext) private var ctx
+    @Environment(\.scenePhase) private var phase
     @Query private var profiles: [Profile]
 
     var body: some View {
@@ -43,6 +47,12 @@ struct Root: View {
             }
         }
         .task {
+            #if os(macOS)
+            SyncServer.shared.context = ctx
+            if SyncServer.shared.enabled { SyncServer.shared.start() }
+            #else
+            SyncClient.shared.context = ctx
+            #endif
             ctx.seedExercises()
             #if os(iOS)
             if UserDefaults.standard.bool(forKey: "healthWeights") { _ = await HealthWeights.importNew(into: ctx) }
@@ -52,6 +62,19 @@ struct Root: View {
             if let path = UserDefaults.standard.string(forKey: "snapshot") { await saveSnapshot(to: path) }   // -snapshot dashboard.png
             #endif
         }
+        .onChange(of: phase, initial: true) { _, p in
+            if p != .active, ctx.hasChanges { ctx.commit() }       // nothing typed is lost when the app goes away
+            #if os(iOS)
+            if p == .active { SyncClient.shared.context = ctx; SyncClient.shared.start() } else if p == .background { SyncClient.shared.pause() }
+            #endif
+        }
+        #if os(iOS)
+        .onReceive(NotificationCenter.default.publisher(for: .gymDidCommit)) { _ in SyncClient.shared.changed() }
+        #else
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+            if ctx.hasChanges { ctx.commit() }
+        }
+        #endif
     }
 }
 
