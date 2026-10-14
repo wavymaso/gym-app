@@ -103,6 +103,7 @@ enum PhotoAI {
         Rules:
         - One item per distinct food. A composed dish (paella, tortilla de patatas, lasagne, kabsa, a sandwich) is ONE item unless its parts are clearly separate on the plate.
         - Estimate the portion in grams (ml for drinks) as eaten. \(hasImage ? "Use visual scale: a dinner plate is about 26 cm, a fork 19 cm, a can 33 cl. Think about depth, not just area." : "Use amounts given; otherwise a typical adult portion.")
+        - A whole pan, tray, cake or serving dish: estimate ONE person's portion of it, unless the person says they ate it all.
         - Include visible sauces, dressings and cooking oil as their own items when there's a noticeable amount.
         - The _100g fields are nutrition PER 100 g of the food as served (NOT for the portion), typical USDA/BEDCA values.
         - "search": 1 to 3 English words, the food first then how it's cooked, like a USDA name (e.g. "egg fried", "bread toasted", "rice white cooked", "chicken breast grilled", "paella seafood", "potato omelet").
@@ -155,15 +156,33 @@ enum PhotoAI {
         return parse((json["message"] as? [String: Any])?["content"] as? String ?? "")
     }
 
-    /// Google Gemini (free tier with your own key).
+    /// Google Gemini (free tier with your own key). Busy or out of free quota: try once more,
+    /// then the next model (each has its own free quota).
     static func askGemini(image: Data?, text: String) async throws -> [AIItem] {
         guard !geminiKey.isEmpty else { throw Failure(message: "Add a free Gemini key in Settings → Photo logging.") }
+        let models = Array(NSOrderedSet(array: [geminiModel, "gemini-2.5-flash", "gemini-flash-lite-latest"])) as? [String] ?? [geminiModel]
+        var last: Failure?
+        for (n, model) in models.enumerated() {
+            for attempt in 0..<(n == 0 ? 2 : 1) {
+                do { return try await askGemini(model: model, image: image, text: text) } catch let f as GeminiFailure {
+                    last = Failure(message: f.message)
+                    if !f.tryAnother { throw Failure(message: f.message) }
+                    if f.status == 503 && attempt == 0 && n == 0 { try? await Task.sleep(nanoseconds: 2_000_000_000) } else { break }
+                }
+            }
+        }
+        throw last ?? Failure(message: "Gemini didn't answer.")
+    }
+
+    private struct GeminiFailure: Error { let status: Int; let message: String; var tryAnother: Bool { [404, 429, 500, 503].contains(status) } }
+
+    private static func askGemini(model: String, image: Data?, text: String) async throws -> [AIItem] {
         var parts: [[String: Any]] = [["text": prompt(text: text, hasImage: image != nil)]]
         if let image { parts.append(["inline_data": ["mime_type": "image/jpeg", "data": image.base64EncodedString()]]) }
         let body: [String: Any] = ["contents": [["parts": parts]],
                                    "generationConfig": ["temperature": 0.1, "responseMimeType": "application/json"]]
-        let model = geminiModel.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? geminiModel
-        var r = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent")!,
+        let m = model.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? model
+        var r = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(m):generateContent")!,
                            timeoutInterval: 90)
         r.httpMethod = "POST"
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -175,14 +194,15 @@ enum PhotoAI {
         guard status == 200 else {
             let msg = (json["error"] as? [String: Any])?["message"] as? String ?? "error \(status)"
             switch status {
-            case 400, 403: throw Failure(message: "Gemini didn't accept the key: \(msg)")
-            case 404: throw Failure(message: "Gemini doesn't know the model “\(geminiModel)”. Change it in Settings → Photo logging.")
-            case 429: throw Failure(message: "Gemini's free limit is used up for now. Try again later, or use your Mac.")
-            default: throw Failure(message: "Gemini: \(msg)")
+            case 400, 403: throw GeminiFailure(status: status, message: "Gemini didn't accept the key: \(msg)")
+            case 404: throw GeminiFailure(status: status, message: "Gemini doesn't know the model “\(model)”. Change it in Settings → Photo logging.")
+            case 429: throw GeminiFailure(status: status, message: "Gemini's free limit is used up for now. Try again later, or use your Mac.")
+            case 500, 503: throw GeminiFailure(status: status, message: "Gemini is busy right now. Try again in a minute, or use your Mac.")
+            default: throw GeminiFailure(status: status, message: "Gemini: \(msg)")
             }
         }
-        let parts2 = (((json["candidates"] as? [[String: Any]])?.first?["content"] as? [String: Any])?["parts"] as? [[String: Any]]) ?? []
-        return parse(parts2.compactMap { $0["text"] as? String }.joined())
+        let out = (((json["candidates"] as? [[String: Any]])?.first?["content"] as? [String: Any])?["parts"] as? [[String: Any]]) ?? []
+        return parse(out.compactMap { $0["text"] as? String }.joined())
     }
 
     /// The model's answer → items (tolerates ```json fences or a bare list).

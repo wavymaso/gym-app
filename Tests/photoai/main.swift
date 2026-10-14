@@ -89,6 +89,7 @@ check(abs((navyBodyFat(sex: .male, heightCm: 180, waist: 84, neck: 38, hips: nil
 // 5. Real photos
 let photos = CommandLine.arguments.dropFirst()
 if let m = ProcessInfo.processInfo.environment["MODEL"] { UserDefaults.standard.set(m, forKey: "localVisionModel") }
+if let k = ProcessInfo.processInfo.environment["GEMINI_KEY"] { UserDefaults.standard.set(k, forKey: "geminiKey") }
 let group = DispatchGroup(); group.enter()
 Task {
     for path in photos {
@@ -96,7 +97,8 @@ Task {
         let codes = await PhotoAI.barcodes(in: cg)
         let t = Date()
         do {
-            let found = try await PhotoAI.askLocal(image: jpeg, text: "")
+            let gemini = ProcessInfo.processInfo.environment["GEMINI_KEY"] != nil
+            let found = gemini ? try await PhotoAI.askGemini(image: jpeg, text: "") : try await PhotoAI.askLocal(image: jpeg, text: "")
             print("\n\((path as NSString).lastPathComponent)  \(jpeg.count / 1024) KB  \(cg.width)x\(cg.height)  \(String(format: "%.0f", Date().timeIntervalSince(t))) s  barcodes \(codes)")
             var total = 0.0
             for p in ctx.plate(from: found, foods: local) {
