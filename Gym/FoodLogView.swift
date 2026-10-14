@@ -30,8 +30,16 @@ struct FoodLogView: View {
     }
 
     var body: some View {
+        #if os(iOS)
+        PhoneFoodLog()
+        #else
+        macBody
+        #endif
+    }
+
+    private var macBody: some View {
         let energy = profiles.first?.energy ?? .kcal
-        ScrollView {
+        return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if isPhone { header }
                 WeekStrip(day: $day)
