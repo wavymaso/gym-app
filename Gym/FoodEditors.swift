@@ -59,7 +59,7 @@ struct QuickAddView: View {
                 }
                 DatePicker("Time", selection: $when, displayedComponents: .hourAndMinute)
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle("Quick add")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -73,7 +73,7 @@ struct QuickAddView: View {
                 }
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 420, height: 440)
         #endif
@@ -164,14 +164,14 @@ struct CustomFoodView: View {
                     NumberRow(label: "Sodium", text: $sodium, unit: "mg")
                 }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle(food == nil ? "New food" : "Edit food")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(!valid) }
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 480, height: 680)
         #endif
@@ -264,7 +264,7 @@ struct RecipeView: View {
                     }
                 }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle(recipe == nil ? "New recipe" : "Edit recipe")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -278,7 +278,7 @@ struct RecipeView: View {
                 })
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 520, height: 620)
         #endif

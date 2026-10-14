@@ -289,6 +289,7 @@ struct ExercisePicker: View {
                     }
                 }
             }
+            .themedList()
             .searchable(text: $query, prompt: "Search exercises")
             .navigationTitle("Add exercise")
             .toolbar {
@@ -297,7 +298,7 @@ struct ExercisePicker: View {
             }
             .sheet(isPresented: $creating) { NewExerciseView { pick($0); dismiss() } }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 480, height: 620)
         #endif
@@ -324,7 +325,7 @@ struct NewExerciseView: View {
                 Picker("Main muscle", selection: $muscle) { ForEach(Muscle.allCases) { Text($0.label).tag($0) } }
                 Picker("Equipment", selection: $equipment) { ForEach(Equipment.allCases) { Text($0.label).tag($0) } }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle("New exercise")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

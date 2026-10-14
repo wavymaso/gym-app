@@ -91,7 +91,7 @@ struct InsightsView: View {
         }
         .background(Color.pageBackground)
         .navigationTitle("Insights")
-        .environment(\.locale, appLocale)
+        .appStyle()
     }
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {

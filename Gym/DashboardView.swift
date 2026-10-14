@@ -62,7 +62,7 @@ struct DashboardView: View {
                         Card(title: "Trend weight", systemImage: "scalemass") {
                             if let now = series.last, let w = weights.first {
                                 big(p.weight.format(now.trend))
-                                if series.count > 2 { Sparkline(values: series.suffix(60).map(\.trend), color: .accentColor) }
+                                if series.count > 2 { Sparkline(values: series.suffix(60).map(\.trend), color: palette.accent) }
                                 Text("\(weeklyTrendChange(series).map { signed(p.weight, $0) + " a week · " } ?? "")scale \(p.weight.format(w.kg)) \(relative(w.day))")
                                     .font(.callout).foregroundStyle(.secondary)
                             }

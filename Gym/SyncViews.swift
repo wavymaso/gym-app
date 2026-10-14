@@ -31,7 +31,8 @@ struct SyncSection: View {
                 LabeledContent("Last synced", value: lastPhoneSync > 0 ? relative(Date(timeIntervalSince1970: lastPhoneSync)) : "Not yet")
                 if !server.address.isEmpty, let qr = qrImage("gymsync:\(SyncClient.normalise(server.address))#\(server.code)") {
                     HStack {
-                        Image(nsImage: qr).interpolation(.none).resizable().frame(width: 150, height: 150)
+                        Image(nsImage: qr).interpolation(.none).resizable().frame(width: 220, height: 220)
+                            .padding(10).background(.white, in: RoundedRectangle(cornerRadius: 12))
                         Text("On your iPhone: Gym → Settings → Connect to your Mac → Scan the code.")
                             .font(.callout).foregroundStyle(.secondary)
                     }
@@ -94,7 +95,7 @@ struct MacSyncSection: View {
                  ? "Syncs when you open Gym, shortly after each change and every minute, whenever your Mac is on with Gym open. Away from it, everything still works and syncs later."
                  : "Use Gym on your Mac too? Connect to keep both in step.")
         }
-        .sheet(isPresented: $connecting) { ConnectMacView().environment(\.locale, appLocale) }
+        .sheet(isPresented: $connecting) { ConnectMacView().appStyle() }
         .confirmationDialog("Stop syncing with \(client.macName)?", isPresented: $confirmDisconnect) {
             Button("Disconnect", role: .destructive) { client.disconnect() }
         } message: {
@@ -119,6 +120,7 @@ struct ConnectMacView: View {
     @State private var found: SyncClient.Mac?
     @State private var confirmReplace = false
     @State private var scanning = false
+    @State private var scanned = false
 
     var body: some View {
         NavigationStack {
@@ -147,13 +149,16 @@ struct ConnectMacView: View {
                     if let error { Text(error).foregroundStyle(.red) }
                 }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle("Connect to your Mac")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $scanning) {
+            .sheet(isPresented: $scanning, onDismiss: {
+                // Only once the camera has gone, or the confirmation can't appear.
+                if scanned { scanned = false; check() }
+            }) {
                 BarcodeScanner(title: "Scan the code on your Mac", qr: true) { text in
-                    if let p = SyncClient.parsePairing(text) { address = p.address; code = p.code; check() }
+                    if let p = SyncClient.parsePairing(text) { address = p.address; code = p.code; scanned = true }
                     else { error = "That isn't Gym's pairing code. It's under Gym → Settings → iPhone sync on your Mac." }
                 }
             }

@@ -78,7 +78,7 @@ struct SetupView: View {
         }
         .background(Color.pageBackground)
         #if os(iOS)
-        .sheet(isPresented: $connecting) { ConnectMacView().environment(\.locale, appLocale) }
+        .sheet(isPresented: $connecting) { ConnectMacView().appStyle() }
         #endif
     }
 
@@ -121,12 +121,12 @@ struct ChoiceRow: View {
                 }
                 Spacer()
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3).foregroundStyle(selected ? Color.accentColor : Color.secondary.opacity(0.5))
+                    .font(.title3).foregroundStyle(selected ? palette.accent : Color.secondary.opacity(0.5))
             }
             .padding(14)
             .contentShape(Rectangle())
             .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? Color.accentColor : .primary.opacity(0.08), lineWidth: selected ? 2 : 1))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? palette.accent : .primary.opacity(0.08), lineWidth: selected ? 2 : 1))
         }
         .buttonStyle(.plain)
     }

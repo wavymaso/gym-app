@@ -31,6 +31,7 @@ struct ExercisesView: View {
                 }
             }
         }
+        .themedList()
         .searchable(text: $query, prompt: "Search exercises")
         .navigationTitle("Exercises")
         .toolbar {
@@ -105,7 +106,7 @@ struct ExerciseDetail: View {
         }
         .background(Color.pageBackground)
         .navigationTitle(exercise.name)
-        .environment(\.locale, appLocale)
+        .appStyle()
     }
 
     private func fmt(_ kg: Double, _ unit: WeightUnit) -> String {

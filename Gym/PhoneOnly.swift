@@ -20,6 +20,14 @@ struct BarcodeScanner: View {
             Group {
                 if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
                     ScannerView(qr: qr) { code in found(code); dismiss() }.ignoresSafeArea()
+                        .overlay(alignment: .bottom) {
+                            if qr {
+                                Text("Hold the phone about an arm's length from the screen so the whole code fits.")
+                                    .font(.callout.weight(.medium)).multilineTextAlignment(.center)
+                                    .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                    .padding(24)
+                            }
+                        }
                 } else {
                     ContentUnavailableView("Camera not available", systemImage: "camera",
                                            description: Text("Allow camera access for Gym in Settings → Privacy & Security → Camera."))
@@ -38,7 +46,7 @@ private struct ScannerView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let vc = DataScannerViewController(recognizedDataTypes: [.barcode(symbologies: qr ? [.qr] : [.ean13, .ean8, .upce, .code128])],
-                                           qualityLevel: .balanced, isHighlightingEnabled: true)
+                                           qualityLevel: qr ? .accurate : .balanced, isHighlightingEnabled: true)
         vc.delegate = context.coordinator
         return vc
     }

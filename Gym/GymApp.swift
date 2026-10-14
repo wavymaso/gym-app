@@ -19,8 +19,7 @@ struct GymApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Root()
-                .environment(\.locale, appLocale)
+            ThemedRoot()
                 #if os(macOS)
                 .frame(minWidth: 820, minHeight: 600)
                 #endif
@@ -29,6 +28,22 @@ struct GymApp: App {
         #if os(macOS)
         .defaultSize(width: 1100, height: 760)
         #endif
+    }
+}
+
+/// Applies the chosen theme; changing it redraws everything in the new colours.
+struct ThemedRoot: View {
+    @AppStorage("theme") private var theme: AppTheme = .midnight
+    @Environment(\.colorScheme) private var systemScheme
+
+    var body: some View {
+        let p = theme.palette(systemDark: systemScheme == .dark)
+        palette = p
+        return Root()
+            .id(p.name)
+            .environment(\.locale, appLocale)
+            .tint(p.accent)
+            .preferredColorScheme(theme.scheme)
     }
 }
 

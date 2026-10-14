@@ -16,6 +16,7 @@ struct SettingsView: View {
                 #else
                 MacSyncSection()
                 #endif
+                AppearanceSection()
                 Section("Units") {
                     Picker("Weight", selection: binding(p, \.weightUnit)) {
                         Text("Kilograms (kg)").tag("kg")
@@ -61,7 +62,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+        .themedForm()
         .navigationTitle("Settings")
         .sheet(isPresented: $importing) { ImportView() }
         .confirmationDialog("Delete all your data and start again?", isPresented: $confirmReset) {
@@ -82,5 +83,54 @@ struct SettingsView: View {
         #else
         SyncClient.shared.disconnect()
         #endif
+    }
+}
+
+/// Pick a theme: a small preview of each.
+struct AppearanceSection: View {
+    @AppStorage("theme") private var theme: AppTheme = .midnight
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Section("Appearance") {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 96 : 120), spacing: 12)], spacing: 12) {
+                ForEach(AppTheme.allCases) { t in
+                    Button { theme = t } label: { tile(t) }.buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 6)
+            Text(theme.detail).font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
+    private func tile(_ t: AppTheme) -> some View {
+        let p = t.palette(systemDark: scheme == .dark)
+        return VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(p.background)
+                if t == .system {      // half and half
+                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.daylight.background)
+                        .mask(HStack(spacing: 0) { Color.clear; Color.black })
+                }
+                VStack(spacing: 6) {
+                    ZStack {
+                        Circle().stroke(p.calories.opacity(0.2), lineWidth: 5)
+                        Circle().trim(from: 0, to: 0.7).stroke(p.calories, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
+                    }
+                    .frame(width: 30, height: 30)
+                    HStack(spacing: 4) {
+                        ForEach([p.protein, p.fat, p.carbs], id: \.self) { c in Capsule().fill(c).frame(width: 14, height: 5) }
+                    }
+                }
+                .padding(10)
+                .background(p.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .frame(height: 78)
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(t == theme ? palette.accent : Color.primary.opacity(0.1), lineWidth: t == theme ? 2.5 : 1))
+            Text(t.label).font(.caption.weight(t == theme ? .bold : .regular))
+                .foregroundStyle(t == theme ? .primary : .secondary)
+        }
+        .contentShape(Rectangle())
     }
 }

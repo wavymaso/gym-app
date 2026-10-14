@@ -60,7 +60,7 @@ struct ImportView: View {
                 }
                 if let error { Text(error).foregroundStyle(Macro.protein.color) }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle("Import from MacroFactor")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(result == nil ? "Cancel" : "Done") { dismiss() } }
@@ -72,7 +72,7 @@ struct ImportView: View {
                                                                            UTType(filenameExtension: "xlsx") ?? .data],
                           allowsMultipleSelection: true, onCompletion: read)
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 520, height: 560)
         #endif

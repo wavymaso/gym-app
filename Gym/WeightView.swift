@@ -45,7 +45,7 @@ struct WeightView: View {
                         WeightChart(series: range.clip(series), unit: unit).frame(height: 260)
                         HStack(spacing: 16) {
                             Label("Scale", systemImage: "circle.fill").labelStyle(DotLabel(color: Color.primary.opacity(0.4)))
-                            Label("Trend", systemImage: "circle.fill").labelStyle(DotLabel(color: .accentColor))
+                            Label("Trend", systemImage: "circle.fill").labelStyle(DotLabel(color: palette.accent))
                         }
                         .font(.caption).foregroundStyle(.secondary)
                     }
@@ -124,11 +124,11 @@ struct WeightChart: View {
             }
             ForEach(series, id: \.day) { p in
                 LineMark(x: .value("Day", date(fromKey: p.day)), y: .value("Trend", unit.fromKg(p.trend)))
-                    .foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
+                    .foregroundStyle(palette.accent).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
             }
         }
         .chartYScale(domain: lo...hi)
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 5)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.day().month(.abbreviated).locale(appLocale)) } }
-        .environment(\.locale, appLocale)
+        .appStyle()
     }
 }

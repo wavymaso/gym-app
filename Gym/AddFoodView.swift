@@ -57,6 +57,7 @@ struct AddFoodView: View {
                 }
                 #if os(macOS)
                 .listStyle(.inset)
+                .themedList()
                 #endif
             }
             .navigationTitle(isPicking ? "Add ingredient" : "Add food")
@@ -83,7 +84,7 @@ struct AddFoodView: View {
             .sheet(item: $editingFood) { CustomFoodView(food: $0) }
             .sheet(item: $editingRecipe) { RecipeView(recipe: $0) }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 620, height: 680)
         #endif
@@ -310,7 +311,7 @@ struct FoodAmountView: View {
                 detail("Sodium", n.sodium, "mg")
             }
         }
-        .formStyle(.grouped)
+        .themedForm()
         .navigationTitle(entry == nil ? "How much?" : "Edit entry")
         .toolbar {
             ToolbarItem {
@@ -393,7 +394,7 @@ struct EntryEditor: View {
                     }
                 }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 520, height: 600)
         #endif

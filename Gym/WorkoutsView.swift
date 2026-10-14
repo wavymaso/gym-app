@@ -170,6 +170,7 @@ struct WorkoutDetail: View {
                     }
                 }
             }
+            .themedList()
             .navigationTitle(workout.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
@@ -179,7 +180,7 @@ struct WorkoutDetail: View {
                 Button("Delete workout", role: .destructive) { ctx.discard(workout); dismiss() }
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 520, height: 600)
         #endif
@@ -237,7 +238,7 @@ struct RoutineEditor: View {
                     Section { Button("Delete routine", role: .destructive) { confirmDelete = true } }
                 }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle(routine == nil ? "New routine" : "Edit routine")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -253,7 +254,7 @@ struct RoutineEditor: View {
                 }
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 600, height: 620)
         #endif

@@ -56,7 +56,7 @@ struct CheckInView: View {
             .navigationTitle("Weekly check-in")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Later") { dismiss() } } }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 580, height: 640)
         #endif
@@ -104,14 +104,14 @@ struct ManualTargetsView: View {
                     Text("Calories from these: \(number(fromMacros)) kcal")
                 }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle("Your own targets")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(fromMacros < 800) }
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 420, height: 320)
         #endif

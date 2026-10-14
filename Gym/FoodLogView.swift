@@ -215,7 +215,7 @@ struct CopyDayView: View {
                     }
                 }
             }
-            .formStyle(.grouped)
+            .themedForm()
             .navigationTitle("Copy a day")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -225,7 +225,7 @@ struct CopyDayView: View {
                 }
             }
         }
-        .environment(\.locale, appLocale)       // sheets don't inherit it on the Mac
+        .appStyle()                             // sheets don't inherit these on the Mac
         #if os(macOS)
         .frame(width: 460, height: 520)
         #endif
