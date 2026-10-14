@@ -131,6 +131,16 @@ import SwiftData
         }
     }
 
+    // MARK: Photo logging (the model runs on the Mac)
+
+    func photo(image: Data?, text: String) async throws -> [AIItem] {
+        var body: [String: Any] = ["text": text]
+        if let image { body["image"] = image.base64EncodedString() }
+        let (data, _) = try await request(base: address, code: code, path: "/gym/photo", body: body, timeout: 240)
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+        return (json["items"] as? [[String: Any]] ?? []).compactMap(AIItem.init)
+    }
+
     // MARK: HTTP
 
     enum SyncError: Error {
@@ -138,9 +148,9 @@ import SwiftData
         var text: String { switch self { case .message(let m): return m } }
     }
 
-    private func request(base: String, code: String, path: String, body: [String: Any]?) async throws -> (Data, HTTPURLResponse) {
+    private func request(base: String, code: String, path: String, body: [String: Any]?, timeout: Double? = nil) async throws -> (Data, HTTPURLResponse) {
         guard let url = URL(string: base + path) else { throw SyncError.message("That address doesn't look right.") }
-        var r = URLRequest(url: url, timeoutInterval: body == nil ? 10 : 60)
+        var r = URLRequest(url: url, timeoutInterval: timeout ?? (body == nil ? 10 : 60))
         r.setValue("Bearer \(code)", forHTTPHeaderField: "Authorization")
         if let body {
             r.httpMethod = "POST"

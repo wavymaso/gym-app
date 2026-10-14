@@ -37,6 +37,7 @@ struct AddFoodView: View {
     @State private var scanningLabel = false
     @State private var newRecipe = false
     @State private var scanning = false
+    @State private var photo: PhotoLogView.Start?
     @FocusState private var focused: Bool
 
     enum Tab: String, CaseIterable { case search = "Search", recent = "Recent", meals = "Meals", favourites = "Favourites", mine = "My foods" }
@@ -94,6 +95,15 @@ struct AddFoodView: View {
                 if !isPicking {
                     ToolbarItem {
                         Menu {
+                            Button("Photo of your meal…", systemImage: "camera") { photo = .camera }
+                            Button("Choose a photo…", systemImage: "photo") { photo = .library }
+                            Button("Describe it…", systemImage: "text.bubble") { photo = .describe }
+                        } label: { Label("AI", systemImage: "sparkles") }
+                    }
+                }
+                if !isPicking {
+                    ToolbarItem {
+                        Menu {
                             Button("New food…") { newFood = true }
                             Button("Scan a nutrition label…") { scanningLabel = true }
                             Button("New recipe…") { newRecipe = true }
@@ -105,6 +115,9 @@ struct AddFoodView: View {
             .sheet(isPresented: $scanning) { BarcodeScanner { code in tab = .search; query = code } }
             #endif
             .sheet(isPresented: $newFood) { CustomFoodView(food: nil) }
+            .sheet(item: $photo) { start in
+                if case .log(let day, let at) = mode { PhotoLogView(day: day, time: at, start: start) }
+            }
             .sheet(isPresented: $scanningLabel) { LabelScanView() }
             .sheet(isPresented: $newRecipe) { RecipeView(recipe: nil) }
             .sheet(item: $editingFood) { CustomFoodView(food: $0) }
@@ -323,6 +336,7 @@ struct FoodRowLabel: View {
 
 /// How much of a food, and when. Used for logging, editing an entry, and recipe ingredients.
 struct FoodAmountView: View {
+    @Environment(\.pickTitle) private var pickTitle
     let food: Food
     let mode: AddFoodView.Mode
     var entry: FoodEntry?
@@ -394,7 +408,7 @@ struct FoodAmountView: View {
 
     private var buttonTitle: String {
         if entry != nil { return "Save" }
-        if case .pick = mode { return "Add to recipe" }
+        if case .pick = mode { return pickTitle }
         return "Add"
     }
 
@@ -440,6 +454,12 @@ struct FoodAmountView: View {
         }
         done()
     }
+}
+
+/// What the button says when picking a food for something else ("Add to recipe", "Use this").
+private struct PickTitleKey: EnvironmentKey { static let defaultValue = "Add to recipe" }
+extension EnvironmentValues {
+    var pickTitle: String { get { self[PickTitleKey.self] } set { self[PickTitleKey.self] = newValue } }
 }
 
 /// Editing a logged entry (its food may since have been deleted: then grams only).

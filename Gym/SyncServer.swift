@@ -113,12 +113,30 @@ let syncPort: UInt16 = 8010
             status = 401; json = ["error": "Wrong pairing code. Check it on the Mac: Gym → Settings → iPhone sync."]
         } else if r.method == "GET" && r.path == "/gym/ping" {
             json = ["ok": true, "name": Host.current().localizedName ?? "Mac", "hasData": context?.hasSyncedData ?? false]
+        } else if r.method == "POST" && r.path == "/gym/photo",
+                  let body = (try? JSONSerialization.jsonObject(with: r.body)) as? [String: Any] {
+            // The phone's photo, through the model on this Mac (takes a few seconds; answer when done).
+            let image = (body["image"] as? String).flatMap { Data(base64Encoded: $0) }
+            let text = body["text"] as? String ?? ""
+            Task { @MainActor in
+                do {
+                    let items = try await PhotoAI.askLocal(image: image, text: text)
+                    self.send(c, 200, ["items": items.map(\.dict)])
+                } catch {
+                    self.send(c, 502, ["error": error.localizedDescription])
+                }
+            }
+            return
         } else if r.method == "POST" && r.path == "/gym/sync", let ctx = context,
                   let body = (try? JSONSerialization.jsonObject(with: r.body)) as? [String: Any] {
             json = handleSync(body, ctx: ctx)
         } else {
             status = 404; json = ["error": "Not found"]
         }
+        send(c, status, json)
+    }
+
+    private func send(_ c: NWConnection, _ status: Int, _ json: Any) {
         let payload = (try? JSONSerialization.data(withJSONObject: json)) ?? Data()
         let head = "HTTP/1.1 \(status) \(status == 200 ? "OK" : "Error")\r\nContent-Type: application/json\r\nContent-Length: \(payload.count)\r\nConnection: close\r\n\r\n"
         c.send(content: Data(head.utf8) + payload, completion: .contentProcessed { _ in c.cancel() })

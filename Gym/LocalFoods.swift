@@ -57,6 +57,94 @@ final class LocalFoods {
         return rows(sql, bind: [match])
     }
 
+    /// Generic foods and dishes (USDA, in English), best match first, with the usual portion
+    /// people eat where USDA knows it. Whole words (plurals allowed: "egg" never finds "eggplant");
+    /// if nothing has every word, the best match missing one of them; never just any word.
+    func generic(_ query: String, limit: Int = 10) -> [(food: FoodResult, typical: Double?)] {
+        let stop: Set<String> = ["with", "and", "the", "of", "in", "a", "fresh", "plain", "homemade", "slice", "slices", "piece", "pieces",
+                                 "portion", "serving", "side", "some", "small", "large", "medium", "bowl", "plate", "glass", "cup"]
+        let words = Array(NSOrderedSet(array: query.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 2 && !stop.contains($0) }.map(Self.singular))) as? [String] ?? []
+        guard db != nil, !words.isEmpty, hasGeneric else { return [] }
+        func term(_ w: String) -> String {      // egg, eggs; tomato, tomatoes; toast, toasted; bake, baked
+            "(" + [w, w + "s", w + "es", w + "ed", w + "d"].map { "\"\($0)\"" }.joined(separator: " OR ") + ")"
+        }
+        // Every word; then without one of them; then the first two; then the first alone.
+        // Never without the first word: it's the food ("mushroom sauteed" must not become a sauteed chicken wing).
+        let ws = Array(words.prefix(5))
+        var tries = [ws]
+        if ws.count >= 2 { tries += ws.indices.dropFirst().map { i in ws.enumerated().filter { $0.offset != i }.map(\.element) } }
+        if ws.count >= 4 { tries.append(Array(ws.prefix(2))) }
+        if ws.count >= 2 { tries.append([ws[0]]) }
+        // Each step only if the one before found nothing; within a step, the best-scoring.
+        var groups: [[[String]]] = [[tries[0]]]
+        if ws.count >= 2 { groups.append(Array(tries[1..<ws.count])) }
+        groups += tries[(ws.count >= 2 ? ws.count : 1)...].map { [$0] }
+        for group in groups {
+            var best: [(food: FoodResult, typical: Double?, score: Double)] = []
+            for t in group {
+                let found = genericRows(sql(limit), bind: [t.map(term).joined(separator: " AND "), ws[0]])
+                if let top = found.first, best.isEmpty || top.score < best[0].score { best = found }
+            }
+            if !best.isEmpty { return best.map { ($0.food, $0.typical) } }
+        }
+        return []
+    }
+
+    /// "tomatoes" → "tomato", "slices" → "slice" (the search adds the plural back).
+    static func singular(_ w: String) -> String {
+        if w.count > 4, w.hasSuffix("oes") { return String(w.dropLast(2)) }
+        if w.count > 3, w.hasSuffix("s"), !w.hasSuffix("ss"), !w.hasSuffix("us") { return String(w.dropLast()) }
+        return w
+    }
+
+    private func sql(_ limit: Int) -> String {
+        // Dishes "as eaten" first; "not further specified" is USDA's average version; shorter names are plainer.
+        """
+        SELECT g.fdc, g.name, g.kcal, g.protein, g.fat, g.carbs, g.fiber, g.sugar, g.satfat, g.sodium, g.micros, g.portions, g.typical_g,
+               bm25(generic_fts) + length(g.name) / 60.0 - (CASE g.kind WHEN 'dish' THEN 0.6 ELSE 0 END)
+                 - (CASE WHEN g.name LIKE '%NFS%' OR g.name LIKE '%NS as to%' THEN 1.5 ELSE 0 END)
+                 - (CASE WHEN g.name LIKE ?2 || '%' THEN 2.5 ELSE 0 END)
+                 + (CASE WHEN g.name LIKE '%as ingredient%' OR g.name LIKE '%glutinous%' OR g.name LIKE '%baby%'
+                           OR g.name LIKE '%infant%' OR g.name LIKE '%dehydrated%' THEN 3 ELSE 0 END) AS score
+        FROM generic_fts JOIN generic g ON g.fdc = generic_fts.rowid
+        WHERE generic_fts MATCH ?1
+        ORDER BY score
+        LIMIT \(limit)
+        """
+    }
+
+    private lazy var hasGeneric: Bool = scalar("SELECT count(*) FROM sqlite_master WHERE name='generic'") == "1"
+
+    private func genericRows(_ sql: String, bind: [String]) -> [(food: FoodResult, typical: Double?, score: Double)] {
+        lock.lock(); defer { lock.unlock() }
+        var st: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &st, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(st) }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for (i, b) in bind.enumerated() { sqlite3_bind_text(st, Int32(i + 1), b, -1, transient) }
+        var out: [(food: FoodResult, typical: Double?, score: Double)] = []
+        while sqlite3_step(st) == SQLITE_ROW {
+            func text(_ i: Int32) -> String? { sqlite3_column_text(st, i).map { String(cString: $0) } }
+            func real(_ i: Int32) -> Double? { sqlite3_column_type(st, i) == SQLITE_NULL ? nil : sqlite3_column_double(st, i) }
+            func pairs(_ s: String?) -> [(String, Double)] {
+                (s ?? "").split(separator: ";").compactMap { kv in
+                    guard let eq = kv.lastIndex(of: "="), let v = Double(kv[kv.index(after: eq)...]) else { return nil }
+                    return (String(kv[..<eq]), v)
+                }
+            }
+            guard let name = text(1) else { continue }
+            let micros = Dictionary(pairs(text(10)), uniquingKeysWith: { a, _ in a })
+            let per100 = Nutrients(kcal: real(2) ?? 0, protein: real(3) ?? 0, fat: real(4) ?? 0, carbs: real(5) ?? 0, fiber: real(6),
+                                   sugar: real(7), satFat: real(8), sodium: real(9), micros: micros.isEmpty ? nil : micros)
+            let servings = pairs(text(11)).map { Serving(name: $0.0, grams: $0.1) }
+            let liquid = ["juice", "milk", "soda", "beer", "wine", "coffee", "tea,", "water", "drink", "smoothie", "soup"].contains { name.lowercased().contains($0) }
+            out.append((FoodResult(key: "usda:\(sqlite3_column_int(st, 0))", name: name, brand: nil, barcode: nil, source: "usda",
+                                   per100: per100, servings: servings, isLiquid: liquid), real(12), sqlite3_column_double(st, 13)))
+        }
+        return out
+    }
+
     func product(barcode: String) -> FoodResult? {
         let code = barcode.trimmingCharacters(in: .whitespaces)
         // Open Food Facts stores short EAN-8/UPC codes as written, and sometimes padded to 13 digits.

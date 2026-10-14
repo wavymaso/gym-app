@@ -6,7 +6,7 @@ import SwiftUI
 
 /// What the + button can do.
 enum QuickSheet: String, Identifiable {
-    case food, scan, label, quickAdd, weighIn, water
+    case food, scan, label, quickAdd, weighIn, water, photo, describe
     var id: String { rawValue }
 }
 
@@ -22,6 +22,8 @@ struct QuickActionsSheet: View {
             Text("Quick add").font(.number(22)).padding(.top, 22)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
                 tile("Log food", "magnifyingglass", palette.accent) { pick(.food) }
+                tile("Photo", "camera.fill", Color(hex: 0xA77BF3)) { pick(.photo) }
+                tile("Describe", "text.bubble.fill", Color(hex: 0x7B8CF3)) { pick(.describe) }
                 #if os(iOS)
                 tile("Scan barcode", "barcode.viewfinder", Macro.carbs.color) { pick(.scan) }
                 #endif
@@ -71,6 +73,8 @@ struct QuickActionsSheet: View {
     case .quickAdd: QuickAddView(day: dayKey(), entry: nil)
     case .weighIn: WeighInSheet()
     case .water: WaterAmountSheet()
+    case .photo: PhotoLogView(day: dayKey(), start: .camera)
+    case .describe: PhotoLogView(day: dayKey(), start: .describe)
     }
 }
 

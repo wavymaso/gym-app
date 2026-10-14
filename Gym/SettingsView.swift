@@ -62,6 +62,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Plain foods come from USDA FoodData Central. The shared demo key allows only a few searches an hour; your own key is free and unlimited. Products come from Open Food Facts and need no key.")
                 }
+                PhotoAISection()
                 ActivitySection()
                 RemindersSection()
                 HealthSection()
