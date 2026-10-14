@@ -354,6 +354,7 @@ func addDemoProfile(_ ctx: ModelContext) {
         let w = ctx.startWorkout(routine: push)
         let first = ctx.sets(of: w.key).prefix(2)
         first.forEach { $0.done = true; $0.kg += 2.5 }
+        ctx.supersetWithNext(order: 2, in: w)                    // lateral raises + triceps pushdowns
     }
     ctx.commit()
 }

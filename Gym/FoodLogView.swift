@@ -178,6 +178,7 @@ struct DayLog: View {
     let open: (FoodLogView.LogSheet) -> Void
 
     @State private var savingMeal: (Meal, [FoodEntry])?
+    @AppStorage("showEmptyHours") private var showEmptyHours = true
     @State private var mealName = ""
 
     init(day: String, energy: EnergyUnit, target: Targets?, style: Binding<FoodLogView.LogStyle>, open: @escaping (FoodLogView.LogSheet) -> Void) {
@@ -211,11 +212,18 @@ struct DayLog: View {
     }
 
     @ViewBuilder private var log: some View {
-        Picker("View", selection: $style.animation(.snappy)) {
-            Text("Meals").tag(FoodLogView.LogStyle.meals)
-            Text("Timeline").tag(FoodLogView.LogStyle.timeline)
+        HStack {
+            Picker("View", selection: $style.animation(.snappy)) {
+                Text("Meals").tag(FoodLogView.LogStyle.meals)
+                Text("Timeline").tag(FoodLogView.LogStyle.timeline)
+            }
+            .pickerStyle(.segmented).labelsHidden()
+            if style == .timeline {
+                Toggle(isOn: $showEmptyHours.animation(.snappy)) { Label("Empty hours", systemImage: "clock") }
+                    .toggleStyle(.button).controlSize(.small).fixedSize()
+                    .help("Show hours with nothing logged (you can drop food onto them)")
+            }
         }
-        .pickerStyle(.segmented).labelsHidden()
             .alert("Save as meal", isPresented: Binding(get: { savingMeal != nil }, set: { if !$0 { savingMeal = nil } })) {
                 TextField("Name", text: $mealName)
                 Button("Save") { if let (_, items) = savingMeal { ctx.saveMeal(mealName.isEmpty ? "Meal" : mealName, from: items) }; savingMeal = nil }
@@ -248,12 +256,13 @@ struct DayLog: View {
         let cal = Calendar.current
         let byHour = Dictionary(grouping: entries) { cal.component(.hour, from: $0.time) }
         let lo = min(6, byHour.keys.min() ?? 6), hi = max(23, byHour.keys.max() ?? 23)
+        let hours = showEmptyHours ? Array(lo...hi) : byHour.keys.sorted()
         return VStack(spacing: 0) {
-            ForEach(lo...hi, id: \.self) { h in
+            ForEach(hours, id: \.self) { h in
                 HourRow(hour: h, items: byHour[h] ?? [], energy: energy, open: { open(.edit($0)) },
                         add: { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) },
                         drop: { ids in move(ids, to: h) })
-                if h < hi { Divider().opacity(0.5) }
+                if h != hours.last { Divider().opacity(0.5) }
             }
         }
         .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

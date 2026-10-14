@@ -120,8 +120,15 @@ struct ActiveWorkoutView: View {
             let before = ctx.history(of: row.exerciseKey, excluding: workout.key).map(\.lift)
                 + sets.filter { $0.done && $0.exerciseKey == row.exerciseKey && $0.persistentModelID != row.persistentModelID }.map(\.lift)
             records[row.persistentModelID] = newRecords(row.lift, before: before)
-            restTotal = row.restSeconds
-            restEnds = Date().addingTimeInterval(TimeInterval(row.restSeconds))
+            // No rest in the middle of a superset (go straight to the next exercise) or between a left and a right set.
+            let groupOrders = row.group > 0 ? Set(sets.filter { $0.group == row.group }.map(\.exerciseOrder)).sorted() : []
+            let midSuperset = row.group > 0 && row.exerciseOrder != groupOrders.last
+            if midSuperset || row.side == "L" {
+                restEnds = nil
+            } else {
+                restTotal = row.restSeconds
+                restEnds = Date().addingTimeInterval(TimeInterval(row.restSeconds))
+            }
         } else {
             records[row.persistentModelID] = nil
         }
@@ -130,8 +137,12 @@ struct ActiveWorkoutView: View {
 
     private func addSet(to rows: [WorkoutSet]) {
         guard let last = rows.last else { return }
-        ctx.insert(WorkoutSet(workoutKey: workout.key, exerciseKey: last.exerciseKey, exerciseOrder: last.exerciseOrder,
-                              setOrder: last.setOrder + 1, kg: last.kg, reps: last.reps, restSeconds: last.restSeconds, day: workout.day))
+        for (i, side) in (last.side.isEmpty ? [""] : ["L", "R"]).enumerated() {          // tracking sides: add a pair
+            let s = WorkoutSet(workoutKey: workout.key, exerciseKey: last.exerciseKey, exerciseOrder: last.exerciseOrder,
+                               setOrder: last.setOrder + 1 + i, kg: last.kg, reps: last.reps, restSeconds: last.restSeconds, day: workout.day)
+            s.side = side; s.group = last.group
+            ctx.insert(s)
+        }
         ctx.commit()
     }
 
@@ -187,11 +198,33 @@ private struct ExerciseBlock: View {
                         }
                     } label: { Label("Swap for…", systemImage: "arrow.triangle.2.circlepath") }
                     .disabled(rows.contains(where: \.done))
+                    if rows[0].group > 0 {
+                        Button { ctx.leaveSuperset(order: rows[0].exerciseOrder, in: workout) } label: { Label("Leave superset", systemImage: "link.badge.plus") }
+                    } else {
+                        Button { ctx.supersetWithNext(order: rows[0].exerciseOrder, in: workout) } label: { Label("Superset with next", systemImage: "link") }
+                    }
+                    if rows.allSatisfy({ $0.side.isEmpty }) {
+                        Button { ctx.trackSides(order: rows[0].exerciseOrder, in: workout) } label: { Label("Track left & right", systemImage: "arrow.left.and.right") }
+                    }
                     Divider()
                     Button("Remove exercise", role: .destructive, action: remove)
                 } label: { Image(systemName: "ellipsis.circle") }
                 .menuStyle(.borderlessButton).fixedSize()
             }
+            if rows[0].group > 0 {
+                Label("Superset \(String(UnicodeScalar(64 + min(rows[0].group, 26))!)) · rest after the last exercise", systemImage: "link")
+                    .font(.caption.weight(.bold)).foregroundStyle(supersetColor)
+            }
+            TextField("Note",
+                      text: Binding(get: { workout.notesByExercise[exercise.key] ?? "" },
+                                    set: { v in var n = workout.notesByExercise; n[exercise.key] = v.isEmpty ? nil : v; workout.notesByExercise = n }),
+                      prompt: Text(ctx.lastNote(for: exercise.key, before: workoutKey).map { "Last time: \($0)" } ?? "Note (seat height, grip, how it felt…)")
+                        .foregroundStyle(.secondary),
+                      axis: .vertical)
+                .font(.callout).lineLimit(1...3).textFieldStyle(.plain)
+                .padding(.horizontal, 10).padding(.vertical, 7)
+                .background(Color.raisedBackground.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
+                .onSubmit { ctx.commit() }
             if let t = target, !rows.contains(where: \.done) {
                 Label {
                     Text("\(t.kg > 0 ? "\(trimmed(unit.fromKg(t.kg))) \(unit.rawValue) × " : "")\(repsText(t.reps)) · \(t.reason)")
@@ -217,7 +250,7 @@ private struct ExerciseBlock: View {
                             Divider()
                             Button("Delete set", role: .destructive) { ctx.delete(row); ctx.commit() }
                         } label: {
-                            Text(row.kindValue == .normal ? "\(working)" : row.kindValue.short)
+                            Text((row.kindValue == .normal ? "\(row.side == "R" ? working - 1 : working)" : row.kindValue.short) + row.side)
                                 .fontWeight(.semibold).frame(width: 26)
                                 .foregroundStyle(row.kindValue == .warmup ? Macro.fat.color : row.kindValue == .normal ? Color.primary : Macro.protein.color)
                         }
@@ -257,8 +290,11 @@ private struct ExerciseBlock: View {
         }
         .padding(16)
         .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(palette.stroke))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(rows[0].group > 0 ? supersetColor.opacity(0.7) : palette.stroke,
+                                                                                  lineWidth: rows[0].group > 0 ? 2 : 1))
     }
+
+    private var supersetColor: Color { [Macro.fat.color, Macro.carbs.color, Color(hex: 0xA78BFA), Macro.protein.color][(max(rows[0].group, 1) - 1) % 4] }
 
     /// Today's aim from last time (double progression in the routine's rep range).
     private var target: Progression? {

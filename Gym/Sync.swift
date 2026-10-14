@@ -312,11 +312,11 @@ extension Workout: Syncable {
     static var syncType: String { "workout" }
     var naturalID: String { key }
     func encode() -> [String: Any] {
-        ["key": key, "name": name, "start": t(start), "end": t(end), "routineKey": n(routineKey), "notes": n(notes)]
+        ["key": key, "name": name, "start": t(start), "end": t(end), "routineKey": n(routineKey), "notes": n(notes), "exerciseNotes": exerciseNotes]
     }
     func decode(_ d: [String: Any]) {
         key = d.str("key"); name = d.str("name"); start = d.date("start"); end = d.optDate("end"); routineKey = d.optStr("routineKey")
-        notes = d.optStr("notes")
+        notes = d.optStr("notes"); exerciseNotes = d.str("exerciseNotes")
     }
     static func blank() -> Self { Self(name: "") }
 }
@@ -325,12 +325,12 @@ extension WorkoutSet: Syncable {
     static var syncType: String { "set" }
     func encode() -> [String: Any] {
         ["workoutKey": workoutKey, "exerciseKey": exerciseKey, "exerciseOrder": exerciseOrder, "setOrder": setOrder, "kind": kind,
-         "kg": kg, "reps": reps, "rir": n(rir), "done": done, "restSeconds": restSeconds, "day": day]
+         "kg": kg, "reps": reps, "rir": n(rir), "done": done, "restSeconds": restSeconds, "day": day, "group": group, "side": side]
     }
     func decode(_ d: [String: Any]) {
         workoutKey = d.str("workoutKey"); exerciseKey = d.str("exerciseKey"); exerciseOrder = d.int("exerciseOrder")
         setOrder = d.int("setOrder"); kind = d.str("kind"); kg = d.num("kg"); reps = d.int("reps"); rir = d.optNum("rir")
-        done = d.bool("done"); restSeconds = d.int("restSeconds"); day = d.str("day")
+        done = d.bool("done"); restSeconds = d.int("restSeconds"); day = d.str("day"); group = d.int("group"); side = d.str("side")
     }
     static func blank() -> Self { Self(workoutKey: "", exerciseKey: "", exerciseOrder: 0, setOrder: 0, day: "") }
 }

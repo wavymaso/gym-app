@@ -65,6 +65,12 @@ import SwiftData
     var end: Date?                            // nil while you're training
     var routineKey: String?
     var notes: String?
+    var exerciseNotes: String = ""            // JSON {exerciseKey: note}
+
+    var notesByExercise: [String: String] {
+        get { (try? JSONDecoder().decode([String: String].self, from: Data(exerciseNotes.utf8))) ?? [:] }
+        set { exerciseNotes = (try? JSONEncoder().encode(newValue)).map { String(decoding: $0, as: UTF8.self) } ?? "" }
+    }
 
     init(name: String, routineKey: String? = nil, start: Date = Date()) {
         self.key = UUID().uuidString; self.name = name; self.start = start; self.routineKey = routineKey
@@ -88,6 +94,8 @@ import SwiftData
     var done: Bool
     var restSeconds: Int
     var day: String
+    var group: Int = 0                        // > 0: in a superset with the other exercises sharing the number
+    var side: String = ""                     // "L" / "R" when tracking each side
 
     init(workoutKey: String, exerciseKey: String, exerciseOrder: Int, setOrder: Int, kind: SetKind = .normal, kg: Double = 0,
          reps: Int = 0, restSeconds: Int = 120, day: String) {
@@ -287,3 +295,45 @@ let exerciseLibrary: [(String, String, Muscle, [Muscle], Equipment)] = [
     ("treadmill", "Treadmill (minutes as reps)", .cardio, [], .machine),
     ("bike", "Bike (minutes as reps)", .cardio, [], .machine),
 ]
+
+extension ModelContext {
+    /// Put an exercise in a superset with the next one (joining its group if it has one).
+    func supersetWithNext(order: Int, in w: Workout) {
+        let all = sets(of: w.key)
+        let orders = Set(all.map(\.exerciseOrder)).sorted()
+        guard let i = orders.firstIndex(of: order), i + 1 < orders.count else { return }
+        let next = orders[i + 1]
+        let g = all.first { $0.exerciseOrder == order && $0.group > 0 }?.group
+            ?? all.first { $0.exerciseOrder == next && $0.group > 0 }?.group
+            ?? ((all.map(\.group).max() ?? 0) + 1)
+        for s in all where s.exerciseOrder == order || s.exerciseOrder == next { s.group = g }
+        commit()
+    }
+
+    func leaveSuperset(order: Int, in w: Workout) {
+        for s in sets(of: w.key) where s.exerciseOrder == order { s.group = 0 }
+        commit()
+    }
+
+    /// Track each side: every set not yet done becomes a left and a right set.
+    func trackSides(order: Int, in w: Workout) {
+        let rows = sets(of: w.key).filter { $0.exerciseOrder == order }.sorted { $0.setOrder < $1.setOrder }
+        guard !rows.contains(where: { !$0.side.isEmpty }) else { return }
+        var next = 0
+        for s in rows {
+            if s.done { s.setOrder = next; next += 1; continue }
+            s.side = "L"; s.setOrder = next
+            let r = WorkoutSet(workoutKey: s.workoutKey, exerciseKey: s.exerciseKey, exerciseOrder: s.exerciseOrder, setOrder: next + 1,
+                               kind: s.kindValue, kg: s.kg, reps: s.reps, restSeconds: s.restSeconds, day: s.day)
+            r.side = "R"; r.group = s.group
+            insert(r); next += 2
+        }
+        commit()
+    }
+
+    /// Last time's note on an exercise, if any.
+    func lastNote(for exerciseKey: String, before workoutKey: String) -> String? {
+        let ws = (try? fetch(FetchDescriptor<Workout>(predicate: #Predicate { $0.end != nil }, sortBy: [SortDescriptor(\.start, order: .reverse)]))) ?? []
+        return ws.first { $0.key != workoutKey && !($0.notesByExercise[exerciseKey] ?? "").isEmpty }?.notesByExercise[exerciseKey]
+    }
+}
