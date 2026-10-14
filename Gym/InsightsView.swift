@@ -18,7 +18,7 @@ struct InsightsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Picker("", selection: $range) { ForEach(InsightRange.allCases, id: \.self) { Text($0.label).tag($0) } }
                     .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16, alignment: .top)], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 150 : 150), spacing: 12, alignment: .top)], spacing: 12) {
                     tile("Average intake", d.avg.map { energy.format($0.kcal) } ?? "–", "\(d.logged.count) of \(d.span.count) days logged")
                     tile("On target", d.adherence.map { "\(Int(($0 * 100).rounded()))%" } ?? "–", "Days within 10% of your calories")
                     tile("Average protein", d.avg.map { "\(number($0.protein)) g" } ?? "–",
@@ -27,6 +27,7 @@ struct InsightsView: View {
                     tile("Expenditure", d.expenditure.last.map { energy.format($0.kcal) } ?? "–",
                          d.expenditureChange.map { "\(signedKcal($0, energy)) over this period" } ?? "")
                 }
+                HabitCard()
                 Card(title: "Calories", systemImage: "chart.bar") {
                     Chart {
                         ForEach(d.logged, id: \.day) { x in
@@ -87,6 +88,11 @@ struct InsightsView: View {
                 }
                 EnergyBalanceCard(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
                 WeeklyTable(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
+                let inRange = entries.filter { $0.day >= (d.span.first ?? "") }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
+                    NutrientTimingCard(entries: inRange, energy: energy)
+                    TopContributorsCard(entries: inRange, energy: energy)
+                }
             }
             .padding(pagePadding)
             .frame(maxWidth: 900, alignment: .leading)

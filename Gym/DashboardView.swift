@@ -43,6 +43,7 @@ struct DashboardView: View {
                     TodayRings(eaten: today, target: p.adjust(t.targets, on: dayKey()), energy: p.energy)
                     quickActions
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 280), spacing: 16, alignment: .top)], spacing: 16) {
+                        HabitCard()
                         ActivityCard()
                         WeekNutritionCard(entries: weekEntries, target: { d in target(on: d).map { p.adjust($0.targets, on: d) } }, energy: p.energy)
                         TrainingCard()
