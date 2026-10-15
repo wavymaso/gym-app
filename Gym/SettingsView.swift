@@ -5,7 +5,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var ctx
     @Query private var profiles: [Profile]
     @State private var confirmReset = false
-    @AppStorage("usdaKey") private var usdaKey = ""
+    @State private var usdaKey = Secrets.get("usdaKey")
     @State private var importing = false
     #if DEBUG
     @State private var debugSub = UserDefaults.standard.string(forKey: "settingsPage")      // testing only: -settingsPage expenditure
@@ -209,6 +209,7 @@ struct SettingsView: View {
         Form {
             Section {
                 TextField("USDA API key", text: $usdaKey, prompt: Text("Using the shared demo key"))
+                    .onChange(of: usdaKey) { _, v in Secrets.set("usdaKey", v) }
                 Link("Get a free key (takes a minute)", destination: URL(string: "https://fdc.nal.usda.gov/api-key-signup")!)
                 if LocalFoods.shared.available {
                     LabeledContent("Built-in products", value: "\(number(Double(LocalFoods.shared.count))) · \(LocalFoods.shared.built)")

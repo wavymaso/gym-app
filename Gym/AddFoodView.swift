@@ -21,7 +21,7 @@ struct AddFoodView: View {
     var startScanning = false                    // the + button's "Scan barcode"
     @Environment(\.modelContext) private var ctx
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("usdaKey") private var usdaKey = ""
+    private var usdaKey: String { Secrets.get("usdaKey") }
     @Query(sort: \Food.lastUsed, order: .reverse) private var foods: [Food]
 
     @State private var query: String = {

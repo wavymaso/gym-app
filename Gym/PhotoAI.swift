@@ -100,7 +100,7 @@ enum PhotoAI {
     }
 
     static var engine: Engine { Engine(rawValue: UserDefaults.standard.string(forKey: "photoEngine") ?? "") ?? .auto }
-    static var geminiKey: String { (UserDefaults.standard.string(forKey: "geminiKey") ?? "").trimmingCharacters(in: .whitespaces) }
+    static var geminiKey: String { Secrets.get("geminiKey") }
     static var geminiModel: String {
         let m = (UserDefaults.standard.string(forKey: "geminiModel") ?? "").trimmingCharacters(in: .whitespaces)
         return m.isEmpty ? "gemini-flash-latest" : m

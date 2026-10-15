@@ -405,7 +405,7 @@ struct PlateRow: View {
 /// Settings → Photo logging: which model, and the Gemini key.
 struct PhotoAISection: View {
     @AppStorage("photoEngine") private var engine: PhotoAI.Engine = .auto
-    @AppStorage("geminiKey") private var geminiKey = ""
+    @State private var geminiKey = Secrets.get("geminiKey")
     @AppStorage("geminiModel") private var geminiModel = ""
     #if os(macOS)
     @AppStorage("localVisionModel") private var localModel = ""
@@ -420,6 +420,7 @@ struct PhotoAISection: View {
             TextField("Model", text: $localModel, prompt: Text("qwen3-vl:8b"))
             #endif
             SecureField("Gemini API key", text: $geminiKey, prompt: Text("Paste your free key"))
+                .onChange(of: geminiKey) { _, v in Secrets.set("geminiKey", v) }
             Link("Get a free Gemini key", destination: URL(string: "https://aistudio.google.com/apikey")!)
             TextField("Gemini model", text: $geminiModel, prompt: Text("gemini-flash-latest"))
         } header: {
