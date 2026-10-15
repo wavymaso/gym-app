@@ -95,7 +95,7 @@ struct ActiveWorkoutView: View {
                 }
                 .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
                 Button { ctx.finish(workout) } label: { Text("Finish").font(.headline).padding(.horizontal, 6) }
-                    .buttonStyle(.borderedProminent).tint(palette.good).controlSize(.large)
+                    .buttonStyle(.borderedProminent).tint(palette.accent).foregroundStyle(palette.onAccent).controlSize(.large)
                     .disabled(done.isEmpty)
             }
             HStack(spacing: 0) {

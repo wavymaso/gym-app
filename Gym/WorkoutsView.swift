@@ -34,7 +34,9 @@ struct WorkoutsView: View {
             if new == nil, let k = lastActiveKey, let w = finished.first(where: { $0.key == k }) { summary = w }
             #if os(iOS)
             if new == nil { RestLive.end() }
-            else { Task { _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) } }
+            else if !UserDefaults.standard.bool(forKey: "noPrompts") {      // (snapshot runs skip the permission prompt)
+                Task { _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) }
+            }
             #endif
             lastActiveKey = new
         }

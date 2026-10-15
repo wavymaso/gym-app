@@ -11,7 +11,7 @@ xcrun simctl install $S build/Build/Products/Debug-iphonesimulator/Gym.app
 shot() {   # appearance finish name args…
   local a=$1 f=$2 n=$3; shift 3
   xcrun simctl terminate $S com.wavymaso.gym 2>/dev/null || true
-  xcrun simctl launch $S com.wavymaso.gym -inMemory YES -demo YES -macAddress x -macCode "" -whatsNewSeen 99 -appearance $a -finish $f "$@" >/dev/null
+  xcrun simctl launch $S com.wavymaso.gym -inMemory YES -demo YES -macAddress x -macCode "" -whatsNewSeen 99 -noPrompts YES -appearance $a -finish $f "$@" >/dev/null
   sleep 7
   xcrun simctl io $S screenshot "$OUT/$a-$f-$n.png" >/dev/null 2>&1
 }
