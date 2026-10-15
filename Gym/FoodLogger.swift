@@ -44,7 +44,7 @@ struct CartItem: Identifiable {
 struct FoodLogger: View {
     let day: String
     var time: Date? = nil
-    var start: LoggerTab = .search
+    var start: LoggerTab? = nil               // nil: the tab you used last
     var startCamera = false                    // AI tab: open the camera straight away
     var describe = false                       // AI tab: start on Describe
 
@@ -60,6 +60,7 @@ struct FoodLogger: View {
     @State private var reviewing = false
     @State private var confirmClose = false
     @State private var started = false
+    @State private var bump = false
     @Namespace private var underline
 
     var body: some View {
@@ -110,6 +111,7 @@ struct FoodLogger: View {
             }
         }
         .interactiveDismissDisabled(!cart.isEmpty)
+        .onChange(of: tab) { _, t in UserDefaults.standard.set(t.rawValue, forKey: "lastLoggerTab"); Haptics.tick() }
         .appStyle()
         #if os(macOS)
         .frame(width: 640, height: 760)
@@ -117,7 +119,9 @@ struct FoodLogger: View {
         .onAppear {
             guard !started else { return }
             started = true
-            tab = LoggerTab.available.contains(start) ? start : .search
+            let last = LoggerTab(rawValue: UserDefaults.standard.string(forKey: "lastLoggerTab") ?? "") ?? .search
+            let s = start ?? (last == .scan ? .search : last)      // never reopen straight into the camera
+            tab = LoggerTab.available.contains(s) ? s : .search
             when = time ?? defaultTime(for: day)
             #if DEBUG
             if let k = UserDefaults.standard.string(forKey: "loggerFood") { chosen = ctx.food(key: k) }   // testing only
@@ -178,12 +182,15 @@ struct FoodLogger: View {
             } else {
                 HStack(spacing: -8) {
                     ForEach(cart.suffix(4)) { c in
+                        // Each food drops into the cart as a coloured chip.
                         Circle().fill(dominant(c.nutrients).gradient).frame(width: 22, height: 22)
                             .overlay(Circle().stroke(Color.pageBackground, lineWidth: 2))
+                            .transition(.asymmetric(insertion: .scale(scale: 0.2).combined(with: .offset(y: -18)).combined(with: .opacity),
+                                                    removal: .opacity))
                     }
                 }
                 .padding(.leading, 12)
-                Text("\(cart.count)").font(.callout.weight(.bold)).monospacedDigit()
+                Text("\(cart.count)").font(.callout.weight(.bold)).liveNumber(Double(cart.count))
                 Spacer(minLength: 0)
             }
             Button(action: { cart.isEmpty ? dismiss() : logAll() }) {
@@ -196,7 +203,15 @@ struct FoodLogger: View {
         }
         .frame(maxWidth: .infinity, minHeight: 44)
         .background(Color.raisedBackground, in: Capsule())
-        .animation(Motion.snappy, value: cart.count)
+        .scaleEffect(bump && !Motion.reduceMotion ? 1.06 : 1)
+        .animation(Motion.pick(Motion.bouncy), value: cart.count)
+        .animation(Motion.pick(Motion.bouncy), value: bump)
+        .onChange(of: cart.count) { old, new in
+            guard new > old else { return }
+            Haptics.tap()
+            bump = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { bump = false }
+        }
     }
 
     /// The colour of the macro that gives most of the calories.

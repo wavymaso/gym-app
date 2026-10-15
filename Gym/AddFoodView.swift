@@ -341,7 +341,8 @@ struct AddFoodView: View {
             if embedded != nil {
                 let (a, u) = f.suggestedAmount
                 MFFoodRow(name: f.name, brand: f.brand, n: f.nutrients(a, unit: u), amount: amountText(a, u, f), favorite: f.isFavorite,
-                          open: { pick(f) }, plus: quickAdd.map { q in { q(f, a, u) } })
+                          open: { pick(f) }, plus: quickAdd.map { q in { q(f, a, u) } },
+                          logNow: quickAdd.flatMap { q in logFoods.map { l in { q(f, a, u); l() } } })
             } else {
                 Button { pick(f) } label: {
                     FoodRowLabel(name: f.name, brand: f.brand, source: f.source, per100: f.per100, unit: f.baseUnit, favorite: f.isFavorite)
@@ -662,6 +663,7 @@ struct MFFoodRow: View {
     var busy = false
     let open: () -> Void
     let plus: (() -> Void)?
+    var logNow: (() -> Void)? = nil          // long-press ＋: log it straight away
     @State private var added = false
 
     var body: some View {
@@ -686,20 +688,26 @@ struct MFFoodRow: View {
             .buttonStyle(.plain)
             if busy { ProgressView().controlSize(.small) }
             if let plus {
-                Button {
-                    plus()
-                    animate(Motion.snappy) { added = true }
-                    #if os(iOS)
-                    Haptics.press()
-                    #endif
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { animate { added = false } }
-                } label: {
-                    Image(systemName: added ? "checkmark" : "plus").font(.headline)
-                        .frame(width: 40, height: 40)
-                        .background(added ? palette.good : Color.raisedBackground, in: Circle())
-                        .foregroundStyle(added ? .white : .primary)
-                }
-                .buttonStyle(.plain)
+                Image(systemName: added ? "checkmark" : "plus").font(.headline)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 40, height: 40)
+                    .background(added ? palette.good : Color.raisedBackground, in: Circle())
+                    .foregroundStyle(added ? .white : .primary)
+                    .scaleEffect(added && !Motion.reduceMotion ? 1.1 : 1)
+                    .contentShape(Circle())
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        guard let logNow else { return }
+                        Haptics.press()
+                        logNow()
+                    }
+                    .onTapGesture {
+                        plus()
+                        animate(Motion.bouncy) { added = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { animate { added = false } }
+                    }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Add to cart")
+                    .accessibilityAction(named: "Log now") { logNow?() }
             }
         }
         .padding(.vertical, 6)
