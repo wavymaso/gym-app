@@ -25,7 +25,8 @@ extension ModelContext {
 
     private func dailyIntakeUncached() -> [String: Double] {
         let today = dayKey()
-        let partial = partialDays                               // marked "partially logged": treated as not logged
+        // Marked "partially logged", or looking half-logged and not yet answered: treated as not logged.
+        let partial = partialDays.union(suspectedPartialDays)
         var out: [String: Double] = [:]
         for e in (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day < today }))) ?? [] where !partial.contains(e.day) {
             out[e.day, default: 0] += e.nutrients.kcal

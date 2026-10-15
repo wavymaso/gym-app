@@ -36,6 +36,7 @@ struct SavedItem: Codable, Hashable {
     var text: String
     var partial: Bool
     var waterEvent: Bool = false            // salty meal, creatine start, travel, a big carb day: scale jump is water
+    var complete: Bool = false              // you confirmed a day that looked half-logged was complete
 
     init(day: String, text: String = "", partial: Bool = false) { self.day = day; self.text = text; self.partial = partial }
 }
@@ -65,6 +66,29 @@ extension ModelContext {
     /// Days marked as partially logged (left out of expenditure).
     var partialDays: Set<String> {
         Set(((try? fetch(FetchDescriptor<DayNote>(predicate: #Predicate { $0.partial }))) ?? []).map(\.day))
+    }
+
+    /// The last 4 weeks' days that look half-logged and you haven't answered for.
+    var suspectedPartialDays: [String] {
+        let today = dayKey(), from = addDays(today, -28), histFrom = addDays(today, -90)
+        let notes = (try? fetch(FetchDescriptor<DayNote>())) ?? []
+        let answered = Set(notes.filter { $0.partial || $0.complete }.map(\.day))
+        let entries = (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= histFrom && $0.day < today }))) ?? []
+        let byDay = Dictionary(grouping: entries, by: \.day)
+        let history = byDay.map { LoggedDay(day: $0.key, entries: $0.value.count, kcal: $0.value.reduce(0) { $0 + $1.nutrients.kcal }, target: nil) }
+        let recent = byDay.filter { $0.key >= from && !answered.contains($0.key) }.map { d, es in
+            LoggedDay(day: d, entries: es.count, kcal: es.reduce(0) { $0 + $1.nutrients.kcal }, target: dayTargets(on: d)?.kcal)
+        }
+        return PartialDayRule.suspects(recent, usual: PartialDayRule.usualEntries(history)).sorted()
+    }
+
+    /// Your answer for a day that looked half-logged.
+    func answerPartial(_ day: String, complete: Bool) {
+        let n = ((try? fetch(FetchDescriptor<DayNote>(predicate: #Predicate { $0.day == day }))) ?? []).first ?? {
+            let x = DayNote(day: day); insert(x); return x
+        }()
+        if complete { n.complete = true; n.partial = false } else { n.partial = true; n.complete = false }
+        commit()
     }
 }
 
