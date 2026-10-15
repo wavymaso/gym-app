@@ -38,7 +38,7 @@ struct Palette: Equatable {
     var onInverse: Color { background }                    // …with the page tone on it
 
     /// Brushed metal for primary buttons, the main ring and selection: a 3-stop gradient in the finish's hue.
-    var accentFill: AnyShapeStyle { reduceDepth ? AnyShapeStyle(accent) : AnyShapeStyle(tokens.metal) }
+    var accentFill: AnyShapeStyle { reduceDepth ? AnyShapeStyle(accent) : MetalTexture.paint(tokens) }
     var titleStyle: AnyShapeStyle { AnyShapeStyle(text1) }
 
     static func make(_ a: Appearance, _ f: Finish, systemDark: Bool = true, reduceDepth: Bool = false) -> Palette {

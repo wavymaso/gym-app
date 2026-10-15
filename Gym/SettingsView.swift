@@ -283,7 +283,7 @@ struct AppearanceSection: View {
                     let ft = Tokens.make(t.appearance, f)
                     Button { Haptics.tick(); finish = f } label: {
                         VStack(spacing: Space.s) {
-                            Circle().fill(ft.metal).frame(width: 34, height: 34)
+                            Circle().fill(MetalTexture.paint(ft)).frame(width: 34, height: 34)
                                 .overlay(Circle().strokeBorder(t.separator.color.opacity(t.isDark ? 0 : 1), lineWidth: 0.5))
                                 .padding(4)
                                 .overlay(Circle().strokeBorder(f == finish ? t.accent.color : .clear, lineWidth: 1.5))
