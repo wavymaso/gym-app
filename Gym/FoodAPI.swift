@@ -194,20 +194,34 @@ enum FoodAPI {
             req.httpBody = body
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let data: Data, resp: URLResponse
-        do {
-            (data, resp) = try await URLSession.shared.data(for: req)
-        } catch let e as URLError where e.code == .cancelled {
-            throw e
-        } catch {
-            throw FoodAPIError(message: "Couldn't reach \(usda ? "USDA" : "Open Food Facts"). Check your internet connection.")
+        let name = usda ? "USDA" : "Open Food Facts"
+        var data = Data(), resp: URLResponse?
+        // Brief drops and busy servers: try again after 0,6 s and 1,5 s before giving up.
+        for (attempt, wait) in [0.0, 0.6, 1.5].enumerated() {
+            if wait > 0 { try await Task.sleep(nanoseconds: UInt64(wait * 1e9)) }
+            do {
+                (data, resp) = try await URLSession.shared.data(for: req)
+                let c = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                if (500...599).contains(c) || (c == 429 && !usda), attempt < 2 { continue }
+                break
+            } catch let e as URLError where e.code == .cancelled {
+                throw e
+            } catch {
+                if attempt < 2 { continue }
+                Log.network.error("\(name, privacy: .public) unreachable: \(error.localizedDescription, privacy: .public)")
+                throw FoodAPIError(message: "Couldn't reach \(name). Check your internet connection; the built-in database still works offline.")
+            }
         }
         let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        if code == 429 && !usda { throw FoodAPIError(message: "Open Food Facts is limiting searches right now. Try again in a minute.") }
         if usda && (code == 429 || code == 403) {
             throw FoodAPIError(message: "USDA search limit reached. Add your free USDA API key in Settings for unlimited searches.")
         }
         if code == 404 && allow404 { return [:] }
-        guard code == 200 else { throw FoodAPIError(message: "\(usda ? "USDA" : "Open Food Facts") answered with error \(code).") }
+        guard code == 200 else {
+            Log.network.error("\(name, privacy: .public) error \(code)")
+            throw FoodAPIError(message: code >= 500 ? "\(name) is having problems (error \(code)). Try again later." : "\(name) answered with error \(code).")
+        }
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
     }
 }
