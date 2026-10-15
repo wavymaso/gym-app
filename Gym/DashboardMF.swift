@@ -138,6 +138,9 @@ struct SparkCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title), \(value) \(unit), \(period)")
+        .accessibilityAddTraits(.isButton)
     }
 
     @ViewBuilder private var chart: some View {

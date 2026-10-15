@@ -391,6 +391,8 @@ struct Ring: View {
             }
         }
         .padding(lineWidth / 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityValue("\(Int((progress * 100).rounded())) percent")
         .scaleEffect(closed && !Motion.reduceMotion ? 1.05 : 1)
         .shadow(color: closed ? color.opacity(0.7) : .clear, radius: closed ? lineWidth * 1.6 : 0)
         .onAppear { animate(Motion.smooth) { shown = progress } }

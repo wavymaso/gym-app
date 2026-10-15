@@ -504,6 +504,9 @@ struct EntryCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.name), \(Int(entry.nutrients.kcal)) calories, \(Int(entry.nutrients.protein)) grams protein, \(entry.amountText)")
+        .accessibilityHint(tap == nil ? "Edit" : "Select")
     }
 
     private func dominant(_ n: Nutrients) -> Color {

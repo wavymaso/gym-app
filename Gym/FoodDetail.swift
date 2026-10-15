@@ -313,6 +313,7 @@ struct FoodDetailView: View {
                 }
             }
             .buttonStyle(PadButtonStyle(kind: ["/", "␣", "⌫"].contains(k) ? .dark : .key))
+            .accessibilityLabel(["⌫": "Delete", "␣": "Space", "/": "Fraction", ".": "Decimal point"][k] ?? k)
         }
     }
 

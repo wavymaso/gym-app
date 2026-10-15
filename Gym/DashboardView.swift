@@ -14,6 +14,7 @@ struct DashboardView: View {
     @Query private var loggedDays: [FoodEntry]
     @AppStorage("dashLayout") private var layoutJSON = ""
     @State private var heroPage = UserDefaults.standard.integer(forKey: "heroPage")      // testing: -heroPage 1
+    @State private var heroHeights: [Int: CGFloat] = [:]
     @State private var detail: InsightKind? = {
         #if DEBUG
         if let k = UserDefaults.standard.string(forKey: "insight") { return InsightKind(rawValue: k) }   // testing: -insight expenditure
@@ -175,6 +176,12 @@ struct DashboardView: View {
 
     /// Daily nutrition, the week against targets, and energy balance: swipe between them on the
     /// phone; on the Mac, the rings across the top and the other two side by side.
+    private func heroPage<V: View>(_ v: V, _ i: Int) -> some View {
+        v.padding(.horizontal, 2).fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heroHeights[i] = $0 }
+            .frame(maxHeight: .infinity, alignment: .top).tag(i)
+    }
+
     @ViewBuilder private func heroWidgets(_ eaten: Nutrients, _ t: Targets, _ p: Profile) -> some View {
         let rings = TodayRings(eaten: eaten.targets, target: t, energy: p.energy)
         let week = Card(title: "Weekly nutrition", systemImage: "calendar") {
@@ -188,14 +195,19 @@ struct DashboardView: View {
         }
         if isPhone {
             TabView(selection: $heroPage) {
-                rings.padding(.horizontal, 2).tag(0)
-                week.padding(.horizontal, 2).tag(1)
-                balance.padding(.horizontal, 2).tag(2)
+                // Pinned to the top: cards of different heights don't float in the middle of the pager.
+                heroPage(rings, 0)
+                heroPage(week, 1)
+                balance.padding(.horizontal, 2).fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heroHeights[2] = $0 }
+                    .frame(maxHeight: .infinity, alignment: .top).tag(2)
             }
             #if os(iOS)
             .tabViewStyle(.page(indexDisplayMode: .always))
             #endif
-            .frame(height: 452)
+            // As tall as the card showing (plus the page dots), so there's never an empty band.
+            .frame(height: (heroHeights[heroPage] ?? 452) + 34)
+            .animation(Motion.pick(Motion.smooth), value: heroPage)
         } else {
             rings
             HStack(alignment: .top, spacing: 16) { week; balance }
