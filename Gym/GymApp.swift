@@ -207,6 +207,10 @@ struct MainView: View {
         }
         .onAppear { showWhatsNew(); handlePending() }
         .onReceive(NotificationCenter.default.publisher(for: .gymOpenAction)) { _ in handlePending() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            NSTimeZone.resetSystemTimeZone()        // landed somewhere new: "today" follows
+            dataVersion += 1
+        }
         #else
         // The tabs stay alive once opened (scroll position, navigation), and change with a short
         // spring: the new one fades in from the side it's on, the old one fades back.
@@ -240,6 +244,10 @@ struct MainView: View {
         .sheet(item: $quick) { quickSheet($0) }
         .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
         .onReceive(NotificationCenter.default.publisher(for: .gymOpenAction)) { _ in handlePending() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            NSTimeZone.resetSystemTimeZone()        // landed somewhere new: "today" follows
+            dataVersion += 1
+        }
         .onAppear {
             if let p = page, p != .dashboard { open(p) }
             showWhatsNew()

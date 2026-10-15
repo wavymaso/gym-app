@@ -304,7 +304,10 @@ func parseNumber(_ text: String) -> Double? {
 
 let dayFormatter: DateFormatter = {
     let f = DateFormatter()
-    f.calendar = Calendar(identifier: .gregorian)
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = .autoupdatingCurrent           // follows you when you travel, without a relaunch
+    f.calendar = cal
+    f.timeZone = .autoupdatingCurrent
     f.locale = Locale(identifier: "en_US_POSIX")
     f.dateFormat = "yyyy-MM-dd"
     return f
@@ -316,8 +319,32 @@ let appLocale = Locale(identifier: "en_GB")
 /// "0,5%", "0,25%", "1%".
 func percent(_ x: Double) -> String { "\(number(x, digits: x == x.rounded() ? 0 : (x * 10 == (x * 10).rounded() ? 1 : 2)))%" }
 
-func dayKey(_ d: Date = Date()) -> String { dayFormatter.string(from: d) }
-func date(fromKey k: String) -> Date { dayFormatter.date(from: k) ?? Date() }
+/// The calendar day of a moment, where you are now (the zone is read each time, so it follows travel).
+func dayKey(_ d: Date) -> String {
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = NSTimeZone.default
+    let c = cal.dateComponents([.year, .month, .day], from: d)
+    return String(format: "%04d-%02d-%02d", c.year ?? 2000, c.month ?? 1, c.day ?? 1)
+}
+
+/// Today, the day you're logging into: before the day-start hour (Settings → Food log, default
+/// midnight) it's still yesterday, for late dinners and nights out.
+func dayKey() -> String { todayKey(now: Date()) }
+
+func todayKey(now: Date) -> String {
+    let start = dayStartHour
+    return dayKey(start > 0 ? now.addingTimeInterval(-Double(start) * 3600) : now)
+}
+
+/// 0 (midnight) to 6.
+var dayStartHour: Int { min(max(UserDefaults.standard.integer(forKey: "dayStartHour"), 0), 6) }
+func date(fromKey k: String) -> Date {
+    let p = k.split(separator: "-").compactMap { Int($0) }
+    guard p.count == 3 else { return Date() }
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = NSTimeZone.default
+    return cal.date(from: DateComponents(year: p[0], month: p[1], day: p[2])) ?? Date()
+}
 
 /// "+0,35 kg", "−0,20 kg".
 func signed(_ unit: WeightUnit, _ kg: Double) -> String {

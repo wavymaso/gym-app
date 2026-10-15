@@ -34,6 +34,7 @@ struct SettingsView: View {
                         row("bolt.fill", "Expenditure", "Algorithm, starting estimate, modifiers") { ExpenditureSettingsView() },
                         row("chart.line.uptrend.xyaxis", "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() },
                         row("fork.knife", "Food search", usdaKey.isEmpty ? "USDA demo key" : "Your USDA key") { foodSearchPage },
+                        row("moon.stars", "Day start", dayStartHour == 0 ? "Midnight" : "\(dayStartHour):00 · late meals count for the day before") { page("Day start") { DayStartSection() } },
                     ])
                     group("App", [
                         rowAction("square.grid.2x2", "Dashboard", "Sections, cards, consumed or remaining") { customizing = true },
@@ -333,5 +334,21 @@ struct PrivacySection: View {
             Label("API keys are kept in the Keychain.", systemImage: "key")
         } header: { Text("What leaves this device") }
         .font(.callout)
+    }
+}
+
+
+struct DayStartSection: View {
+    @AppStorage("dayStartHour") private var hour = 0
+    var body: some View {
+        Section {
+            Picker("Day starts at", selection: $hour) {
+                Text("Midnight").tag(0)
+                ForEach(1...6, id: \.self) { h in Text(String(format: "%02d:00", h)).tag(h) }
+            }
+            .onChange(of: hour) { _, _ in dataVersion += 1 }
+        } footer: {
+            Text("Food logged before this counts for the day before: a late dinner or a night out stays with that day. Weigh-ins and past days don't change.")
+        }
     }
 }
