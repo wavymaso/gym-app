@@ -43,7 +43,7 @@ struct ActiveWorkoutView: View {
                 }
                 Button { picking = true } label: {
                     Label("Add exercise", systemImage: "plus").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
-                        .background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                         .foregroundStyle(palette.accent)
                 }
                 .buttonStyle(.plain)
@@ -244,7 +244,7 @@ private struct ExerciseBlock: View {
                       axis: .vertical)
                 .font(.callout).lineLimit(1...3).textFieldStyle(.plain)
                 .padding(.horizontal, 10).padding(.vertical, 7)
-                .background(Color.raisedBackground.opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.raisedBackground.opacity(0.6), in: RoundedRectangle(cornerRadius: Radius.s))
                 .onSubmit { ctx.commit() }
             if let t = target, !rows.contains(where: \.done) {
                 Label {
@@ -252,7 +252,7 @@ private struct ExerciseBlock: View {
                 } icon: { Image(systemName: "arrow.up.right.circle.fill") }
                 .font(.caption.weight(.semibold)).foregroundStyle(palette.good)
                 .padding(.horizontal, 10).padding(.vertical, 6)
-                .background(palette.good.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .background(palette.good.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.s))
             }
             Grid(alignment: .leading, horizontalSpacing: isPhone ? 10 : 14, verticalSpacing: 8) {
                 GridRow {
@@ -304,7 +304,7 @@ private struct ExerciseBlock: View {
                                 Image(systemName: "checkmark").font(.callout.weight(.heavy))
                                     .foregroundStyle(row.done ? .white : .secondary)
                                     .frame(width: 32, height: 28)
-                                    .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: 8))
+                                    .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                             .buttonStyle(.plain)
                             if let r = records[row.persistentModelID], !r.isEmpty {
@@ -328,7 +328,7 @@ private struct ExerciseBlock: View {
         .overlay { if rows[0].group > 0 { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(supersetColor.opacity(0.7), lineWidth: 2) } }
     }
 
-    private var supersetColor: Color { [Macro.fat.color, Macro.carbs.color, Color(hex: 0xA78BFA), Macro.protein.color][(max(rows[0].group, 1) - 1) % 4] }
+    private var supersetColor: Color { [Macro.fat.color, Macro.carbs.color, Color.extraTone, Macro.protein.color][(max(rows[0].group, 1) - 1) % 4] }
 
     /// Today's aim from last time (double progression in the routine's rep range).
     private var target: Progression? {

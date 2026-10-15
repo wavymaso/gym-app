@@ -128,7 +128,7 @@ struct EditGoalFlow: View {
                         Text("What is your target goal rate?").font(.title3.weight(.bold))
                         VStack(spacing: 14) {
                             Text(rateName).font(.headline).padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(palette.good.opacity(0.18), in: RoundedRectangle(cornerRadius: 8))
+                                .background(palette.good.opacity(0.18), in: RoundedRectangle(cornerRadius: Radius.s))
                             Slider(value: $rate, in: rateRange, step: 0.01).tint(palette.good)
                             if goal == .lose, (ctx.activeProgram?.mode ?? "coached") == "coached",
                                let floor = ctx.bodyInfo(guardrails: true)?.floorKcal, budget.kcal <= floor + 5 {
@@ -172,7 +172,7 @@ struct EditGoalFlow: View {
             Text(suffix).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 12).frame(height: 46)
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.2)))
+        .overlay(RoundedRectangle(cornerRadius: Radius.s).stroke(Color.primary.opacity(0.2)))
     }
 
     private func tile(_ value: String, _ label: String, _ bg: Color) -> some View {
@@ -181,7 +181,7 @@ struct EditGoalFlow: View {
             Text(label).font(.caption)
         }
         .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        .background(bg, in: RoundedRectangle(cornerRadius: 12))
+        .background(bg, in: RoundedRectangle(cornerRadius: Radius.m))
     }
 
     // MARK: Step 2

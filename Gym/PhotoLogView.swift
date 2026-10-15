@@ -136,7 +136,7 @@ struct PhotoLogView: View {
             ZStack(alignment: .topTrailing) {
                 Image(decorative: preview, scale: 1).resizable().scaledToFill()
                     .frame(maxWidth: .infinity).frame(height: 260).clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                 Button { jpeg = nil; self.preview = nil } label: {
                     Image(systemName: "xmark.circle.fill").font(.title2).symbolRenderingMode(.palette)
                         .foregroundStyle(.white, .black.opacity(0.5))
@@ -164,7 +164,7 @@ struct PhotoLogView: View {
                 #endif
             }
             .padding(22).frame(maxWidth: .infinity)
-            .modifier(CardSurface(cornerRadius: 18))
+            .modifier(CardSurface(cornerRadius: Radius.l))
         }
     }
 
@@ -189,8 +189,8 @@ struct PhotoLogView: View {
         VStack(spacing: 18) {
             if let preview {
                 Image(decorative: preview, scale: 1).resizable().scaledToFill()
-                    .frame(width: 180, height: 180).clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.black.opacity(0.25)))
+                    .frame(width: 180, height: 180).clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(.black.opacity(0.25)))
             }
             ProgressView().controlSize(.large)
             Text(jpeg == nil ? "Finding foods…" : "Looking at your meal…").font(.headline)
@@ -275,7 +275,7 @@ struct PhotoLogView: View {
         return HStack(spacing: 14) {
             if let preview {
                 Image(decorative: preview, scale: 1).resizable().scaledToFill()
-                    .frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(energy.format(total.kcal)).font(.number(26))
@@ -289,7 +289,7 @@ struct PhotoLogView: View {
             Spacer()
         }
         .padding(14)
-        .modifier(CardSurface(cornerRadius: 18))
+        .modifier(CardSurface(cornerRadius: Radius.l))
     }
 
     private func macro(_ l: String, _ g: Double, _ c: Color) -> some View {
@@ -374,7 +374,7 @@ struct PlateRow: View {
             }
         }
         .padding(14)
-        .modifier(CardSurface(cornerRadius: 18))
+        .modifier(CardSurface(cornerRadius: Radius.l))
         .opacity(item.included ? 1 : 0.6)
     }
 

@@ -22,15 +22,15 @@ struct QuickActionsSheet: View {
             Text("Quick add").font(.number(22)).padding(.top, 22)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
                 tile("Log food", "magnifyingglass", palette.accent) { pick(.food) }
-                tile("Photo", "camera.fill", Color(hex: 0xA77BF3)) { pick(.photo) }
-                tile("Describe", "text.bubble.fill", Color(hex: 0x7B8CF3)) { pick(.describe) }
+                tile("Photo", "camera.fill", Color.weightTone) { pick(.photo) }
+                tile("Describe", "text.bubble.fill", Color.calmTone) { pick(.describe) }
                 #if os(iOS)
                 tile("Scan barcode", "barcode.viewfinder", Macro.carbs.color) { pick(.scan) }
                 #endif
                 tile("Scan label", "text.viewfinder", Macro.fat.color) { pick(.label) }
                 tile("Quick add", "bolt.fill", Macro.fat.color.mix(with: .orange, by: 0.4)) { pick(.quickAdd) }
                 tile("Weigh in", "scalemass.fill", DashItem.color("weighIn")) { pick(.weighIn) }
-                tile("Water +250", "drop.fill", Color(hex: 0x3BB2F6)) { ctx.addWater(250); dismiss() }
+                tile("Water +250", "drop.fill", Color.waterTone) { ctx.addWater(250); dismiss() }
                 tile("Train", "dumbbell.fill", Macro.protein.color) { dismiss(); train() }
             }
             Spacer(minLength: 0)
@@ -57,7 +57,7 @@ struct QuickActionsSheet: View {
                 Text(title).font(.caption.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity).padding(.vertical, 12)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -162,11 +162,11 @@ extension Page {
         case .dashboard: return palette.accent
         case .food: return Macro.carbs.color
         case .weight: return DashItem.color("weight")
-        case .insights: return Color(hex: 0x3BB2F6)
+        case .insights: return Color.waterTone
         case .strategy: return Macro.fat.color
         case .workouts: return Macro.protein.color
         case .exercises: return Macro.protein.color.mix(with: .orange, by: 0.4)
-        case .settings: return Color(hex: 0x8E8E93)
+        case .settings: return Color.neutralTone
         }
     }
 }

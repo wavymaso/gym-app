@@ -66,12 +66,12 @@ struct WeeklyReview: View {
                 Chart(Array(exp), id: \.day) { p in
                     let band = (1 - p.confidence) * 280 + 40
                     AreaMark(x: .value("Day", date(fromKey: p.day)), yStart: .value("lo", p.kcal - band), yEnd: .value("hi", p.kcal + band))
-                        .foregroundStyle(Color(hex: 0xFF8A5B).opacity(0.2))
-                    LineMark(x: .value("Day", date(fromKey: p.day)), y: .value("kcal", p.kcal)).foregroundStyle(Color(hex: 0xFF8A5B))
+                        .foregroundStyle(Color.expenditureTone.opacity(0.2))
+                    LineMark(x: .value("Day", date(fromKey: p.day)), y: .value("kcal", p.kcal)).foregroundStyle(Color.expenditureTone)
                 }
                 .chartYScale(domain: .automatic(includesZero: false)).chartXAxis(.hidden)
                 .dayTip("Expenditure", days: exp.map(\.day)) { d in
-                    exp.filter { $0.day == d }.map { TipRow(label: "Estimate", value: energy.format($0.kcal), color: Color(hex: 0xFF8A5B)) }
+                    exp.filter { $0.day == d }.map { TipRow(label: "Estimate", value: energy.format($0.kcal), color: Color.expenditureTone) }
                 }
                 .frame(height: 90)
                 Text("Expenditure, last 4 weeks. The band is how unsure the estimate still is; it narrows as you log.")
@@ -83,7 +83,7 @@ struct WeeklyReview: View {
             ForEach(flags(rate: rate, trendKg: trendKg, goal: program?.goalValue, target: target), id: \.self) { f in
                 Label(f, systemImage: "lightbulb.fill").font(.callout)
                     .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                    .background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.m))
             }
         }
     }
@@ -142,7 +142,7 @@ struct WeeklyReview: View {
         let s = sleep
         if let now = s.now {
             HStack(spacing: 12) {
-                Image(systemName: "bed.double.fill").font(.title3).foregroundStyle(Color(hex: 0x7B8CF3))
+                Image(systemName: "bed.double.fill").font(.title3).foregroundStyle(Color.calmTone)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Sleep \(number(now, digits: 1)) h a night").font(.headline)
                     Text(s.before.map { "\($0 <= now ? "+" : "−")\(number(abs(now - $0), digits: 1)) h on the week before" } ?? "from Apple Health")

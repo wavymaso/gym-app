@@ -212,7 +212,7 @@ struct StrengthRetentionCard: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    .padding(12).background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                    .padding(12).background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.m))
                 } else {
                     Text("Estimated 1RM from your best working set each week (Epley). Holding strength while the scale drops means you're keeping muscle.")
                         .font(.caption).foregroundStyle(.secondary)

@@ -136,9 +136,9 @@ struct InsightDetailView: View {
 
     private var color: Color {
         switch kind {
-        case .weightTrend: return Color(hex: 0xA77BF3)
+        case .weightTrend: return Color.weightTone
         case .scaleWeight, .goal: return palette.good
-        case .expenditure: return Color(hex: 0xFF8A5B)
+        case .expenditure: return Color.expenditureTone
         case .energyBalance: return palette.calories
         case .nutrition: return macro.color
         }
@@ -534,7 +534,7 @@ struct InsightDetailView: View {
                 if !unit.isEmpty { Text(unit).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center) }
             }
             .frame(width: 120, height: 100)
-            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
             VStack(alignment: .leading, spacing: 6) {
                 Text(title).font(.headline)
                 Text(text).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

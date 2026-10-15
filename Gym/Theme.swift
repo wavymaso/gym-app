@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 // The look of the app: themes (dark and bold by default), colours, cards, rings.
 // The chosen palette is global so every view, sheet and window uses the same one;
@@ -208,7 +211,15 @@ enum Macro: CaseIterable {
 
 extension Font {
     /// Big rounded numbers (calories left, weights, totals).
-    static func number(_ size: CGFloat, weight: Font.Weight = .bold) -> Font { .system(size: size, weight: weight, design: .rounded) }
+    /// (Scales with the Dynamic Type setting, from the size it's designed at.)
+    static func number(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        #if os(iOS)
+        let scaled = min(UIFontMetrics(forTextStyle: .body).scaledValue(for: size), size * 1.6)    // big numbers grow, but stay on screen
+        return .system(size: scaled, weight: weight, design: .rounded)
+        #else
+        return .system(size: size, weight: weight, design: .rounded)
+        #endif
+    }
 }
 
 extension View {

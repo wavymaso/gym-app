@@ -32,7 +32,7 @@ struct SyncSection: View {
                 if !server.address.isEmpty, let qr = qrImage("gymsync:\(SyncClient.normalise(server.address))#\(server.code)") {
                     HStack {
                         Image(nsImage: qr).interpolation(.none).resizable().frame(width: 220, height: 220)
-                            .padding(10).background(.white, in: RoundedRectangle(cornerRadius: 12))
+                            .padding(10).background(.white, in: RoundedRectangle(cornerRadius: Radius.m))
                         Text("On your iPhone: Gym → Settings → Connect to your Mac → Scan the code.")
                             .font(.callout).foregroundStyle(.secondary)
                     }

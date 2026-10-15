@@ -257,7 +257,7 @@ struct WorkoutsView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(CardSurface(cornerRadius: 18))
+        .modifier(CardSurface(cornerRadius: Radius.l))
         .contextMenu {
             Button("Start") { ctx.startWorkout(routine: r) }
             Button("Edit…") { editingRoutine = r }

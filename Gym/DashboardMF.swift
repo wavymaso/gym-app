@@ -215,9 +215,9 @@ struct ShortcutsSheet: View {
                         big("Quick Add", "bolt.fill", palette.fat) { pick(.quickAdd) }
                     }
                     .padding(.vertical, 18)
-                    row("AI photo", "camera.fill", Color(hex: 0xA77BF3)) { pick(.photo) }
-                    row("Describe a meal", "quote.opening", Color(hex: 0x7B8CF3)) { pick(.describe) }
-                    row("Water +250 ml", "drop.fill", Color(hex: 0x3BB2F6)) {
+                    row("AI photo", "camera.fill", Color.weightTone) { pick(.photo) }
+                    row("Describe a meal", "quote.opening", Color.calmTone) { pick(.describe) }
+                    row("Water +250 ml", "drop.fill", Color.waterTone) {
                         ctx.addWater(250)
                         #if os(iOS)
                         Haptics.success()
@@ -225,7 +225,7 @@ struct ShortcutsSheet: View {
                         dismiss()
                     }
                     row("Scan a label", "text.viewfinder", palette.fat) { pick(.label) }
-                    row("Recipe from a link", "link", Color(hex: 0xFF5C86)) { pick(.recipeLink) }
+                    row("Recipe from a link", "link", Color.linkTone) { pick(.recipeLink) }
                     row("Start a workout", "dumbbell.fill", palette.protein) { dismiss(); train() }
                 }
             }

@@ -151,7 +151,7 @@ struct WeekStrip: View {
                             .frame(width: 34, height: 34)
                         }
                         .frame(maxWidth: .infinity).padding(.vertical, 8)
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .overlay(RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
                             .stroke(d == day ? Color.primary.opacity(0.85) : .clear, lineWidth: 2))
                         .contentShape(Rectangle())
                     }
@@ -160,7 +160,7 @@ struct WeekStrip: View {
                 }
             }
             .padding(6)
-            .modifier(CardSurface(cornerRadius: 18))
+            .modifier(CardSurface(cornerRadius: Radius.l))
             .capType()
         }
     }
@@ -522,7 +522,7 @@ struct HourRow: View {
                             .onTapGesture { open(e) }
                             .draggable(e.syncID) {
                                 Text(e.name).font(.callout.weight(.semibold)).padding(8)
-                                    .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+                                    .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                     }
                 }

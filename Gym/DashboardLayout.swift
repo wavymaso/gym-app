@@ -69,10 +69,10 @@ enum DashItem {
         case "protein": return Macro.protein.color
         case "fat", "satFat", "energyBalance": return Macro.fat.color
         case "carbs", "fiber", "foodLogging", "goal": return Macro.carbs.color
-        case "water", "activity": return Color(hex: 0x3BB2F6)
+        case "water", "activity": return Color.waterTone
         case "weight", "weighIn": return palette.accent.mix(with: .purple, by: 0.5)
-        case "sugar", "sodium", "cholesterol": return Color(hex: 0xFF6F91)
-        default: return Color(hex: 0xA78BFA)
+        case "sugar", "sodium", "cholesterol": return Color.alertTone
+        default: return Color.extraTone
         }
     }
 
@@ -91,7 +91,7 @@ enum DashItem {
             case "energyBalance", "week", "training":
                 Image(systemName: "chart.bar.fill").font(.caption).foregroundStyle(c)
             case "goal":
-                HStack(spacing: 2) { Capsule().fill(c).frame(width: 14, height: 4); Capsule().fill(Color(hex: 0xA78BFA)).frame(width: 5, height: 4) }
+                HStack(spacing: 2) { Capsule().fill(c).frame(width: 14, height: 4); Capsule().fill(Color.extraTone).frame(width: 5, height: 4) }
             case "weighIn", "foodLogging", "score":
                 HStack(spacing: 2) { ForEach(0..<3, id: \.self) { _ in Circle().fill(c).frame(width: 5, height: 5) } }
             default:
@@ -119,7 +119,7 @@ struct CustomizeDashboardView: View {
                             .onDelete { layout.sections[i].items.remove(atOffsets: $0) }
                         Button { adding = section.kind } label: {
                             Text(section.kind.addLabel).font(.body.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 8)
-                                .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 12))
+                                .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
                         }
                         .buttonStyle(.plain)
                     } header: {

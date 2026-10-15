@@ -114,7 +114,7 @@ struct FoodDetailView: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon).font(.title3).frame(width: 46, height: 40)
-                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                 Text(title).font(.caption)
             }
         }

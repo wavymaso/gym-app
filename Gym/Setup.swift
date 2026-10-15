@@ -125,8 +125,8 @@ struct ChoiceRow: View {
             }
             .padding(14)
             .contentShape(Rectangle())
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? palette.accent : .primary.opacity(0.08), lineWidth: selected ? 2 : 1))
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.m))
+            .overlay(RoundedRectangle(cornerRadius: Radius.m).stroke(selected ? palette.accent : .primary.opacity(0.08), lineWidth: selected ? 2 : 1))
         }
         .buttonStyle(.plain)
     }

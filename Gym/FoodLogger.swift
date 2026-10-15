@@ -338,7 +338,7 @@ struct FoodLogger: View {
                         } label: {
                             VStack(spacing: 4) { Image(systemName: m.icon).foregroundStyle(m.color); Text(m.label).font(.caption2) }
                                 .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                .background(Meal(time: when) == m ? m.color.opacity(0.2) : Color.raisedBackground, in: RoundedRectangle(cornerRadius: 12))
+                                .background(Meal(time: when) == m ? m.color.opacity(0.2) : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
                         }
                         .buttonStyle(.plain)
                     }
@@ -833,7 +833,7 @@ struct AIPlateCard: View {
                 }
             }
         }
-        .modifier(CardSurface(cornerRadius: 18))
+        .modifier(CardSurface(cornerRadius: Radius.l))
         .opacity(item.included ? 1 : 0.5)
     }
 

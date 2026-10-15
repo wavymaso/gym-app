@@ -119,7 +119,7 @@ struct ProgramEditor: View {
                     if locked { Image(systemName: "lock.fill").foregroundStyle(.secondary) }
                 }
                 .padding(.horizontal, 14).frame(height: 52)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.2)))
+                .overlay(RoundedRectangle(cornerRadius: Radius.s).stroke(Color.primary.opacity(0.2)))
             }
             VStack(alignment: .leading, spacing: 6) {
                 HStack {

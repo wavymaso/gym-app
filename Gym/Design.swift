@@ -299,3 +299,16 @@ struct EmptyState: View {
         .frame(maxWidth: .infinity).padding(.vertical, Space.xxl).padding(.horizontal, Space.l)
     }
 }
+
+// MARK: - Meaning colours (the same everywhere they appear)
+
+extension Color {
+    static let weightTone = Color(hex: 0xA77BF3)        // weight, trend, AI photo
+    static let expenditureTone = Color(hex: 0xFF8A5B)
+    static let waterTone = Color(hex: 0x3BB2F6)         // water, activity, insights
+    static let calmTone = Color(hex: 0x7B8CF3)          // describe, sleep
+    static let extraTone = Color(hex: 0xA78BFA)         // other nutrients, supersets
+    static let alertTone = Color(hex: 0xFF6F91)         // sugar, sodium
+    static let linkTone = Color(hex: 0xFF5C86)
+    static let neutralTone = Color(hex: 0x8E8E93)
+}

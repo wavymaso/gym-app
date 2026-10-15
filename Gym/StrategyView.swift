@@ -434,7 +434,7 @@ struct StrategyView: View {
                 rowButton("shield.lefthalf.filled", palette.good, "Calorie floor",
                           "Never below \(p.energy.format(p.calorieFloorKcal > 0 ? p.calorieFloorKcal : calorieFloor(p.sexValue))) · fat minimum on") { editingFloor = true }
             }
-            rowButton("eye.slash", Color(hex: 0xA77BF3), "Shadow mode", p.shadowMode ? "On: check-ins don't change targets" : "Off · replay past check-ins", last: true) { shadowing = true }
+            rowButton("eye.slash", Color.weightTone, "Shadow mode", p.shadowMode ? "On: check-ins don't change targets" : "Off · replay past check-ins", last: true) { shadowing = true }
         }
         category("Your week & phases", "Planning the days and months ahead") {
             rowButton("calendar", palette.carbs, "Calorie distribution", p.hasDistribution ? "On: varies by day" : "Off: the same every day") { showingDistribution = true }
@@ -449,7 +449,7 @@ struct StrategyView: View {
         category("Accuracy", "How your data is read") {
             rowButton("scalemass", palette.accent, "Scales", p.scaleNames.isEmpty ? "Just one" : "Main + \(p.scaleNames.joined(separator: ", "))") { scaling = true }
             rowLink("flame", palette.warn, "Expenditure", "Algorithm, starting estimate") { ExpenditureSettingsView() }
-            rowLink("chart.line.uptrend.xyaxis", Color(hex: 0xA77BF3), "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() }
+            rowLink("chart.line.uptrend.xyaxis", Color.weightTone, "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() }
             rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals", last: true) { NutrientTargetsView() }
         }
     }

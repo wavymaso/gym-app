@@ -270,7 +270,7 @@ struct DayEntries: View {
                     .transition(.scale.combined(with: .opacity))
             }
             EntryCard(entry: e, energy: energy, tap: { toggle(e) }) { open(.edit(e)) }
-                .overlay(RoundedRectangle(cornerRadius: 18).stroke(selected.contains(e.syncID) ? palette.accent : .clear, lineWidth: 2))
+                .overlay(RoundedRectangle(cornerRadius: Radius.l).stroke(selected.contains(e.syncID) ? palette.accent : .clear, lineWidth: 2))
         }
     }
 
@@ -333,7 +333,7 @@ struct DayEntries: View {
                         .contextMenu { menu(e) }
                         .draggable(e.syncID) {
                             Text(e.name).font(.callout.weight(.semibold)).padding(8)
-                                .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+                                .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                         }
                 }
             }
@@ -480,7 +480,7 @@ struct EntryCard: View {
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 11)
-            .modifier(CardSurface(cornerRadius: 18))
+            .modifier(CardSurface(cornerRadius: Radius.l))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

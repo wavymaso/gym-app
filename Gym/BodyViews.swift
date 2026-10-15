@@ -63,7 +63,7 @@ struct BodySection: View {
                                 Button { viewing = p } label: {
                                     VStack(spacing: 4) {
                                         PhotoThumb(data: p.jpeg).frame(width: 96, height: 128)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                            .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                                         Text(short(p.day)).font(.caption2).foregroundStyle(.secondary)
                                     }
                                 }

@@ -144,7 +144,7 @@ struct DashboardView: View {
         Button { sheet = .checkIn } label: {
             HStack(spacing: 14) {
                 Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(.white)
-                    .frame(width: 44, height: 44).background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
+                    .frame(width: 44, height: 44).background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: Radius.m))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(isPhone ? "Weekly check-in ready" : "Your weekly check-in is ready").font(.headline).foregroundStyle(.white)
                     Text(isPhone ? "Review the week, update targets" : "See how the week went and update your targets.")
@@ -263,7 +263,7 @@ struct DashboardView: View {
             let series = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
             let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
             SparkCard(title: "Weight Trend", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.weight.fromKg),
-                      color: Color(hex: 0xA77BF3), value: series.last.map { number(p.weight.fromKg($0.trend), digits: 1) } ?? "–",
+                      color: Color.weightTone, value: series.last.map { number(p.weight.fromKg($0.trend), digits: 1) } ?? "–",
                       unit: p.weight.rawValue) { detail = .weightTrend }
         case "energyBalance":
             let intake = ctx.dailyIntake()
@@ -468,7 +468,7 @@ struct QuickAction: View {
                 Text(title).font(.caption.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity).padding(.vertical, 12)
-            .modifier(CardSurface(cornerRadius: 18))
+            .modifier(CardSurface(cornerRadius: Radius.l))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

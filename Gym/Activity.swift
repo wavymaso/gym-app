@@ -172,7 +172,7 @@ struct ActivityCard: View {
 
     var body: some View {
         let drunk = water.reduce(0) { $0 + $1.ml }, goal = ctx.waterGoalMl
-        let waterColor = Color(hex: 0x3BB2F6)
+        let waterColor = Color.waterTone
         Card(title: "Water & activity", systemImage: "drop.fill") {
             HStack(alignment: .top, spacing: 16) {
                 VStack(spacing: 10) {
