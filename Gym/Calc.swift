@@ -336,8 +336,17 @@ func todayKey(now: Date) -> String {
     return dayKey(start > 0 ? now.addingTimeInterval(-Double(start) * 3600) : now)
 }
 
-/// 0 (midnight) to 6.
-var dayStartHour: Int { min(max(UserDefaults.standard.integer(forKey: "dayStartHour"), 0), 6) }
+/// 0 (midnight) to 6. During Ramadan mode at least 5: iftar to suhoor is one day.
+var dayStartHour: Int {
+    let set = min(max(UserDefaults.standard.integer(forKey: "dayStartHour"), 0), 6)
+    return ramadanActive ? max(set, 5) : set
+}
+
+/// Ramadan mode: on until a calendar day (it switches itself off).
+var ramadanActive: Bool {
+    guard let until = UserDefaults.standard.string(forKey: "ramadanUntil") else { return false }
+    return dayKey(Date()) <= until
+}
 func date(fromKey k: String) -> Date {
     let p = k.split(separator: "-").compactMap { Int($0) }
     guard p.count == 3 else { return Date() }

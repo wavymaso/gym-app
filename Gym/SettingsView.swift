@@ -350,5 +350,20 @@ struct DayStartSection: View {
         } footer: {
             Text("Food logged before this counts for the day before: a late dinner or a night out stays with that day. Weigh-ins and past days don't change.")
         }
+        Section {
+            Toggle(isOn: Binding(get: { ramadan }, set: { on in
+                UserDefaults.standard.set(on ? addDays(dayKey(Date()), 30) : nil, forKey: "ramadanUntil")
+                ramadan = on; dataVersion += 1
+            })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ramadan")
+                    Text(ramadan ? "On until \(date(fromKey: UserDefaults.standard.string(forKey: "ramadanUntil") ?? dayKey()).formatted(.dateTime.day().month(.wide).locale(appLocale)))" : "Iftar to suhoor counts as one day")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } footer: {
+            Text("The day starts at 05:00 (or your later choice above), so iftar, the night and suhoor all count as one day. Switches itself off after 30 days.")
+        }
     }
+    @State private var ramadan = ramadanActive
 }
