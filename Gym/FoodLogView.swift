@@ -84,7 +84,7 @@ extension FoodLogView {
     /// The phone's page header: FOOD LOG, and the day's actions as round buttons.
     var header: some View {
         HStack(alignment: .center) {
-            Text("FOOD LOG").font(.pageTitle(30)).lineLimit(1).minimumScaleFactor(0.6)
+            Text("FOOD LOG").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
                 .foregroundStyle(GlowStyle.on || palette.glass
                                  ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
                                  : AnyShapeStyle(.primary))

@@ -381,11 +381,17 @@ struct PadButtonStyle: ButtonStyle {
             .font(kind == .key ? .title2.weight(.regular) : .headline)
             .lineLimit(1).minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity, minHeight: 50)
-            .background(background.opacity(configuration.isPressed ? 0.6 : 1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(fillFor(configuration.isPressed), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .opacity(configuration.isPressed && kind == .primary ? 0.75 : 1)
             .foregroundStyle(kind == .primary ? Color.black : .primary)
             .opacity(enabled ? 1 : 0.45)
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
             .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+    }
+
+    /// The main button is brushed metal on the metal themes.
+    private func fillFor(_ pressed: Bool) -> AnyShapeStyle {
+        kind == .primary ? palette.accentFill : AnyShapeStyle(background.opacity(pressed ? 0.6 : 1))
     }
 
     private var background: Color {

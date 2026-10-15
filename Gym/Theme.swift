@@ -9,7 +9,7 @@ import UIKit
 
 enum AppTheme: String, CaseIterable, Identifiable {
     // Dark
-    case noir, sterling, midnight, graphite, ocean, oled, forest, ember, crimson, amethyst, mocha, nord, neon, slate
+    case noir, sterling, roseGold, titanium, bronze, midnight, graphite, ocean, oled, forest, ember, crimson, amethyst, mocha, nord, neon, slate
     // Light
     case daylight, sand, mint, blush, arctic, paper
     // Glass
@@ -18,11 +18,12 @@ enum AppTheme: String, CaseIterable, Identifiable {
     case system
     var id: String { rawValue }
 
-    enum Group: String, CaseIterable { case dark = "Dark", light = "Light", glass = "Glass" }
+    enum Group: String, CaseIterable { case metal = "Metal", dark = "Dark", light = "Light", glass = "Glass" }
     var group: Group {
         switch self {
         case .daylight, .sand, .mint, .blush, .arctic, .paper, .system: return .light
         case .glass, .aurora, .sunsetGlass, .oceanGlass, .frost: return .glass
+        case .noir, .sterling, .roseGold, .titanium, .bronze: return .metal
         default: return .dark
         }
     }
@@ -33,6 +34,9 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .oled: return "OLED Black"
         case .noir: return "Noir & Gold"
         case .sterling: return "Sterling"
+        case .roseGold: return "Rose Gold"
+        case .titanium: return "Titanium"
+        case .bronze: return "Bronze"
         case .sunsetGlass: return "Sunset Glass"
         case .oceanGlass: return "Ocean Glass"
         default: return rawValue.prefix(1).uppercased() + rawValue.dropFirst()
@@ -43,6 +47,9 @@ enum AppTheme: String, CaseIterable, Identifiable {
         switch self {
         case .noir: return "Matte black and gold: classic, quiet luxury"
         case .sterling: return "Matte black and silver: cool and understated"
+        case .roseGold: return "Warm black with rose gold"
+        case .titanium: return "Blue-black with brushed titanium"
+        case .bronze: return "Deep brown-black with antique bronze"
         case .midnight: return "Near-black, electric colours"
         case .graphite: return "Dark grey, warm orange"
         case .ocean: return "Deep blue, teal"
@@ -73,8 +80,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
     /// The palette to use, given whether the system is in dark mode (only matters for Automatic).
     func palette(systemDark: Bool) -> Palette {
         switch self {
-        case .system: return systemDark ? .midnight : .daylight
-        default: return Palette.all[self] ?? .midnight
+        case .system: return (systemDark ? Palette.midnight : .daylight).refined()
+        default: return (Palette.all[self] ?? .midnight).refined()
         }
     }
 
@@ -154,6 +161,12 @@ extension Palette {
                     protein: 0xB86A5E, fat: 0xE0D2AE, carbs: 0x86A08A, matte: true, onAccent: 0x0A0A0A).warn(0xC4835E),
         .sterling: make("sterling", bg: 0x0B0B0C, surface: 0x151517, raised: 0x222225, accent: 0xC8CCD2, kcal: 0xE2E5E9,
                         protein: 0xB97C7C, fat: 0xCBB78C, carbs: 0x8DA5B6, matte: true, onAccent: 0x0B0B0C).warn(0xC99172),
+        .roseGold: make("roseGold", bg: 0x0D0A0A, surface: 0x171213, raised: 0x241C1C, accent: 0xC98F7E, kcal: 0xD9A493,
+                        protein: 0xB0606A, fat: 0xE3CBA8, carbs: 0x8FA394, matte: true, onAccent: 0x120C0C).warn(0xC98A6A),
+        .titanium: make("titanium", bg: 0x0A0C0E, surface: 0x13161A, raised: 0x1F242A, accent: 0xA9B2BD, kcal: 0xC3CBD3,
+                        protein: 0xB57A80, fat: 0xC9B48A, carbs: 0x7FA3A8, matte: true, onAccent: 0x0A0C0E).warn(0xC39070),
+        .bronze: make("bronze", bg: 0x0C0A08, surface: 0x16120E, raised: 0x231D17, accent: 0xB07A44, kcal: 0xC9935A,
+                      protein: 0xA85E4E, fat: 0xDCC59A, carbs: 0x7F9476, matte: true, onAccent: 0x0C0A08).warn(0xC27A4E),
         .oled: make("oled", bg: 0x000000, surface: 0x0D0D0F, raised: 0x1C1C1F, accent: 0x5E8BFF, protein: 0xFF4F70, fat: 0xFFB830, carbs: 0x2FD39A),
         .forest: make("forest", bg: 0x0B1410, surface: 0x14211A, raised: 0x1F3127, accent: 0x4CC38A, kcal: 0x8FD16A, protein: 0xFF7A6B, fat: 0xF2C14E, carbs: 0x3DB9A6),
         .ember: make("ember", bg: 0x120D0B, surface: 0x1E1614, raised: 0x2C211D, accent: 0xFF6A2B, protein: 0xFF3D5A, fat: 0xFFC233, carbs: 0x5CCB8A),
@@ -250,7 +263,11 @@ extension View {
     /// Behind a page: the theme's colour, or the Glass backdrop.
     func pageBackground() -> some View {
         background {
-            if palette.glass { GlassBackdrop() } else { Color.pageBackground.ignoresSafeArea() }
+            if palette.glass { GlassBackdrop() }
+            else {
+                Color.pageBackground.ignoresSafeArea()
+                    .overlay { if palette.scheme == .dark { Grain(opacity: palette.matte ? 0.07 : 0.05).ignoresSafeArea() } }
+            }
         }
     }
 
@@ -350,9 +367,20 @@ struct CardSurface: ViewModifier {
                 .overlay(shape.stroke(LinearGradient(colors: [palette.accent.opacity(0.55), .white.opacity(0.03), palette.protein.opacity(0.3)],
                                                      startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2))
                 .shadow(color: palette.accent.opacity(palette.scheme == .dark ? 0.18 : 0.1), radius: 16, y: 6)
-        } else if palette.matte {
-            // Matte: flat, with a hairline of the metal.
-            content.background(Color.cardBackground, in: shape).overlay(shape.stroke(palette.stroke, lineWidth: 0.75))
+        } else if let m = palette.metalStops {
+            // Matte: a lit surface with a fine grain, edged in the metal.
+            content
+                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: .white, by: 0.035), palette.surface],
+                                                      startPoint: .top, endPoint: .bottom)))
+                .background(Grain(opacity: 0.045).clipShape(shape))
+                .overlay(shape.stroke(LinearGradient(colors: [m[3].opacity(0.55), m[1].opacity(0.18), m[2].opacity(0.4)],
+                                                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8))
+        } else if palette.scheme == .dark {
+            // Light falling from above: a touch brighter at the top edge.
+            content
+                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: .white, by: 0.03), palette.surface],
+                                                      startPoint: .top, endPoint: .bottom)))
+                .overlay(shape.stroke(LinearGradient(colors: [.white.opacity(0.09), .white.opacity(0.03)], startPoint: .top, endPoint: .bottom)))
         } else {
             content.background(Color.cardBackground, in: shape).overlay(shape.stroke(palette.stroke))
         }
@@ -393,12 +421,18 @@ struct Ring: View {
     @State private var shown: Double = 0
     @State private var closed = false          // the moment it reaches 100%: one soft glow
 
+    /// Metal themes: the calories ring is polished metal; other rings shade from deep to bright.
+    private var ringColors: [Color] {
+        if let m = palette.metalStops, color == palette.calories { return [m[0], m[1], m[2], m[3], m[4], m[1]] }
+        return [color.mix(with: .black, by: 0.25), color, color.mix(with: .white, by: 0.12)]
+    }
+
     var body: some View {
         ZStack {
             Circle().stroke(color.opacity(0.16), lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: min(max(shown, 0), 1))
-                .stroke(AngularGradient(colors: [color.opacity(0.7), color], center: .center, startAngle: .degrees(0), endAngle: .degrees(360 * min(max(shown, 0.01), 1))),
+                .stroke(AngularGradient(colors: ringColors, center: .center, startAngle: .degrees(0), endAngle: .degrees(360 * min(max(shown, 0.01), 1))),
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .shadow(color: GlowStyle.on || palette.glass ? color.opacity(0.65) : .clear, radius: lineWidth * 0.8)
                 .rotationEffect(.degrees(-90))

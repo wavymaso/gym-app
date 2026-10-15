@@ -66,7 +66,7 @@ struct PhoneFoodLog: View {
     private func header(_ energy: EnergyUnit) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Text(title).font(.pageTitle(title.count > 9 ? 24 : 30)).lineLimit(1).minimumScaleFactor(0.5)
+                Text(title).font(.pageTitle(title.count > 9 ? 24 : 30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.5)
                     .foregroundStyle(GlowStyle.on || palette.glass
                                      ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
                                      : AnyShapeStyle(.primary))

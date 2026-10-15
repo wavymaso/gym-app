@@ -87,7 +87,7 @@ struct DashboardView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("DASHBOARD").font(.pageTitle(isPhone ? 30 : 34)).lineLimit(1).minimumScaleFactor(0.6)
+                Text("DASHBOARD").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
                     .foregroundStyle(GlowStyle.on || palette.glass
                                      ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
                                      : AnyShapeStyle(.primary))

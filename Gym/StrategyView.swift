@@ -115,7 +115,7 @@ struct StrategyView: View {
 
     private var header: some View {
         HStack {
-            Text("STRATEGY").font(.pageTitle(isPhone ? 30 : 34)).lineLimit(1).minimumScaleFactor(0.6)
+            Text("STRATEGY").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
                 .foregroundStyle(GlowStyle.on || palette.glass
                                  ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.good], startPoint: .leading, endPoint: .trailing))
                                  : AnyShapeStyle(.primary))
@@ -277,7 +277,7 @@ struct StrategyView: View {
                     .shadow(color: GlowStyle.on || palette.glass ? palette.good.opacity(0.6) : .clear, radius: 8)
                 Circle().inset(by: 22).stroke(Color.primary.opacity(0.85), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 VStack(spacing: 2) {
-                    Text(due ? "TODAY" : "\(days) DAY\(days == 1 ? "" : "S")").font(.pageTitle(30)).monospacedDigit()
+                    Text(due ? "TODAY" : "\(days) DAY\(days == 1 ? "" : "S")").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).monospacedDigit()
                     Text(due ? "check-in ready" : "until check-in").font(.subheadline).foregroundStyle(.secondary)
                 }
             }

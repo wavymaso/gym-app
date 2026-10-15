@@ -108,7 +108,7 @@ struct AddFoodView: View {
                                 Button(s.label) { scope = s; local = LocalFoods.shared.search(query, scope: s) }
                                     .font(.caption.weight(.semibold)).buttonStyle(.plain)
                                     .padding(.horizontal, 10).padding(.vertical, 5)
-                                    .background(scope == s ? palette.accent : Color.raisedBackground, in: Capsule())
+                                    .background(scope == s ? palette.accentFill : AnyShapeStyle(Color.raisedBackground), in: Capsule())
                                     .foregroundStyle(scope == s ? palette.onAccent : .primary)
                             }
                         }

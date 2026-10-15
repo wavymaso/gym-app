@@ -211,7 +211,7 @@ struct WhatsNewSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
-        ("paintpalette", "Noir & Gold, Sterling", "Two matte themes: black with gold or silver, serif titles, no glow (More → Theme)."),
+        ("paintpalette", "Metal themes", "Noir & Gold, Sterling, Rose Gold, Titanium, Bronze: real metal finishes, film grain, serif titles. Colour themes are calmer too."),
         ("plus.magnifyingglass", "Pinch the charts", "Zoom into any time window on the insight charts; slide it along with the arrows."),
         ("doc.on.clipboard", "Copy and move like MacroFactor", "Pick foods, tap Copy or Move, then tap any hour (any day) to put them there."),
         ("lock.shield", "Safer data", "A copy before every update, a check at every launch, weekly backups for 3 months, Face ID lock, keys in the Keychain."),

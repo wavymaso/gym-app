@@ -19,7 +19,7 @@ struct SettingsView: View {
             if let p = profiles.first {
                 VStack(alignment: .leading, spacing: 22) {
                     if isPhone {
-                        Text("MORE").font(.pageTitle(30)).padding(.top, 8)
+                        Text("MORE").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).padding(.top, 8)
                     }
                     profileHeader(p)
                     group("General", [

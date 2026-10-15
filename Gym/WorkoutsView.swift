@@ -165,7 +165,7 @@ struct WorkoutsView: View {
         return VStack(alignment: .leading, spacing: 14) {
             if isPhone {
                 HStack {
-                    Text("TRAINING").font(.pageTitle(30)).lineLimit(1).minimumScaleFactor(0.6)
+                    Text("TRAINING").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
                         .foregroundStyle(GlowStyle.on || palette.glass
                                          ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.protein], startPoint: .leading, endPoint: .trailing))
                                          : AnyShapeStyle(.primary))
@@ -230,7 +230,7 @@ struct WorkoutsView: View {
             Spacer()
             Button { editingRoutine = r } label: { Image(systemName: "pencil").font(.callout) }.buttonStyle(.borderless)
             Button { ctx.startWorkout(routine: r) } label: {
-                Image(systemName: "play.fill").font(.callout).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accent, in: Circle())
+                Image(systemName: "play.fill").font(.callout).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accentFill, in: Circle())
             }
             .buttonStyle(.plain)
         }
