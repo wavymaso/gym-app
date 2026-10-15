@@ -91,8 +91,10 @@ extension ModelContext {
         guard let s = expenditureStart, s.day <= day else { return [] }
         let p = try? fetch(FetchDescriptor<Profile>()).first
         var r: [ExpenditurePoint]
-        let algorithm = ExpenditureAlgorithm(rawValue: p?.expAlgorithm ?? "") ?? .joint
-        if algorithm == .joint {
+        let algorithm = ExpenditureAlgorithm(rawValue: p?.expAlgorithm ?? "") ?? .classic
+        if algorithm == .classic {
+            r = classicExpenditure(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues)
+        } else if algorithm == .joint {
             var js = JointSettings()
             js.waterEvents = waterEvents(from: s.day, to: day)
             r = jointExpenditure(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues,

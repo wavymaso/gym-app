@@ -37,7 +37,8 @@ extension ModelContext {
         let all = (try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []
         let main = all.filter { $0.scale.isEmpty }
         guard main.count >= 5 else { return [:] }
-        let trend = Dictionary(trendSeries(main.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey()).map { ($0.day, $0.trend) },
+        // The two-sided trend: no lag, so a falling or rising weight doesn't bias the offsets.
+        let trend = Dictionary(robustTrend(trendSeriesV1(main.map { DayValue(day: $0.day, value: $0.kg) }, through: dayKey())).map { ($0.day, $0.trend) },
                                uniquingKeysWith: { a, _ in a })
         var out: [String: Double] = [:]
         for (name, rows) in Dictionary(grouping: all.filter { !$0.scale.isEmpty }, by: \.scale) {

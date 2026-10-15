@@ -38,21 +38,21 @@ struct RadioRow: View {
 }
 
 struct WeightTrendSettingsView: View {
-    @AppStorage("trendAlgorithm") private var algorithm = TrendAlgorithm.v2.rawValue
+    @AppStorage("trendAlgorithm") private var algorithm = TrendAlgorithm.v1.rawValue
 
     var body: some View {
         Form {
             Section {
-                RadioRow(title: "Weight Trend V2", badge: "Recommended",
-                         detail: "Robust smoothing that also looks at later weigh-ins, so past values get revised and the trend lags less. Outliers like a salty dinner barely move it.",
-                         selected: algorithm == TrendAlgorithm.v2.rawValue) { set(.v2) }
-                RadioRow(title: "Weight Trend V1",
-                         detail: "Simple and reliable smoothing that only looks at past weigh-ins.",
+                RadioRow(title: "Weight Trend (Standard)", badge: "Recommended",
+                         detail: "Smooths out day-to-day water and food swings using past weigh-ins. Matches MacroFactor's trend weight on your history.",
                          selected: algorithm == TrendAlgorithm.v1.rawValue) { set(.v1) }
+                RadioRow(title: "Weight Trend V2",
+                         detail: "Robust smoothing that also looks at later weigh-ins, so past values get revised. Smoother, but reads differently from MacroFactor.",
+                         selected: algorithm == TrendAlgorithm.v2.rawValue) { set(.v2) }
             } header: {
                 Text("Trend algorithm")
             } footer: {
-                Text("In tests on simulated weigh-ins, V2 was about 3× closer to the true weight and showed changes sooner. Your expenditure isn't affected: it works from the weigh-ins themselves.")
+                Text("Expenditure always works from the Standard trend, so it stays in step with MacroFactor-style numbers.")
             }
         }
         .themedForm()
@@ -88,14 +88,14 @@ struct ExpenditureSettingsView: View {
                     editRow("Calculation mode", p.expStaticKcal > 0 ? "Static · \(p.energy.format(p.expStaticKcal))" : "Dynamic") { editing = .mode }
                     ForEach([ExpenditureAlgorithm.joint, .standard, .responsive, .stable]) { a in
                         RadioRow(title: a.label, badge: a == .joint ? "Recommended" : nil, detail: a.detail,
-                                 selected: (ExpenditureAlgorithm(rawValue: p.expAlgorithm) ?? .joint) == a) {
-                            p.expAlgorithm = a == .joint ? "" : a.rawValue; ctx.commit()
+                                 selected: (ExpenditureAlgorithm(rawValue: p.expAlgorithm) ?? .classic) == a) {
+                            p.expAlgorithm = a == .classic ? "" : a.rawValue; ctx.commit()
                         }
                     }
                 } header: {
                     Text("Expenditure calculation")
                 } footer: {
-                    Text("V2 was 15% more accurate than V1 on average and 32% more accurate on the current day, over 300 simulated people with patchy logging and water swings (Tests/expsim).")
+                    Text("Standard is fitted to MacroFactor's own numbers on your 3 years of data (within about 60 kcal). V2 is a different model that tested well in simulations but reads a few hundred kcal off MacroFactor on your history.")
                 }
                 Section("Expenditure modifiers") {
                     Toggle(isOn: Binding(get: { p.stepInformed }, set: { p.stepInformed = $0; ctx.commit() })) {

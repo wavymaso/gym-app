@@ -26,6 +26,10 @@ struct AIItem: Equatable {
     var packaged = false
     var brand: String?
     var confidence: Double = 0.6
+    var amount = ""                  // how the model would say it: "1 serving", "1 medium", "1 pinch"
+    var assumed = false              // not seen, inferred (cooking oil, butter): the model's likelihood below
+    var likelihood: Double = 1
+    var ingredients: [AIItem] = []   // a dish's parts (empty for a simple food)
 
     init(name: String, grams: Double, per100: Nutrients) { self.name = name; self.grams = grams; self.per100 = per100 }
 
@@ -39,10 +43,18 @@ struct AIItem: Equatable {
         }
         func text(_ k: String) -> String { (d[k] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
         let name = text("name")
-        guard !name.isEmpty, let g = num("grams"), g > 0 else { return nil }
+        let parts = (d["ingredients"] as? [[String: Any]] ?? []).compactMap(AIItem.init)
+        let partsGrams = parts.reduce(0) { $0 + $1.grams }
+        guard !name.isEmpty, let g = num("grams") ?? (partsGrams > 0 ? partsGrams : nil), g > 0 else { return nil }
         self.name = name
+        amount = text("amount")
+        ingredients = parts
+        assumed = d["assumed"] as? Bool ?? false
+        likelihood = min(max(num("likelihood") ?? (assumed ? 0.6 : 1), 0), 1)
         nameES = text("name_es"); search = text("search").isEmpty ? name : text("search")
-        grams = min(max(g, 1), 2000)
+        let amt = text("amount").lowercased()
+        let pinch = amt.contains("pinch") || amt.contains("pizca") || amt.contains("dash")
+        grams = pinch ? min(g, 1) : min(max(g, 1), 2000)                  // a pinch is about 1 g
         let p = max(0, num("protein_100g") ?? num("protein") ?? 0), f = max(0, num("fat_100g") ?? num("fat") ?? 0)
         let c = max(0, num("carbs_100g") ?? num("carbs") ?? 0)
         let fiber = (num("fiber_100g") ?? num("fiber")).map { max(0, $0) }
@@ -55,12 +67,17 @@ struct AIItem: Equatable {
         packaged = d["packaged"] as? Bool ?? false
         brand = text("brand").isEmpty ? nil : text("brand")
         confidence = min(max(num("confidence") ?? 0.6, 0), 1)
+        // A dish is exactly its ingredients.
+        if !parts.isEmpty, partsGrams > 0 {
+            grams = partsGrams
+            per100 = parts.reduce(Nutrients.zero) { $0 + $1.per100.scaled($1.grams / 100) }.scaled(100 / partsGrams)
+        }
     }
 
     var dict: [String: Any] {
         ["name": name, "name_es": nameES, "search": search, "grams": grams, "kcal_100g": per100.kcal, "protein_100g": per100.protein,
          "fat_100g": per100.fat, "carbs_100g": per100.carbs, "fiber_100g": per100.fiber ?? 0, "liquid": isLiquid, "packaged": packaged,
-         "brand": brand ?? "", "confidence": confidence]
+         "brand": brand ?? "", "confidence": confidence, "amount": amount, "ingredients": ingredients.map(\.dict), "assumed": assumed, "likelihood": likelihood]
     }
 }
 
@@ -101,15 +118,18 @@ enum PhotoAI {
         You are a meticulous dietitian logging a meal for someone in Spain (they also eat Saudi/Gulf food).
         \(hasImage ? "Look at the photo and identify every food and drink that will be eaten." : "Identify every food and drink in the description.")
         Rules:
-        - One item per distinct food. A composed dish (paella, tortilla de patatas, lasagne, kabsa, a sandwich) is ONE item unless its parts are clearly separate on the plate.
+        - One item per distinct food on the plate (a burger and its fries are two items).
+        - A prepared food or dish (burger, fries, salad, paella, tortilla de patatas, a sandwich, a bowl) lists its "ingredients": every component as eaten, INCLUDING cooking oil, butter, sauces and dressings, cheese, bread or bun, and salt or spices (tiny ones in grams, e.g. a pinch of salt 1 g). The item's grams is the sum of its ingredients.
+        - A single simple food (a banana, a boiled egg, a glass of milk, a packaged product) has an empty "ingredients" list.
+        - "amount": a natural description of the portion: "1 serving", "1 medium", "2 slices", "1 tbsp", "1 pinch", "250 ml".
+        - Hidden fats: oil and butter rarely show in a photo but often carry a lot of calories. For every cooked dish judge how likely it was made with oil or butter, from how it looks (shine, browning, crisp edges, pooled oil) and how it's usually made: deep-fried and restaurant or takeaway food almost always (0.9); pan-fried, sautéed, roasted, Spanish home cooking 0.7–0.9; grilled or air-fried 0.4–0.6; boiled, steamed, raw 0.1. When the likelihood is 0.4 or more add it as an ingredient (e.g. "Olive oil (cooking)", "Butter") with "assumed": true, its "likelihood", and the grams that end up in the food: deep-fried fries about 8 g per 100 g of fries, pan-fried meat or eggs 5–10 g a portion, a restaurant sauté 10–15 g, salad dressing 10–15 g, roast vegetables 5 g per 100 g. Seen ingredients have "assumed": false. When oil is listed on its own, every other ingredient's search and nutrition is WITHOUT it (the potato as "potato raw" or "potato baked", never "french fries"), so nothing is counted twice.
         - Estimate the portion in grams (ml for drinks) as eaten. \(hasImage ? "Use visual scale: a dinner plate is about 26 cm, a fork 19 cm, a can 33 cl. Think about depth, not just area." : "Use amounts given; otherwise a typical adult portion.")
         - A whole pan, tray, cake or serving dish: estimate ONE person's portion of it, unless the person says they ate it all.
-        - Include visible sauces, dressings and cooking oil as their own items when there's a noticeable amount.
         - The _100g fields are nutrition PER 100 g of the food as served (NOT for the portion), typical USDA/BEDCA values.
         - "search": 1 to 3 English words, the food first then how it's cooked, like a USDA name (e.g. "egg fried", "bread toasted", "rice white cooked", "chicken breast grilled", "paella seafood", "potato omelet").
         - "packaged": true only for a branded packaged product; give its "brand" if readable.
         - "confidence": 0 to 1, how sure you are of the identity and portion.
-        Reply with JSON only: {"items":[{"name":"","name_es":"","search":"","grams":0,"kcal_100g":0,"protein_100g":0,"fat_100g":0,"carbs_100g":0,"fiber_100g":0,"liquid":false,"packaged":false,"brand":"","confidence":0.0}]}
+        Reply with JSON only: {"items":[{"name":"","name_es":"","search":"","amount":"","grams":0,"kcal_100g":0,"protein_100g":0,"fat_100g":0,"carbs_100g":0,"fiber_100g":0,"liquid":false,"packaged":false,"brand":"","confidence":0.0,"ingredients":[{"name":"","name_es":"","search":"","amount":"","grams":0,"kcal_100g":0,"protein_100g":0,"fat_100g":0,"carbs_100g":0,"fiber_100g":0,"confidence":0.0,"assumed":false,"likelihood":1.0}]}]}
         """
         if photos > 1 { p += "\n\nThe \(photos) photos show the SAME meal from different angles or parts of it: don't count anything twice." }
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -142,23 +162,22 @@ enum PhotoAI {
         return s
     }
 
-    static let schema: [String: Any] = [
-        "type": "object",
-        "properties": [
-            "items": ["type": "array", "items": [
-                "type": "object",
-                "properties": [
-                    "name": ["type": "string"], "name_es": ["type": "string"], "search": ["type": "string"],
-                    "grams": ["type": "number"], "kcal_100g": ["type": "number"], "protein_100g": ["type": "number"],
-                    "fat_100g": ["type": "number"], "carbs_100g": ["type": "number"], "fiber_100g": ["type": "number"],
-                    "liquid": ["type": "boolean"], "packaged": ["type": "boolean"], "brand": ["type": "string"],
-                    "confidence": ["type": "number"],
-                ],
-                "required": ["name", "name_es", "search", "grams", "kcal_100g", "protein_100g", "fat_100g", "carbs_100g"],
-            ]],
-        ],
-        "required": ["items"],
+    private static let foodProps: [String: Any] = [
+        "name": ["type": "string"], "name_es": ["type": "string"], "search": ["type": "string"], "amount": ["type": "string"],
+        "grams": ["type": "number"], "kcal_100g": ["type": "number"], "protein_100g": ["type": "number"],
+        "fat_100g": ["type": "number"], "carbs_100g": ["type": "number"], "fiber_100g": ["type": "number"],
+        "liquid": ["type": "boolean"], "packaged": ["type": "boolean"], "brand": ["type": "string"],
+        "confidence": ["type": "number"], "assumed": ["type": "boolean"], "likelihood": ["type": "number"],
     ]
+    private static let requiredFields = ["name", "name_es", "search", "grams", "kcal_100g", "protein_100g", "fat_100g", "carbs_100g"]
+
+    static let schema: [String: Any] = {
+        var dish = foodProps
+        dish["ingredients"] = ["type": "array", "items": ["type": "object", "properties": foodProps, "required": requiredFields]]
+        return ["type": "object",
+                "properties": ["items": ["type": "array", "items": ["type": "object", "properties": dish, "required": requiredFields + ["ingredients"]]]],
+                "required": ["items"]]
+    }()
 
     /// The model on this Mac, through Ollama.
     static func askLocal(images: [Data], text: String) async throws -> [AIItem] {
@@ -195,11 +214,15 @@ enum PhotoAI {
 
     static func askGeminiRaw(images: [Data], text: String, recipe: Bool) async throws -> String {
         guard !geminiKey.isEmpty else { throw Failure(message: "Add a free Gemini key in Settings → Photo logging.") }
-        let models = Array(NSOrderedSet(array: [geminiModel, "gemini-2.5-flash", "gemini-flash-lite-latest"])) as? [String] ?? [geminiModel]
+        // Busy, retired or slow: the next one (each has its own free quota). Lite last: always quick, a little less exact.
+        let models = Array(NSOrderedSet(array: [geminiModel, "gemini-flash-latest", "gemini-3.8-flash", "gemini-3.5-flash",
+                                                "gemini-flash-lite-latest", "gemini-3.5-flash-lite"])) as? [String] ?? [geminiModel]
         var last: Failure?
         for (n, model) in models.enumerated() {
             for attempt in 0..<(n == 0 ? 2 : 1) {
-                do { return try await askGemini(model: model, images: images, text: text, recipe: recipe) } catch let f as GeminiFailure {
+                do { return try await askGemini(model: model, images: images, text: text, recipe: recipe) }
+                catch let e as URLError where e.code == .timedOut { last = Failure(message: "Gemini took too long."); break }
+                catch let f as GeminiFailure {
                     last = Failure(message: f.message)
                     if !f.tryAnother { throw Failure(message: f.message) }
                     if f.status == 503 && attempt == 0 && n == 0 { try? await Task.sleep(nanoseconds: 2_000_000_000) } else { break }
@@ -219,7 +242,7 @@ enum PhotoAI {
                                    "generationConfig": ["temperature": 0.1, "responseMimeType": "application/json"]]
         let m = model.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? model
         var r = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(m):generateContent")!,
-                           timeoutInterval: 90)
+                           timeoutInterval: 30)
         r.httpMethod = "POST"
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
         r.setValue(geminiKey, forHTTPHeaderField: "x-goog-api-key")
@@ -407,7 +430,7 @@ enum PhotoAI {
 
 /// One line on the plate: what it is, where its nutrition comes from, how much.
 struct PlateItem: Identifiable, Equatable {
-    enum Source: Equatable { case yours, product, generic, estimate, picked }
+    enum Source: Equatable { case yours, product, generic, estimate, picked, dish }
     let id = UUID()
     var ai: AIItem?                  // nil for a barcode found in the photo
     var name: String
@@ -421,11 +444,29 @@ struct PlateItem: Identifiable, Equatable {
     var source: Source
     var options: [FoodResult] = []   // other close matches, to swap to in one tap
     var included = true
+    var children: [PlateItem] = []   // a dish's ingredients
+    var servings: Double = 1         // a dish: how many of the portion the model saw
+    var amount = ""                  // "1 medium", "1 pinch"…
 
-    var nutrients: Nutrients { per100.scaled(grams / 100) }
+    var isDish: Bool { !children.isEmpty }
+    var assumed: Bool { ai?.assumed ?? false }
+
+    /// A dish's portion changed: every ingredient scales with it.
+    mutating func setServings(_ v: Double) {
+        guard isDish, servings > 0 else { return }
+        let k = max(v, 0.25) / servings
+        for i in children.indices { children[i].grams = (children[i].grams * k).rounded() }
+        servings = max(v, 0.25)
+    }
+    var nutrients: Nutrients {
+        isDish ? children.filter(\.included).reduce(Nutrients.zero) { $0 + $1.nutrients } : per100.scaled(grams / 100)
+    }
+    var totalGrams: Double { isDish ? children.filter(\.included).reduce(0) { $0 + $1.grams } : grams }
     var unit: String { isLiquid ? "ml" : "g" }
 
-    static func == (a: PlateItem, b: PlateItem) -> Bool { a.id == b.id && a.grams == b.grams && a.included == b.included && a.name == b.name }
+    static func == (a: PlateItem, b: PlateItem) -> Bool {
+        a.id == b.id && a.grams == b.grams && a.included == b.included && a.name == b.name && a.children == b.children && a.servings == b.servings
+    }
 }
 
 extension ModelContext {
@@ -436,6 +477,15 @@ extension ModelContext {
         let mine = ((try? fetch(FetchDescriptor<Food>(predicate: #Predicate { $0.useCount > 0 }))) ?? [])
             .map { (food: $0, text: FoodAPI.fold("\($0.name) \($0.brand ?? "")")) }
         return items.map { a in
+            if !a.ingredients.isEmpty {
+                // A dish: its ingredients, each matched on its own.
+                var kids = plate(from: a.ingredients, foods: local)
+                for i in kids.indices { kids[i].amount = a.ingredients[i].amount }
+                var d = PlateItem(ai: a, name: a.nameES.isEmpty ? a.name : a.nameES, detail: nil, per100: a.per100, isLiquid: a.isLiquid,
+                                  grams: a.grams, suggested: a.grams, source: .dish)
+                d.children = kids; d.amount = a.amount.isEmpty ? "1 serving" : a.amount
+                return d
+            }
             var suggested = (a.grams * PhotoAI.portionFactor(for: a)).rounded()
             var generic = local.generic(a.search, limit: 6)
             if generic.isEmpty { generic = local.generic(a.name, limit: 6) }
@@ -468,10 +518,32 @@ extension ModelContext {
         }
     }
 
+    /// A dish logged as a recipe of its ingredients, so you can log it again (or edit it) later.
+    private func dishFood(_ item: PlateItem) -> (food: Food, grams: Double)? {
+        let parts = foods(for: item.children)
+        let total = parts.reduce(0) { $0 + $1.grams }
+        guard total > 0 else { return nil }
+        let per100 = parts.reduce(Nutrients.zero) { $0 + $1.food.nutrients($1.grams, unit: $1.food.baseUnit) }.scaled(100 / total)
+        let key = "recipe:ai-" + FoodAPI.fold(item.name).replacingOccurrences(of: " ", with: "-")
+        let food: Food
+        if let f = self.food(key: key) { food = f; food.per100 = per100 } else {
+            food = Food(key: key, name: item.name, source: "recipe", per100: per100)
+            insert(food)
+        }
+        food.servings = [Serving(name: "1 serving", grams: total.rounded())]
+        food.recipeServings = 1
+        for old in ingredients(of: key) { delete(old) }
+        for (i, p) in parts.enumerated() {
+            insert(RecipeIngredient(recipeKey: key, foodKey: p.food.key, name: p.food.name, grams: p.grams, per100: p.food.per100, order: i))
+        }
+        return (food, total.rounded())
+    }
+
     /// Log the plate; learn from how you changed the portions.
     /// The plate as foods and grams (making foods for estimates); learns from changed portions.
     func foods(for plate: [PlateItem]) -> [(food: Food, grams: Double)] {
-        plate.filter { $0.included && $0.grams > 0 }.map { item in
+        plate.filter { $0.included && $0.totalGrams > 0 }.compactMap { item in
+            if item.isDish { return dishFood(item) }
             if let a = item.ai, item.source != .picked {
                 PhotoAI.learn(search: a.search, aiGrams: a.grams, grams: item.grams)
             }

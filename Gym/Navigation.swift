@@ -197,10 +197,12 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 12
+    static let version = 13
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("sparkles", "AI Plate", "Each dish comes with its ingredients (bun, patty, cheese…), each editable; cooking oil and butter it can't see are estimated and marked ✦."),
+        ("chart.line.uptrend.xyaxis", "Trend and expenditure match MacroFactor", "Trend weight within 0,01 kg of MacroFactor's on your history; expenditure within about 60 kcal."),
         ("paintpalette.fill", "23 themes", "More → Theme: dark (OLED, Forest, Ember, Crimson, Amethyst, Neon…), light (Sand, Mint, Blush, Arctic, Paper) and Glass (Aurora, Sunset, Ocean, Frost)."),
         ("figure.arms.open", "New icon", "Front double biceps."),
         ("target", "Edit Goal", "Strategy → Edit Goal: drag a ruler to your target weight, set the rate, see your budget and end date, then review."),

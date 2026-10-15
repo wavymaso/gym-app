@@ -119,7 +119,7 @@ extension ModelContext {
 func foodEmoji(_ e: FoodEntry) -> String { e.isQuickAdd ? "⚡️" : foodEmoji(name: e.name, brand: e.brand) }
 
 func foodEmoji(name: String, brand: String?) -> String {
-    let n = FoodAPI.fold(name + " " + (brand ?? ""))
+    let n = FoodAPI.fold(name + " " + (brand ?? "")) + " "
     let table: [(String, [String])] = [
         ("☕️", ["cafe", "coffee", "espresso", "cortado", "capuccino", "cappuccino", "latte"]),
         ("🥤", ["batido", "shake", "whey", "protein drink", "proteina liquida"]),
@@ -164,6 +164,7 @@ func foodEmoji(name: String, brand: String?) -> String {
         ("🍯", ["miel", "honey", "mermelada", "jam"]),
         ("🧃", ["zumo", "juice"]),
         ("🥫", ["salsa", "sauce", "ketchup", "mayonesa", "mayo", "alioli"]),
+        ("🧂", ["sal ", "salt", "pimienta", "pepper", "especia", "spice"]),
         ("🍺", ["cerveza", "beer"]),
         ("🍷", ["vino", "wine"]),
         ("💧", ["agua", "water"]),

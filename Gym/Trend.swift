@@ -23,7 +23,7 @@ struct DayValue: Equatable {
 enum TrendAlgorithm: String, CaseIterable, Identifiable {
     case v1, v2
     var id: String { rawValue }
-    static var current: TrendAlgorithm { TrendAlgorithm(rawValue: UserDefaults.standard.string(forKey: "trendAlgorithm") ?? "") ?? .v2 }   // V2 by default: better on every test (Tests/trendv2)
+    static var current: TrendAlgorithm { TrendAlgorithm(rawValue: UserDefaults.standard.string(forKey: "trendAlgorithm") ?? "") ?? .v1 }   // V1 by default: matches MacroFactor's trend to 0,01 kg on your history
 }
 
 /// Every day from the first weigh-in to `through`: interpolated scale weight and trend, with the chosen algorithm.
@@ -250,10 +250,11 @@ func days(from a: String, through b: String) -> [String] {
 
 /// Which expenditure engine to use.
 enum ExpenditureAlgorithm: String, CaseIterable, Identifiable {
-    case joint, standard, responsive, stable
+    case classic, joint, standard, responsive, stable
     var id: String { rawValue }
     var label: String {
         switch self {
+        case .classic: return "Standard (MacroFactor-style)"
         case .joint: return "Expenditure V2 (joint model)"
         case .standard: return "Expenditure V1"
         case .responsive: return "V1, responsive"
@@ -262,6 +263,7 @@ enum ExpenditureAlgorithm: String, CaseIterable, Identifiable {
     }
     var detail: String {
         switch self {
+        case .classic: return "Your average intake over 3 weeks minus the change in your trend weight, smoothed. Matches MacroFactor's numbers within about 60 kcal on your history."
         case .joint: return "Tracks your true weight, expenditure and water weight together, day by day. Reacts sooner to real changes, shrugs off water swings and patchy logging."
         case .standard: return "Weight change over 3 weeks against average intake, smoothed."
         case .responsive: return "V1 over 2 weeks: follows changes faster, moves around more."
@@ -352,3 +354,30 @@ private func mul(_ a: [[Double]], _ b: [[Double]]) -> [[Double]] {
 }
 private func add(_ a: [[Double]], _ b: [[Double]]) -> [[Double]] { zip(a, b).map { zip($0, $1).map(+) } }
 private func transpose(_ a: [[Double]]) -> [[Double]] { (0..<a[0].count).map { j in a.map { $0[j] } } }
+
+
+/// MacroFactor-style expenditure: each day, the last 21 days' average intake minus the trend's change
+/// (5 500 kcal per kg: weight change is part water and lean, not all fat), blended in 5% a day.
+/// Fitted to MacroFactor's own numbers on your history (Tests/backtest, MFCMP=1).
+func classicExpenditure(start: String, end: String, initial: Double, intake: [String: Double], weights: [DayValue],
+                        window: Int = 21, density: Double = 5500, alpha: Double = 0.05) -> [ExpenditurePoint] {
+    let all = days(from: start, through: end)
+    let trend = Dictionary(trendSeriesV1(weights, through: end).map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+    var e = initial, out: [ExpenditurePoint] = []
+    var updates = 0
+    for (i, d) in all.enumerated() {
+        var paused = true
+        if i >= window - 1 {
+            let first = all[i - window + 1]
+            let logged = all[(i - window + 1)...i].compactMap { intake[$0] }
+            if Double(logged.count) >= Double(window) * 0.5, let t0 = trend[first], let t1 = trend[d] {
+                let est = logged.reduce(0, +) / Double(logged.count) - density * (t1 - t0) / Double(window - 1)
+                e += alpha * (est - e)
+                updates += 1
+                paused = false
+            }
+        }
+        out.append(ExpenditurePoint(day: d, kcal: e, paused: paused, confidence: min(1, Double(updates) / 45)))
+    }
+    return out
+}

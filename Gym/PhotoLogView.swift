@@ -388,6 +388,7 @@ struct PlateRow: View {
             case .generic: return ("USDA", .teal)
             case .estimate: return ("≈ Estimate", .orange)
             case .picked: return ("Chosen", palette.accent)
+            case .dish: return ("Dish", palette.calories)
             }
         }()
         Text(text).font(.caption2.weight(.bold)).foregroundStyle(color)

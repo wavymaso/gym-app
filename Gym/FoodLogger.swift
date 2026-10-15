@@ -468,7 +468,7 @@ struct AIPanel: View {
             if describe { mode = 1 }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "photoDemo") {        // testing only: a canned answer
-                let items = PhotoAI.parse(#"{"items":[{"name":"Seafood paella","name_es":"Paella de marisco","search":"paella seafood","grams":420,"kcal_100g":160,"protein_100g":9,"fat_100g":6,"carbs_100g":18,"confidence":0.8},{"name":"Alioli","name_es":"Alioli","search":"aioli","grams":25,"kcal_100g":700,"protein_100g":1,"fat_100g":77,"carbs_100g":1,"confidence":0.4}]}"#)
+                let items = PhotoAI.parse(#"{"items":[{"name":"Air fried potato fries","name_es":"Patatas fritas al aire","search":"potato fries","amount":"1 serving","grams":200,"kcal_100g":180,"protein_100g":2,"fat_100g":10,"carbs_100g":20,"confidence":0.8,"ingredients":[{"name":"Potato","name_es":"Patata","search":"potato baked","amount":"1 medium","grams":185,"kcal_100g":93,"protein_100g":2.5,"fat_100g":0.1,"carbs_100g":21,"confidence":0.8},{"name":"Olive oil","name_es":"Aceite de oliva","search":"oil olive","amount":"1 tbsp","grams":13.5,"kcal_100g":884,"protein_100g":0,"fat_100g":100,"carbs_100g":0,"assumed":true,"likelihood":0.85},{"name":"Salt","name_es":"Sal","search":"salt table","amount":"1 pinch","grams":1,"kcal_100g":0,"protein_100g":0,"fat_100g":0,"carbs_100g":0}]},{"name":"Coke Zero","name_es":"Coca-Cola Zero","search":"soft drink diet cola","amount":"1 can","grams":330,"kcal_100g":0.3,"protein_100g":0,"fat_100g":0,"carbs_100g":0,"liquid":true,"confidence":0.9,"ingredients":[]}]}"#)
                 plate = ctx.plate(from: items); seenBy = "Gemini"
             }
             #endif
@@ -593,7 +593,16 @@ struct AIPanel: View {
                     Spacer()
                     Button("Start over") { plate = []; photos = []; text = "" }.font(.callout)
                 }
-                ForEach($plate) { $item in PlateRow(item: $item, energy: energy, swap: { swapping = item }) }
+                Text("AI Plate").font(.title2.bold()).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 4)
+                ForEach($plate) { $item in AIPlateCard(item: $item, energy: energy, swap: { swapping = $0 }) }
+                if plate.contains(where: { $0.children.contains(where: \.assumed) }) {
+                    Label("Rows marked ✦ are inferred, not seen: mostly cooking oil and butter, with how likely they are. Change or remove them if you know better.",
+                          systemImage: "drop.fill").font(.caption).foregroundStyle(.secondary)
+                }
+                Text("AI can make mistakes, so always check its results.").font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                PlateNutrition(plate: total, day: ctx.entries(on: dayKey()).reduce(Nutrients.zero) { $0 + $1.nutrients },
+                               target: ctx.dayTargets(on: dayKey()), energy: energy)
             }
             .padding(16)
         }
@@ -609,9 +618,13 @@ struct AIPanel: View {
     }
 
     private func replace(_ item: PlateItem, with food: Food, grams: Double) {
-        let new = PlateItem(ai: item.ai, name: food.name, detail: food.brand, per100: food.per100, isLiquid: food.isLiquid,
+        var new = PlateItem(ai: item.ai, name: food.name, detail: food.brand, per100: food.per100, isLiquid: food.isLiquid,
                             grams: grams.rounded(), suggested: grams, foodKey: food.key, source: .picked)
-        if let i = plate.firstIndex(where: { $0.id == item.id }) { plate[i] = new }
+        new.amount = "\(number(grams.rounded())) \(food.baseUnit)"
+        for i in plate.indices {
+            if plate[i].id == item.id { plate[i] = new; return }
+            if let j = plate[i].children.firstIndex(where: { $0.id == item.id }) { plate[i].children[j] = new; return }
+        }
     }
 }
 
@@ -767,3 +780,152 @@ private struct LiveScanner: UIViewControllerRepresentable {
     }
 }
 #endif
+
+
+/// One food on the AI plate, MacroFactor-style: emoji, name, macros, an amount chip; a dish opens to
+/// its ingredients, each with its own amount (and inferred oil marked, with how likely it is).
+struct AIPlateCard: View {
+    @Binding var item: PlateItem
+    let energy: EnergyUnit
+    let swap: (PlateItem) -> Void
+    @State private var open = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            row($item, top: true)
+            if item.isDish {
+                Divider().padding(.leading, 16)
+                Button { withAnimation(.snappy) { open.toggle() } } label: {
+                    HStack {
+                        Text(open ? "Collapse Ingredients" : "Show \(item.children.count) Ingredients").font(.subheadline)
+                        Spacer()
+                        Image(systemName: open ? "chevron.up" : "chevron.down").font(.subheadline.weight(.semibold))
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if open {
+                    ForEach($item.children) { $c in
+                        row($c, top: false)
+                        if c.id != item.children.last?.id { Divider().padding(.leading, 72) }
+                    }
+                }
+            }
+        }
+        .modifier(CardSurface(cornerRadius: 18))
+        .opacity(item.included ? 1 : 0.5)
+    }
+
+    private func row(_ x: Binding<PlateItem>, top: Bool) -> some View {
+        let v = x.wrappedValue, n = v.nutrients
+        return HStack(spacing: 12) {
+            Button { withAnimation { x.wrappedValue.included.toggle() } } label: {
+                Text(foodEmoji(name: v.name, brand: nil)).font(.system(size: top ? 30 : 26)).frame(width: 44)
+                    .overlay(alignment: .bottomTrailing) {
+                        if !v.included { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(palette.warn) }
+                    }
+            }
+            .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 4) {
+                    if v.assumed { Image(systemName: "sparkles").font(.caption).foregroundStyle(palette.fat) }
+                    Text(v.name).font(.body).lineLimit(2)
+                    if v.source == .estimate { Text("≈").font(.caption.weight(.bold)).foregroundStyle(palette.warn) }
+                }
+                (Text("\(number(energy.fromKcal(n.kcal)))") + Text(Image(systemName: "flame.fill")).font(.caption2)
+                 + Text("  \(number(n.protein))P  \(number(n.fat))F  \(number(n.carbs))C  •  \(number(v.totalGrams)) \(v.unit)"))
+                    .font(.subheadline).foregroundStyle(.secondary).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                if v.assumed {
+                    Text("Likely \(Int((v.ai?.likelihood ?? 0.6) * 100))%: inferred from how it's usually cooked").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+            amountChip(x)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .contextMenu {
+            if !v.isDish { Button("Swap for another food", systemImage: "arrow.triangle.2.circlepath") { swap(v) } }
+            Button(v.included ? "Leave out" : "Include", systemImage: v.included ? "minus.circle" : "plus.circle") { x.wrappedValue.included.toggle() }
+        }
+    }
+
+    /// "1 serving" / "13,5 g": tap to change it.
+    private func amountChip(_ x: Binding<PlateItem>) -> some View {
+        let v = x.wrappedValue
+        return Menu {
+            if v.isDish {
+                ForEach([0.5, 0.75, 1, 1.25, 1.5, 2], id: \.self) { s in
+                    Button("\(number(s, digits: 2)) serving\(s == 1 ? "" : "s")") { x.wrappedValue.setServings(s) }
+                }
+            } else {
+                let g = v.grams
+                ForEach([0.0, 0.5, 0.75, 1, 1.25, 1.5, 2], id: \.self) { k in
+                    Button(k == 0 ? "None" : "\(number((g * k).rounded())) \(v.unit)") {
+                        if k == 0 { x.wrappedValue.included = false } else { x.wrappedValue.grams = (g * k).rounded(); x.wrappedValue.included = true }
+                    }
+                }
+                Divider()
+                Button("Swap for another food…", systemImage: "magnifyingglass") { swap(v) }
+            }
+        } label: {
+            VStack(spacing: 0) {
+                Text(v.isDish ? number(v.servings, digits: v.servings == v.servings.rounded() ? 0 : 2) : (v.amount.isEmpty ? number(v.grams) : leadingNumber(v.amount)))
+                    .font(.subheadline.weight(.semibold)).monospacedDigit()
+                Text(v.isDish ? (v.servings == 1 ? "serving" : "servings") : (v.amount.isEmpty ? v.unit : unitWord(v.amount)))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .frame(width: 92, height: 50)
+            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .menuStyle(.button).buttonStyle(.plain)
+    }
+
+    private func leadingNumber(_ s: String) -> String { s.split(separator: " ").first.map(String.init) ?? s }
+    private func unitWord(_ s: String) -> String { s.split(separator: " ").dropFirst().joined(separator: " ") }
+}
+
+/// Plate or day: what this adds, against today's targets.
+struct PlateNutrition: View {
+    let plate: Nutrients
+    let day: Nutrients
+    let target: Targets?
+    let energy: EnergyUnit
+    @State private var showDay = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Nutrition").font(.title2.bold())
+                Spacer()
+                Picker("", selection: $showDay) { Text("Plate").tag(false); Text("Day").tag(true) }
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 160)
+            }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                ForEach(Macro.allCases, id: \.self) { m in tile(m) }
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    private func tile(_ m: Macro) -> some View {
+        let p = m.value(plate.targets), d = m.value(day.targets), t = target.map { m.value($0) } ?? 0
+        let conv: (Double) -> Double = { m == .calories ? energy.fromKcal($0) : $0 }
+        let u = m == .calories ? energy.rawValue : "g"
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(m.label).font(.headline)
+            Text(showDay ? "\(number(conv(d + p))) / \(number(conv(t))) \(u)" : "\(number(conv(p))) \(u)").font(.subheadline).monospacedDigit()
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.raisedBackground)
+                    if showDay { Capsule().fill(m.color.opacity(0.4)).frame(width: g.size.width * min(t > 0 ? d / t : 0, 1)) }
+                    Capsule().fill(m.color)
+                        .frame(width: g.size.width * min(t > 0 ? p / t : 0, 1))
+                        .offset(x: showDay ? g.size.width * min(t > 0 ? d / t : 0, 1) : 0)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(CardSurface(cornerRadius: 16))
+    }
+}
