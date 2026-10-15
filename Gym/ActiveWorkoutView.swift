@@ -277,9 +277,9 @@ private struct ExerciseBlock: View {
                         Text(previousText(previous, workingIndex: working - 1, row: row))
                             .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 60 : 90, alignment: .leading)
                             .lineLimit(1).minimumScaleFactor(0.8)
-                        DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commit() }), digits: 2)
+                        DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commitSoon() }), digits: 2)
                             .frame(width: isPhone ? 64 : 70)
-                        DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commit() }), digits: 0)
+                        DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commitSoon() }), digits: 0)
                             .frame(width: isPhone ? 44 : 50)
                         if isPhone {
                             // Reps in reserve: one tap picks it (it makes progression and e1RM honest).
@@ -292,7 +292,7 @@ private struct ExerciseBlock: View {
                             }
                             .menuStyle(.button).buttonStyle(.plain)
                         } else {
-                            DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; ctx.commit() }), digits: 1, emptyBelowZero: true)
+                            DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; ctx.commitSoon() }), digits: 1, emptyBelowZero: true)
                                 .frame(width: 44)
                         }
                         HStack(spacing: 6) {

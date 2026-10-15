@@ -45,8 +45,20 @@ extension Notification.Name {
     static let gymDidCommit = Notification.Name("gymDidCommit")
 }
 
+@MainActor private var pendingCommit: Task<Void, Never>?
+
 extension ModelContext {
     /// Save, stamping what changed (for sync) and noting what was deleted.
+    /// For fields you type into: one save once typing pauses, not one per keystroke (each save
+    /// makes every screen recompute).
+    @MainActor func commitSoon() {
+        pendingCommit?.cancel()
+        pendingCommit = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            if !Task.isCancelled { self.commit() }
+        }
+    }
+
     func commit() {
         let now = Date()
         for m in insertedModelsArray + changedModelsArray {
