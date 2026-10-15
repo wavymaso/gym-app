@@ -46,3 +46,4 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 - [ ] More → Day start set to 03:00: a snack at 01:00 lands on the previous day
 - [ ] Travel: change the time zone in Settings → General → Date & Time with the app open; "Today" follows
 - [ ] Gemini key still works after the move to the Keychain (Photo logging shows the key; analyse a photo)
+- [ ] Insight charts (Weight Trend, Expenditure, Calories & Macros…): pinch to zoom around your fingers; the strip shows the dates, ‹ › slide, ✕ back to presets; pinching all the way out returns to "All"; touch-and-hold still shows values

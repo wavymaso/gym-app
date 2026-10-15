@@ -74,6 +74,8 @@ struct InsightDetailView: View {
     @State private var picked: Date?                  // touch-and-drag on the chart
     @State var macro: Macro = .calories               // Calories & Macros: which one
     @State private var listLimit = 60                 // rows in the raw-data list
+    @State private var window: (from: String, to: String)?      // pinched: a custom time window
+    @State private var pinchBase: (from: String, to: String, anchor: Double)?
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
@@ -95,7 +97,10 @@ struct InsightDetailView: View {
                 }
                 headline(shown, unit, energy)
                 chart(shown, unit, energy).frame(height: 300)
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(kind == .goal ? nil : pinch(all, shown))
                 if kind != .goal { controls }
+                if let w = window, kind != .goal { windowStrip(w, all) }
                 legend
                 Text("Insights & Data").font(.title2.bold()).padding(.top, 6)
                 if [.weightTrend, .expenditure, .scaleWeight].contains(kind) { changes(all, unit, energy) }
@@ -130,6 +135,11 @@ struct InsightDetailView: View {
                 ToolbarItem { Button { weighing = true } label: { Label("Weigh in", systemImage: "plus") } }
             }
         }
+        #if DEBUG
+        .onAppear {   // testing only: -chartWindow 2026-08-12,2026-09-03
+            if let w = UserDefaults.standard.string(forKey: "chartWindow")?.split(separator: ","), w.count == 2 { window = (String(w[0]), String(w[1])) }
+        }
+        #endif
         .sheet(isPresented: $weighing) { WeighInSheet() }
         .sheet(item: $editing) { EditWeighIn(entry: $0, unit: unit) }
     }
@@ -189,6 +199,7 @@ struct InsightDetailView: View {
 
     private func clip(_ pts: [Point]) -> [Point] {
         if kind == .goal { return pts }
+        if let w = window { return grouped(pts.filter { $0.day >= w.from && $0.day <= w.to }, grouping) }
         guard let n = range.days else { return grouped(pts, grouping) }
         let from = addDays(dayKey(), -(n - 1))
         return grouped(pts.filter { $0.day >= from }, grouping)
@@ -375,14 +386,79 @@ struct InsightDetailView: View {
         .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine(stroke: StrokeStyle(dash: [4, 4])); AxisValueLabel() } }
     }
 
+    // MARK: Pinch to zoom: a custom time window
+
+    /// Two fingers: zoom around the point between them (5 days at the closest, your whole history at the widest).
+    private func pinch(_ all: [Point], _ shown: [Point]) -> some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.01)
+            .onChanged { v in
+                guard let first = all.first?.day, let last = all.last?.day else { return }
+                if pinchBase == nil {
+                    let from = window?.from ?? shown.first?.day ?? first, to = window?.to ?? shown.last?.day ?? last
+                    pinchBase = (from, to, Double(v.startAnchor.x))
+                }
+                guard let b = pinchBase else { return }
+                let total = daysBetween(first, last) + 1
+                let span0 = daysBetween(b.from, b.to) + 1
+                let span = min(max(Int((Double(span0) / Double(v.magnification)).rounded()), 5), total)
+                if span >= total {
+                    if window != nil { window = nil; range = .all }
+                    return
+                }
+                let center = Double(daysBetween(first, b.from)) + b.anchor * Double(span0)
+                var start = Int((center - b.anchor * Double(span)).rounded())
+                start = min(max(start, 0), total - span)
+                let w = (from: addDays(first, start), to: addDays(first, start + span - 1))
+                if window?.from != w.from || window?.to != w.to { window = w }
+            }
+            .onEnded { _ in
+                pinchBase = nil
+                Haptics.tick()
+            }
+    }
+
+    /// The window's dates, sliding it along, and back to the presets.
+    private func windowStrip(_ w: (from: String, to: String), _ all: [Point]) -> some View {
+        let span = daysBetween(w.from, w.to) + 1
+        let fmt: (String) -> String = { date(fromKey: $0).formatted(.dateTime.day().month(.abbreviated).year(w.from.prefix(4) == w.to.prefix(4) && w.to.prefix(4) == dayKey().prefix(4) ? .omitted : .defaultDigits).locale(appLocale)) }
+        return HStack(spacing: Space.s) {
+            Button { slide(-max(span / 2, 1), all) } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }
+                .disabled(w.from <= (all.first?.day ?? w.from))
+            VStack(spacing: 1) {
+                Text("\(fmt(w.from)) – \(fmt(w.to))").font(.subheadline.weight(.semibold)).monospacedDigit()
+                Text("\(span) days · pinch to zoom").font(.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            Button { slide(max(span / 2, 1), all) } label: { Image(systemName: "chevron.right").frame(width: 36, height: 36) }
+                .disabled(w.to >= (all.last?.day ?? w.to))
+            Button { animate(Motion.snappy) { window = nil } } label: { Image(systemName: "xmark").font(.caption.weight(.bold)).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle()) }
+                .accessibilityLabel("Back to the preset ranges")
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Space.s).padding(.vertical, Space.xs)
+        .modifier(GlassCapsule())
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func slide(_ days: Int, _ all: [Point]) {
+        guard let w = window, let first = all.first?.day, let last = all.last?.day else { return }
+        let span = daysBetween(w.from, w.to)
+        var from = addDays(w.from, days)
+        if from < first { from = first }
+        if addDays(from, span) > last { from = addDays(last, -span) }
+        animate(Motion.snappy) { window = (from, addDays(from, span)) }
+        Haptics.tick()
+    }
+
     private var controls: some View {
         HStack(spacing: 10) {
             HStack(spacing: 2) {
                 ForEach(DetailRange.allCases) { r in
-                    Button { animate(Motion.snappy) { range = r } } label: {
+                    let on = range == r && window == nil
+                    Button { animate(Motion.snappy) { range = r; window = nil } } label: {
                         Text(r.rawValue).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 40)
-                            .background(range == r ? Color.primary : .clear, in: Capsule())
-                            .foregroundStyle(range == r ? (palette.scheme == .dark ? Color.black : Color.white) : Color.primary)
+                            .background(on ? Color.primary : .clear, in: Capsule())
+                            .foregroundStyle(on ? (palette.scheme == .dark ? Color.black : Color.white) : Color.primary)
                     }
                     .buttonStyle(.plain)
                 }
