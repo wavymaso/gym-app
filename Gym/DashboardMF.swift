@@ -6,10 +6,8 @@ import SwiftUI
 // cards with a sparkline, the wide page title, the "Search for a food" bar and the + Shortcuts sheet.
 
 extension Font {
-    /// Wide, heavy page titles ("DASHBOARD").
-    static func pageTitle(_ size: CGFloat = 32) -> Font {
-        palette.matte ? .system(size: size * 1.05, weight: .semibold, design: .serif) : .system(size: size, weight: .black).width(.expanded)
-    }
+    /// Page titles: wide, tight, heavy, like an engraved label.
+    static func pageTitle(_ size: CGFloat = 32) -> Font { .system(size: size * 0.86, weight: .bold).width(.expanded) }
 }
 
 /// Monday to Sunday × calories, protein, fat, carbs: a bar per day against its target (the tick).
@@ -78,12 +76,11 @@ struct WeekGrid: View {
             RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.raisedBackground.opacity(future ? 0.5 : 1))
             if v > 0 {
                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(LinearGradient(colors: [m.color, m.color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
+                    .fill(m.color)
                     .frame(width: 8, height: min(rowHeight, (rowHeight - tickY) * frac))
                     .animation(Motion.pick(Motion.smooth), value: frac)
-                    .shadow(color: GlowStyle.on ? m.color.opacity(0.6) : .clear, radius: 5)
             }
-            Capsule().fill(frac >= 0.9 && frac <= 1.1 ? Color.white : Color.white.opacity(0.35))
+            Capsule().fill(frac >= 0.9 && frac <= 1.1 ? palette.text1 : palette.text1.opacity(0.35))
                 .frame(width: 12, height: 2.5).offset(y: -(rowHeight - tickY))
         }
         .frame(maxWidth: 24).frame(height: rowHeight)
@@ -160,7 +157,6 @@ struct SparkCard: View {
             .indexTip(count: values.count, title: { i in i == values.count - 1 ? "Latest" : "\(values.count - 1 - i) days ago" }) { i in
                 [TipRow(label: title, value: "\(number(values[i], digits: unit == "kg" || unit == "lb" ? 1 : 0)) \(unit)", color: color)]
             }
-            .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
         } else {
             Text("Not enough data yet").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -250,10 +246,10 @@ struct ShortcutsSheet: View {
     private func big(_ title: String, _ icon: String, _ c: Color, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 10) {
-                Image(systemName: icon).font(.title2.weight(.semibold)).foregroundStyle(c)
+                Image(systemName: icon).font(.title2.weight(.regular)).foregroundStyle(palette.text1)
                     .frame(width: 62, height: 62)
-                    .background(c.opacity(0.16), in: Circle())
-                    .overlay(Circle().stroke(c.opacity(0.25)))
+                    .background(Color.raisedBackground, in: Circle())
+                    .overlay(Circle().strokeBorder(palette.hairline, lineWidth: 0.5))
                 Text(title).font(.subheadline).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
@@ -264,7 +260,7 @@ struct ShortcutsSheet: View {
     private func row(_ title: String, _ icon: String, _ c: Color, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 18) {
-                Image(systemName: icon).font(.title3).foregroundStyle(c).frame(width: 30)
+                Image(systemName: icon).font(.title3).foregroundStyle(.secondary).frame(width: 30)
                 Text(title).font(.body)
                 Spacer()
                 Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)

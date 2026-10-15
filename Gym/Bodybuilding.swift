@@ -124,7 +124,6 @@ struct ProteinMealsCard: View {
                             RoundedRectangle(cornerRadius: 6).fill(Color.raisedBackground).frame(height: 90)
                             RoundedRectangle(cornerRadius: 6).fill(g >= per * 0.85 ? palette.protein : palette.protein.opacity(0.45))
                                 .frame(height: min(90, 90 * g / max(per * 1.6, 1)))
-                                .shadow(color: GlowStyle.on && g >= per * 0.85 ? palette.protein.opacity(0.6) : .clear, radius: 5)
                             Rectangle().fill(Color.primary.opacity(0.7)).frame(height: 2).offset(y: -90 * (per / (per * 1.6)))
                         }
                         .frame(maxWidth: 46)

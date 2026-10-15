@@ -92,7 +92,7 @@ private struct TipBubble: View {
             VStack(spacing: 3) {
                 if !title.isEmpty { Text(title).font(.subheadline.weight(.semibold)) }
                 if let subtitle { Text(subtitle).font(.caption) }
-                Divider().overlay(Color.black.opacity(0.2))
+                Divider().overlay(palette.onInverse.opacity(0.2))
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
                     HStack(spacing: 6) {
                         if r.color != .primary { Circle().fill(r.color).frame(width: 7, height: 7) }
@@ -101,9 +101,9 @@ private struct TipBubble: View {
                     }
                 }
             }
-            .padding(10).foregroundStyle(.black)
-            .background(.white.opacity(0.94), in: RoundedRectangle(cornerRadius: 10))
-            .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
+            .padding(10).foregroundStyle(palette.onInverse)
+            .background(palette.inverseFill.opacity(0.96), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+            .floatShadow()
             .fixedSize()
             .position(x: min(max(x, 85), width - 85), y: plot.minY + 36)
         }

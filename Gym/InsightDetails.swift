@@ -341,15 +341,14 @@ struct InsightDetailView: View {
                             Text("\(kind == .nutrition ? macro.label : kind.title): \(number(p.value, digits: isEnergy || kind == .nutrition ? 0 : 1)) \(isEnergy ? energy.rawValue : kind == .nutrition ? "g" : unit.rawValue)")
                                 .font(.caption.weight(.semibold)).monospacedDigit()
                         }
-                        .padding(10).foregroundStyle(.black)
-                        .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+                        .padding(10).foregroundStyle(palette.onInverse)
+                        .background(palette.inverseFill.opacity(0.96), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                         .fixedSize()
                         .position(x: min(max(px, 90), geo.size.width - 90), y: geo[frame].minY + 40)
                     }
                 }
             }
             .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine(stroke: StrokeStyle(dash: [4, 4])); AxisValueLabel() } }
-            .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
         }
     }
 
@@ -369,7 +368,7 @@ struct InsightDetailView: View {
         return Chart(Array(bars.enumerated()), id: \.offset) { i, b in
             BarMark(x: .value("Month", i), yStart: .value("From", b.from), yEnd: .value("To", max(b.to, b.from + 0.02)), width: .ratio(0.7))
                 .foregroundStyle(b.first ? (i == bars.count - 1 ? Color.secondary.opacity(0.5) : palette.good.opacity(0.85))
-                                 : b.towards ? palette.good.mix(with: .black, by: 0.4) : palette.good.opacity(0.85))
+                                 : b.towards ? palette.good.mix(with: palette.background, by: 0.45) : palette.good.opacity(0.85))
         }
         .chartXAxis {
             AxisMarks(values: names.indices.filter { $0 % step == 0 || $0 == names.count - 1 }) { v in
@@ -458,7 +457,7 @@ struct InsightDetailView: View {
                     Button { animate(Motion.snappy) { range = r; window = nil } } label: {
                         Text(r.rawValue).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 40)
                             .background(on ? Color.primary : .clear, in: Capsule())
-                            .foregroundStyle(on ? (palette.scheme == .dark ? Color.black : Color.white) : Color.primary)
+                            .foregroundStyle(on ? palette.onInverse : Color.primary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -487,7 +486,7 @@ struct InsightDetailView: View {
                 legendItem("Holding", color.opacity(0.6), square: true)
             case .goal:
                 legendItem("Away", palette.good.opacity(0.85), square: true)
-                legendItem("Towards", palette.good.mix(with: .black, by: 0.4), square: true)
+                legendItem("Towards", palette.good.mix(with: palette.background, by: 0.45), square: true)
             case .nutrition:
                 legendItem("Eaten", color, square: true)
                 legendItem("Target", Color.primary.opacity(0.7), line: true)

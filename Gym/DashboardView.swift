@@ -88,9 +88,6 @@ struct DashboardView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("DASHBOARD").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-                    .foregroundStyle(GlowStyle.on || palette.glass
-                                     ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
-                                     : AnyShapeStyle(.primary))
                 Text("\(greeting) · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))")
                     .font(.subheadline.weight(.medium)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             }
@@ -145,19 +142,22 @@ struct DashboardView: View {
     private var checkInBanner: some View {
         Button { sheet = .checkIn } label: {
             HStack(spacing: 14) {
-                Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(.white)
-                    .frame(width: 44, height: 44).background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: Radius.m))
+                Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(palette.accent)
+                    .frame(width: 44, height: 44).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(isPhone ? "Weekly check-in ready" : "Your weekly check-in is ready").font(.headline).foregroundStyle(.white)
+                    Text(isPhone ? "Weekly check-in ready" : "Your weekly check-in is ready").font(.headline).foregroundStyle(palette.text1)
                     Text(isPhone ? "Review the week, update targets" : "See how the week went and update your targets.")
-                        .font(.callout).foregroundStyle(.white.opacity(0.8))
+                        .font(.callout).foregroundStyle(palette.text2)
                 }
                 Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.8))
+                Image(systemName: "chevron.right").foregroundStyle(palette.text2)
             }
             .padding(16)
-            .background(LinearGradient(colors: [palette.accent, palette.accent.mix(with: .purple, by: 0.35)], startPoint: .leading, endPoint: .trailing),
-                        in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .modifier(CardSurface())
+            .overlay(alignment: .leading) {
+                // The finish's metal as a thin edge: "this needs you" without a coloured slab.
+                Capsule().fill(palette.accentFill).frame(width: 3).padding(.vertical, 14)
+            }
         }
         .buttonStyle(.plain)
     }

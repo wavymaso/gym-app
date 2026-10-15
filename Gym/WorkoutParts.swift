@@ -101,7 +101,7 @@ struct RestBar: View {
             .padding(12)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(color.opacity(0.5), lineWidth: 1.5))
-            .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+            .floatShadow()
             .onChange(of: left == 0) { _, over in if over && !rang { rang = true; ring() } }
         }
     }
@@ -228,7 +228,7 @@ struct PlateCalculator: View {
                     ForEach(Array(side.plates.enumerated()), id: \.offset) { _, p in
                         RoundedRectangle(cornerRadius: 3).fill(color(p))
                             .frame(width: p >= 10 ? 14 : 10, height: 34 + p * 2.6)
-                            .overlay { Text(trimmed(p)).font(.system(size: 8, weight: .bold)).rotationEffect(.degrees(-90)).foregroundStyle(.white).fixedSize() }
+                            .overlay { Text(trimmed(p)).font(.system(size: 8, weight: .bold)).rotationEffect(.degrees(-90)).foregroundStyle(Tokens.onScrim).fixedSize() }
                     }
                 }
                 .frame(height: 104)
@@ -268,14 +268,5 @@ struct PlateCalculator: View {
         return (out, left)
     }
 
-    private func color(_ p: Double) -> Color {
-        switch p {
-        case 25: return Color(hex: 0xE5383B)
-        case 20: return Color(hex: 0x3A6FF7)
-        case 15: return Color(hex: 0xF2C12E)
-        case 10: return Color(hex: 0x2BB673)
-        case 5: return Color(hex: 0xF5F5F5).mix(with: .gray, by: 0.3)
-        default: return Color(hex: 0x6B6B76)
-        }
-    }
+    private func color(_ p: Double) -> Color { Tokens.plate(p).color }
 }

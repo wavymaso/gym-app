@@ -70,7 +70,7 @@ enum DashItem {
         case "fat", "satFat", "energyBalance": return Macro.fat.color
         case "carbs", "fiber", "foodLogging", "goal": return Macro.carbs.color
         case "water", "activity": return Color.waterTone
-        case "weight", "weighIn": return palette.accent.mix(with: .purple, by: 0.5)
+        case "weight", "weighIn": return Color.weightTone
         case "sugar", "sodium", "cholesterol": return Color.alertTone
         default: return Color.extraTone
         }

@@ -71,7 +71,7 @@ struct AIPanel: View {
                                 .frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .overlay(alignment: .topTrailing) {
                                     Button { photos.remove(at: i) } label: {
-                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.white, .black.opacity(0.6))
+                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(Tokens.onScrim, Tokens.scrim)
                                     }
                                     .buttonStyle(.plain).padding(4)
                                 }

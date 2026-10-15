@@ -35,8 +35,7 @@ struct PhoneFoodLog: View {
         .overlay(alignment: .top) {
             // Under the status bar: cover what scrolls past the pinned header.
             Color.clear.frame(height: 0)
-                .background { if palette.glass { Rectangle().fill(.ultraThinMaterial).ignoresSafeArea(edges: .top) }
-                              else { Color.pageBackground.ignoresSafeArea(edges: .top) } }
+                .background { Color.pageBackground.ignoresSafeArea(edges: .top) }
         }
         .toolbar(.hidden, for: .navigationBar)
         .onChange(of: day) { _, d in if selection.mode == nil { selection.ids = [] }; selection.day = d; Haptics.tick() }
@@ -67,9 +66,6 @@ struct PhoneFoodLog: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Text(title).font(.pageTitle(title.count > 9 ? 24 : 30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.5)
-                    .foregroundStyle(GlowStyle.on || palette.glass
-                                     ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
-                                     : AnyShapeStyle(.primary))
                     .onTapGesture(count: 2) { animate(Motion.snappy) { day = dayKey() } }
                 Spacer(minLength: 4)
                 round("calendar") { picking = true }
@@ -94,10 +90,7 @@ struct PhoneFoodLog: View {
             MacroBarsRow(day: day, energy: energy)
         }
         .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
-        .background {
-            if palette.glass { Rectangle().fill(.ultraThinMaterial).ignoresSafeArea(edges: .top) }
-            else { Color.pageBackground.ignoresSafeArea(edges: .top) }
-        }
+        .background { Color.pageBackground.ignoresSafeArea(edges: .top) }
     }
 
     private var title: String {
@@ -168,7 +161,7 @@ struct DayPills: View {
         .overlay(shape.stroke(Color.primary.opacity(0.14), lineWidth: 3))
         .overlay(shape.trim(from: 0, to: min(p, 1)).stroke(p > 1.05 ? palette.warn : palette.calories,
                                                            style: StrokeStyle(lineWidth: 3, lineCap: .round))
-            .shadow(color: GlowStyle.on ? palette.calories.opacity(0.7) : .clear, radius: 4))
+            )
         .opacity(d > dayKey() ? 0.55 : 1)
     }
 }
@@ -227,7 +220,6 @@ struct MacroBarsRow: View {
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.primary.opacity(0.12))
                             Capsule().fill(frac > 1.05 ? palette.warn : m.color).frame(width: g.size.width * min(frac, 1))
-                                .shadow(color: GlowStyle.on ? m.color.opacity(0.8) : .clear, radius: 4)
                                 .animation(Motion.pick(Motion.smooth), value: frac)
                         }
                     }
@@ -295,7 +287,7 @@ struct DayEntries: View {
         let cal = Calendar.current
         let byHour = Dictionary(grouping: entries) { cal.component(.hour, from: $0.time) }
         let now = day == dayKey() ? cal.component(.hour, from: Date()) : 0
-        let lo = min(7, byHour.keys.min() ?? 7), hi = max(22, byHour.keys.max() ?? 22, now)
+        let lo = min(6, byHour.keys.min() ?? 6), hi = 23                // the whole evening, up to midnight
         let hours = showEmptyHours || sel.mode != nil ? Array(sel.mode != nil ? min(lo, 5)...max(hi, 23) : lo...hi) : byHour.keys.sorted()
         return VStack(alignment: .leading, spacing: 14) {
             if entries.isEmpty && !showEmptyHours {

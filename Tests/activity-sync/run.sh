@@ -5,5 +5,5 @@ cd "$(dirname "$0")"
 G=../../Gym
 O=$(mktemp -d)
 xcrun swiftc -o "$O/t" $G/Calc.swift $G/Models.swift $G/Food.swift $G/FoodAPI.swift $G/Log.swift $G/Micros.swift $G/GymModels.swift $G/GymCalc.swift \
-  $G/Trend.swift $G/Progress.swift $G/Sync.swift $G/Body.swift $G/Supplements.swift $G/Phases.swift $G/SyncServer.swift $G/LocalFoods.swift $G/SyncClient.swift $G/WidgetData.swift $G/PhotoAI.swift $G/Secrets.swift $G/Activity.swift $G/Design.swift $G/Meals.swift $G/Theme.swift $G/Finish.swift main.swift
+  $G/Trend.swift $G/Progress.swift $G/Sync.swift $G/Body.swift $G/Supplements.swift $G/Phases.swift $G/SyncServer.swift $G/LocalFoods.swift $G/SyncClient.swift $G/WidgetData.swift $G/PhotoAI.swift $G/Secrets.swift $G/Activity.swift $G/Design.swift $G/Meals.swift $G/Theme.swift $G/Tokens.swift main.swift
 "$O/t"

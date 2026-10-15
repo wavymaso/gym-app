@@ -3,193 +3,76 @@ import SwiftUI
 import UIKit
 #endif
 
-// The look of the app: themes (dark and bold by default), colours, cards, rings.
-// The chosen palette is global so every view, sheet and window uses the same one;
-// changing theme rebuilds the window (see ThemedRoot in GymApp.swift).
+// The look of the app: Appearance × Finish, from the tokens in Tokens.swift. The palette is global
+// so every view, sheet and window uses the same one; changing it rebuilds the window (ThemedRoot).
 
-enum AppTheme: String, CaseIterable, Identifiable {
-    // Dark
-    case noir, sterling, roseGold, titanium, bronze, midnight, graphite, ocean, oled, forest, ember, crimson, amethyst, mocha, nord, neon, slate
-    // Light
-    case daylight, sand, mint, blush, arctic, paper
-    // Glass
-    case glass, aurora, sunsetGlass, oceanGlass, frost
-    // Follows the system
-    case system
-    var id: String { rawValue }
-
-    enum Group: String, CaseIterable { case metal = "Metal", dark = "Dark", light = "Light", glass = "Glass" }
-    var group: Group {
-        switch self {
-        case .daylight, .sand, .mint, .blush, .arctic, .paper, .system: return .light
-        case .glass, .aurora, .sunsetGlass, .oceanGlass, .frost: return .glass
-        case .noir, .sterling, .roseGold, .titanium, .bronze: return .metal
-        default: return .dark
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .system: return "Automatic"
-        case .oled: return "OLED Black"
-        case .noir: return "Noir & Gold"
-        case .sterling: return "Sterling"
-        case .roseGold: return "Rose Gold"
-        case .titanium: return "Titanium"
-        case .bronze: return "Bronze"
-        case .sunsetGlass: return "Sunset Glass"
-        case .oceanGlass: return "Ocean Glass"
-        default: return rawValue.prefix(1).uppercased() + rawValue.dropFirst()
-        }
-    }
-
-    var detail: String {
-        switch self {
-        case .noir: return "Matte black and gold: classic, quiet luxury"
-        case .sterling: return "Matte black and silver: cool and understated"
-        case .roseGold: return "Warm black with rose gold"
-        case .titanium: return "Blue-black with brushed titanium"
-        case .bronze: return "Deep brown-black with antique bronze"
-        case .midnight: return "Near-black, electric colours"
-        case .graphite: return "Dark grey, warm orange"
-        case .ocean: return "Deep blue, teal"
-        case .oled: return "Pure black, saves battery on your iPhone"
-        case .forest: return "Deep green, earthy and calm"
-        case .ember: return "Charcoal and fire orange"
-        case .crimson: return "Dark with blood red, aggressive"
-        case .amethyst: return "Deep purple, violet and pink"
-        case .mocha: return "Coffee browns, warm and soft"
-        case .nord: return "Cool arctic greys and pastel blues"
-        case .neon: return "Black with cyber pink and cyan"
-        case .slate: return "Blue-grey, muted and professional"
-        case .daylight: return "Light and clean"
-        case .sand: return "Warm cream and terracotta"
-        case .mint: return "Fresh white and mint green"
-        case .blush: return "Soft pink and rose"
-        case .arctic: return "Icy white and blue"
-        case .paper: return "Off-white, ink black, minimal"
-        case .glass: return "Apple's Liquid Glass over colour"
-        case .aurora: return "Glass over northern lights greens and purples"
-        case .sunsetGlass: return "Glass over orange, pink and violet"
-        case .oceanGlass: return "Glass over deep sea blues and teal"
-        case .frost: return "Light Liquid Glass over pale colour"
-        case .system: return "Midnight at night, Daylight by day"
-        }
-    }
-
-    /// The palette to use, given whether the system is in dark mode (only matters for Automatic).
-    func palette(systemDark: Bool) -> Palette {
-        switch self {
-        case .system: return (systemDark ? Palette.midnight : .daylight).refined()
-        default: return (Palette.all[self] ?? .midnight).refined()
-        }
-    }
-
-    /// nil lets the system decide (Automatic).
-    var scheme: ColorScheme? {
-        if self == .system { return nil }
-        return Palette.all[self]?.scheme ?? .dark
-    }
-}
-
+/// What views read. Everything comes from the tokens: no colour is defined here.
 struct Palette: Equatable {
-    var name: String
-    var scheme: ColorScheme
-    var background: Color          // behind everything
-    var surface: Color             // cards
-    var raised: Color              // things on cards: chips, fields, empty ring tracks
-    var stroke: Color              // card outlines
-    var accent: Color              // buttons, selection, links
-    var calories: Color
-    var protein: Color
-    var fat: Color
-    var carbs: Color
-    var good = Color(hex: 0x34C77B)
-    var warn = Color(hex: 0xFF9F2E)
-    var glass = false              // cards are Liquid Glass over a colourful backdrop
-    var matte = false              // no glow or gradients: flat cards with a fine metallic hairline, serif titles
-    var onAccent = Color.white     // text and icons on an accent-filled button
+    var tokens: Tokens
+    var reduceDepth = false
 
-    static let midnight = Palette(name: "midnight", scheme: .dark, background: Color(hex: 0x09090C), surface: Color(hex: 0x15151B),
-                                  raised: Color(hex: 0x22222B), stroke: .white.opacity(0.06), accent: Color(hex: 0x4C7DFF),
-                                  calories: Color(hex: 0x4C7DFF), protein: Color(hex: 0xFF4F70), fat: Color(hex: 0xFFB830),
-                                  carbs: Color(hex: 0x2FD39A))
-    static let graphite = Palette(name: "graphite", scheme: .dark, background: Color(hex: 0x111111), surface: Color(hex: 0x1D1D1F),
-                                  raised: Color(hex: 0x2A2A2D), stroke: .white.opacity(0.07), accent: Color(hex: 0xFF7A1A),
-                                  calories: Color(hex: 0xFF7A1A), protein: Color(hex: 0xFF4D5E), fat: Color(hex: 0xFFD04A),
-                                  carbs: Color(hex: 0x4CC38A))
-    static let ocean = Palette(name: "ocean", scheme: .dark, background: Color(hex: 0x06111D), surface: Color(hex: 0x0E1F31),
-                               raised: Color(hex: 0x172D45), stroke: .white.opacity(0.07), accent: Color(hex: 0x14B8C8),
-                               calories: Color(hex: 0x22C7DA), protein: Color(hex: 0xFF6A88), fat: Color(hex: 0xFFC65A),
-                               carbs: Color(hex: 0x7BE38E))
-    static let glass = Palette(name: "glass", scheme: .dark, background: Color(hex: 0x0A0D1F), surface: .white.opacity(0.07),
-                               raised: .white.opacity(0.11), stroke: .white.opacity(0.14), accent: Color(hex: 0x7A92FF),
-                               calories: Color(hex: 0x6F8CFF), protein: Color(hex: 0xFF5C86), fat: Color(hex: 0xFFC247),
-                               carbs: Color(hex: 0x3EE0A8), glass: true)
-    static let daylight = Palette(name: "daylight", scheme: .light, background: Color(hex: 0xF2F2F7), surface: .white,
-                                  raised: Color(hex: 0xEDEDF2), stroke: .black.opacity(0.06), accent: Color(hex: 0x2F6BFF),
-                                  calories: Color(hex: 0x2F6BFF), protein: Color(hex: 0xE8445A), fat: Color(hex: 0xEFA300),
-                                  carbs: Color(hex: 0x1FA774))
+    var name: String { "\(tokens.appearance.rawValue)-\(tokens.finish.rawValue)" }
+    var scheme: ColorScheme { tokens.isDark ? .dark : .light }
+    var background: Color { tokens.background.color }
+    var grouped: Color { tokens.grouped.color }
+    var surface: Color { tokens.card.color }              // cards
+    var raised: Color { tokens.raised.color }              // things on cards: chips, fields, empty ring tracks
+    var stroke: Color { tokens.separator.color }           // separators and outlines
+    var hairline: Color { tokens.hairline }                // the top edge of a card
+    var text1: Color { tokens.text1.color }
+    var text2: Color { tokens.text2.color }
+    var text3: Color { tokens.text3.color }
+    var accent: Color { tokens.accent.color }              // the finish: buttons, main ring, selection, key numbers
+    var onAccent: Color { tokens.onAccent.color }
+    var calories: Color { tokens.calories.color }
+    var protein: Color { tokens.protein.color }
+    var fat: Color { tokens.fat.color }
+    var carbs: Color { tokens.carbs.color }
+    var good: Color { tokens.good.color }
+    var warn: Color { tokens.over.color }                  // over target (muted amber-copper, not red)
+    var under: Color { tokens.under.color }
+    var record: Color { tokens.record.color }
+    var warning: Color { tokens.warning.color }
+    var onData: Color { tokens.onData.color }              // on a data-coloured fill
+    var inverseFill: Color { text1 }                       // a selected segment: the primary text colour as a fill…
+    var onInverse: Color { background }                    // …with the page tone on it
+
+    /// Brushed metal for primary buttons, the main ring and selection: a 3-stop gradient in the finish's hue.
+    var accentFill: AnyShapeStyle { reduceDepth ? AnyShapeStyle(accent) : AnyShapeStyle(tokens.metal) }
+    var titleStyle: AnyShapeStyle { AnyShapeStyle(text1) }
+
+    static func make(_ a: Appearance, _ f: Finish, systemDark: Bool = true, reduceDepth: Bool = false) -> Palette {
+        Palette(tokens: Tokens.make(a.resolved(systemDark: systemDark), f), reduceDepth: reduceDepth)
+    }
+    static let standard = Palette.make(.dark, .titanium)
 }
 
-extension Palette {
-    /// A palette from hex colours; the outline follows light or dark.
-    /// The same palette with a different "over / attention" colour (matte themes use copper, not orange).
-    func warn(_ hex: UInt32) -> Palette { var p = self; p.warn = Color(hex: hex); return p }
+/// Settings: the two choices, plus "Reduce depth". Older theme choices move over once.
+enum ThemeChoice {
+    static var appearance: Appearance { Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "") ?? .automatic }
+    static var finish: Finish { Finish(rawValue: UserDefaults.standard.string(forKey: "finish") ?? "") ?? .titanium }
 
-    static func make(_ name: String, dark: Bool = true, bg: UInt32, surface: UInt32, raised: UInt32, accent: UInt32,
-                     kcal: UInt32? = nil, protein: UInt32, fat: UInt32, carbs: UInt32, glass: Bool = false,
-                     matte: Bool = false, onAccent: UInt32? = nil) -> Palette {
-        var p = Palette(name: name, scheme: dark ? .dark : .light, background: Color(hex: bg), surface: Color(hex: surface),
-                        raised: Color(hex: raised), stroke: dark ? .white.opacity(0.07) : .black.opacity(0.07), accent: Color(hex: accent),
-                        calories: Color(hex: kcal ?? accent), protein: Color(hex: protein), fat: Color(hex: fat), carbs: Color(hex: carbs))
-        p.matte = matte
-        if let onAccent { p.onAccent = Color(hex: onAccent) }
-        if matte { p.stroke = Color(hex: accent).opacity(0.18) }
-        if glass {
-            p.glass = true
-            p.surface = dark ? .white.opacity(0.07) : .white.opacity(0.45)
-            p.raised = dark ? .white.opacity(0.11) : .black.opacity(0.06)
-            p.stroke = dark ? .white.opacity(0.14) : .white.opacity(0.6)
+    /// The old 29 themes → appearance and finish.
+    static func migrate() {
+        let d = UserDefaults.standard
+        guard d.string(forKey: "appearance") == nil, let old = d.string(forKey: "theme") else { return }
+        let light = ["daylight", "sand", "mint", "blush", "arctic", "paper", "frost"]
+        let a: Appearance = old == "system" ? .automatic : old == "oled" ? .black : light.contains(old) ? .light : .dark
+        let f: Finish = switch old {
+            case "noir", "bronze", "mocha", "sand", "ember": .gold
+            case "sterling", "arctic", "frost", "paper": .silver
+            case "roseGold", "blush", "crimson", "sunsetGlass": .roseGold
+            case "graphite", "oled", "neon": .graphite
+            default: .titanium
         }
-        return p
+        d.set(a.rawValue, forKey: "appearance")
+        d.set(f.rawValue, forKey: "finish")
+        d.set(false, forKey: "reduceDepth")
     }
-
-    static let all: [AppTheme: Palette] = [
-        .midnight: .midnight, .graphite: .graphite, .ocean: .ocean, .glass: .glass, .daylight: .daylight,
-        .noir: make("noir", bg: 0x0A0A0A, surface: 0x131313, raised: 0x1F1D1A, accent: 0xC9A55C, kcal: 0xC9A55C,
-                    protein: 0xB86A5E, fat: 0xE0D2AE, carbs: 0x86A08A, matte: true, onAccent: 0x0A0A0A).warn(0xC4835E),
-        .sterling: make("sterling", bg: 0x0B0B0C, surface: 0x151517, raised: 0x222225, accent: 0xC8CCD2, kcal: 0xE2E5E9,
-                        protein: 0xB97C7C, fat: 0xCBB78C, carbs: 0x8DA5B6, matte: true, onAccent: 0x0B0B0C).warn(0xC99172),
-        .roseGold: make("roseGold", bg: 0x0D0A0A, surface: 0x171213, raised: 0x241C1C, accent: 0xC98F7E, kcal: 0xD9A493,
-                        protein: 0xB0606A, fat: 0xE3CBA8, carbs: 0x8FA394, matte: true, onAccent: 0x120C0C).warn(0xC98A6A),
-        .titanium: make("titanium", bg: 0x0A0C0E, surface: 0x13161A, raised: 0x1F242A, accent: 0xA9B2BD, kcal: 0xC3CBD3,
-                        protein: 0xB57A80, fat: 0xC9B48A, carbs: 0x7FA3A8, matte: true, onAccent: 0x0A0C0E).warn(0xC39070),
-        .bronze: make("bronze", bg: 0x0C0A08, surface: 0x16120E, raised: 0x231D17, accent: 0xB07A44, kcal: 0xC9935A,
-                      protein: 0xA85E4E, fat: 0xDCC59A, carbs: 0x7F9476, matte: true, onAccent: 0x0C0A08).warn(0xC27A4E),
-        .oled: make("oled", bg: 0x000000, surface: 0x0D0D0F, raised: 0x1C1C1F, accent: 0x5E8BFF, protein: 0xFF4F70, fat: 0xFFB830, carbs: 0x2FD39A),
-        .forest: make("forest", bg: 0x0B1410, surface: 0x14211A, raised: 0x1F3127, accent: 0x4CC38A, kcal: 0x8FD16A, protein: 0xFF7A6B, fat: 0xF2C14E, carbs: 0x3DB9A6),
-        .ember: make("ember", bg: 0x120D0B, surface: 0x1E1614, raised: 0x2C211D, accent: 0xFF6A2B, protein: 0xFF3D5A, fat: 0xFFC233, carbs: 0x5CCB8A),
-        .crimson: make("crimson", bg: 0x0E0809, surface: 0x1B1113, raised: 0x2A1A1D, accent: 0xE5243B, kcal: 0xFF5A5F, protein: 0xFF8FA3, fat: 0xFFB347, carbs: 0x6FD3A0),
-        .amethyst: make("amethyst", bg: 0x0F0B17, surface: 0x1B1426, raised: 0x2A1F3B, accent: 0xA77BF3, protein: 0xFF6FB5, fat: 0xFFC56E, carbs: 0x5FD9C0),
-        .mocha: make("mocha", bg: 0x15100D, surface: 0x221A15, raised: 0x33271F, accent: 0xD9A066, protein: 0xE8746B, fat: 0xF0C987, carbs: 0x9CC58C),
-        .nord: make("nord", bg: 0x232831, surface: 0x2E3440, raised: 0x3B4252, accent: 0x88C0D0, kcal: 0x81A1C1, protein: 0xBF616A, fat: 0xEBCB8B, carbs: 0xA3BE8C),
-        .neon: make("neon", bg: 0x05050A, surface: 0x101018, raised: 0x1B1B28, accent: 0x00E5FF, protein: 0xFF2D95, fat: 0xFFE600, carbs: 0x39FF88),
-        .slate: make("slate", bg: 0x101419, surface: 0x1A2028, raised: 0x262E39, accent: 0x6E9CD2, protein: 0xE07A8A, fat: 0xE3B65E, carbs: 0x63C39B),
-        .sand: make("sand", dark: false, bg: 0xF6F0E6, surface: 0xFFFBF5, raised: 0xEDE4D6, accent: 0xC8643B, protein: 0xD9485F, fat: 0xD99A1E, carbs: 0x3E9B6E),
-        .mint: make("mint", dark: false, bg: 0xEEF7F2, surface: 0xFFFFFF, raised: 0xE1EFE7, accent: 0x1FA37A, protein: 0xE5536B, fat: 0xE0A21B, carbs: 0x2E86DE),
-        .blush: make("blush", dark: false, bg: 0xFBEFF2, surface: 0xFFFFFF, raised: 0xF4E0E6, accent: 0xE0527F, protein: 0xC2185B, fat: 0xF0A030, carbs: 0x2BA88A),
-        .arctic: make("arctic", dark: false, bg: 0xEEF4FA, surface: 0xFFFFFF, raised: 0xDFE9F4, accent: 0x2F7BE0, protein: 0xE04B65, fat: 0xE6A11A, carbs: 0x1AA57F),
-        .paper: make("paper", dark: false, bg: 0xF7F6F2, surface: 0xFFFFFF, raised: 0xECEAE4, accent: 0x111111, kcal: 0x333333, protein: 0xD64545, fat: 0xD9A02B, carbs: 0x3A9A63),
-        .aurora: make("aurora", bg: 0x050F14, surface: 0, raised: 0, accent: 0x5CF2C2, kcal: 0x4BD8A9, protein: 0xC77DFF, fat: 0xFFD166, carbs: 0x48CAE4, glass: true),
-        .sunsetGlass: make("sunsetGlass", bg: 0x1A0A14, surface: 0, raised: 0, accent: 0xFF8A5B, kcal: 0xFF7A59, protein: 0xFF4F9A, fat: 0xFFC14D, carbs: 0x9B6BFF, glass: true),
-        .oceanGlass: make("oceanGlass", bg: 0x03111F, surface: 0, raised: 0, accent: 0x4CC9F0, kcal: 0x3A86FF, protein: 0xF72585, fat: 0xFFBE0B, carbs: 0x06D6A0, glass: true),
-        .frost: make("frost", dark: false, bg: 0xE8EEF8, surface: 0, raised: 0, accent: 0x3F6BFF, kcal: 0x6F8CFF, protein: 0xFF6B9A, fat: 0xFFC247, carbs: 0x2EC4A0, glass: true),
-    ]
 }
 
 /// The palette in use (set by ThemedRoot before anything is drawn).
-var palette: Palette = .midnight
+var palette: Palette = .standard
 
 extension Color {
     init(hex: UInt32, opacity: Double = 1) {
@@ -262,13 +145,7 @@ extension View {
 
     /// Behind a page: the theme's colour, or the Glass backdrop.
     func pageBackground() -> some View {
-        background {
-            if palette.glass { GlassBackdrop() }
-            else {
-                Color.pageBackground.ignoresSafeArea()
-                    .overlay { if palette.scheme == .dark { Grain(opacity: palette.matte ? 0.07 : 0.05).ignoresSafeArea() } }
-            }
-        }
+        background { Color.pageBackground.ignoresSafeArea() }
     }
 
     /// A settings-style form on the theme's background.
@@ -301,7 +178,7 @@ var adaptiveStack: AnyLayout { isPhone ? AnyLayout(VStackLayout(spacing: 12)) : 
 
 extension Color {
     static var cardBackground: Color { palette.surface }
-    static var pageBackground: Color { palette.glass ? .clear : palette.background }     // glass: the backdrop shows through
+    static var pageBackground: Color { palette.background }
     static var raisedBackground: Color { palette.raised }
 }
 
@@ -337,81 +214,34 @@ struct Card<Content: View>: View {
     }
 }
 
-/// How much flair: Standard, or Maximal (gradient edges, glow on rings, bars and charts).
-enum StyleLevel: String, CaseIterable, Identifiable {
-    case standard, maximal
-    var id: String { rawValue }
-    var label: String { self == .standard ? "Standard" : "Maximal" }
-}
-
-enum GlowStyle {
-    static var on: Bool { UserDefaults.standard.string(forKey: "styleLevel") == StyleLevel.maximal.rawValue && !palette.matte }
-}
-
-/// Every card's surface: plain, glowing (Maximal) or Liquid Glass (Glass theme).
+/// Every card: a tonal step up from the page, and a 0.5 pt hairline along the top edge
+/// (lighter than the card in the dark, darker in the light). No shadow.
 struct CardSurface: ViewModifier {
-    var cornerRadius: CGFloat = 20
+    var cornerRadius: CGFloat = Radius.l + 2
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if palette.glass {
-            if #available(iOS 26, macOS 26, *) {
-                content.glassEffect(.regular, in: shape)
-            } else {
-                content.background(.ultraThinMaterial, in: shape).overlay(shape.stroke(palette.stroke))
+        content
+            .background(Color.cardBackground, in: shape)
+            .overlay {
+                if !palette.reduceDepth {
+                    shape.strokeBorder(palette.hairline, lineWidth: 0.5)
+                        .mask(LinearGradient(colors: [Tokens.maskSolid, Tokens.maskSolid.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom))
+                }
             }
-        } else if GlowStyle.on {
-            content
-                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: palette.accent, by: 0.07), palette.surface],
-                                                      startPoint: .topLeading, endPoint: .bottomTrailing)))
-                .overlay(shape.stroke(LinearGradient(colors: [palette.accent.opacity(0.55), .white.opacity(0.03), palette.protein.opacity(0.3)],
-                                                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2))
-                .shadow(color: palette.accent.opacity(palette.scheme == .dark ? 0.18 : 0.1), radius: 16, y: 6)
-        } else if let m = palette.metalStops {
-            // Matte: a lit surface with a fine grain, edged in the metal.
-            content
-                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: .white, by: 0.035), palette.surface],
-                                                      startPoint: .top, endPoint: .bottom)))
-                .background(Grain(opacity: 0.045).clipShape(shape))
-                .overlay(shape.stroke(LinearGradient(colors: [m[3].opacity(0.55), m[1].opacity(0.18), m[2].opacity(0.4)],
-                                                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8))
-        } else if palette.scheme == .dark {
-            // Light falling from above: a touch brighter at the top edge.
-            content
-                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: .white, by: 0.03), palette.surface],
-                                                      startPoint: .top, endPoint: .bottom)))
-                .overlay(shape.stroke(LinearGradient(colors: [.white.opacity(0.09), .white.opacity(0.03)], startPoint: .top, endPoint: .bottom)))
-        } else {
-            content.background(Color.cardBackground, in: shape).overlay(shape.stroke(palette.stroke))
-        }
     }
 }
 
-/// A floating capsule (the search bar, the tab bar on Glass).
+/// A floating capsule (the search bar): a material, because content scrolls behind it.
 struct GlassCapsule: ViewModifier {
     func body(content: Content) -> some View {
-        if palette.glass, #available(iOS 26, macOS 26, *) {
-            content.glassEffect(.regular.interactive(), in: Capsule())
-        } else {
-            content.background(palette.glass ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.raisedBackground), in: Capsule())
-                .overlay(Capsule().stroke(palette.stroke))
-        }
+        content.background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(palette.hairline, lineWidth: 0.5))
     }
 }
 
-/// Behind everything on the Glass theme: soft colour for the glass to bend.
-struct GlassBackdrop: View {
-    var body: some View {
-        ZStack {
-            palette.background
-            Circle().fill(palette.calories).frame(width: 420).blur(radius: 120).offset(x: -150, y: -320).opacity(0.55)
-            Circle().fill(palette.protein).frame(width: 360).blur(radius: 130).offset(x: 170, y: -40).opacity(0.38)
-            Circle().fill(palette.carbs).frame(width: 380).blur(radius: 140).offset(x: -120, y: 360).opacity(0.32)
-            Circle().fill(Color(hex: 0x9B5CFF)).frame(width: 300).blur(radius: 120).offset(x: 160, y: 520).opacity(0.35)
-        }
-        .ignoresSafeArea()
-    }
-}
+/// Concentric corners: a shape inside a rounded container with `padding` keeps the same curve.
+func innerRadius(_ outer: CGFloat, padding: CGFloat) -> CGFloat { max(outer - padding, 2) }
 
 /// A progress ring. Past 100% a second, darker lap shows how far over.
 struct Ring: View {
@@ -419,36 +249,36 @@ struct Ring: View {
     let color: Color
     var lineWidth: CGFloat = 10
     @State private var shown: Double = 0
-    @State private var closed = false          // the moment it reaches 100%: one soft glow
+    @State private var closed = false          // the moment it reaches 100%: a small bounce
 
-    /// Metal themes: the calories ring is polished metal; other rings shade from deep to bright.
+    /// The calorie ring is the finish's metal (a highlight travelling round it); the macros are flat.
     private var ringColors: [Color] {
-        if let m = palette.metalStops, color == palette.calories { return [m[0], m[1], m[2], m[3], m[4], m[1]] }
-        return [color.mix(with: .black, by: 0.25), color, color.mix(with: .white, by: 0.12)]
+        let t = palette.tokens
+        if color == palette.calories || color == palette.accent, !palette.reduceDepth {
+            return [t.accentLow.color, t.accent.color, t.accentHigh.color, t.accent.color]
+        }
+        return [color, color]
     }
 
     var body: some View {
         ZStack {
-            Circle().stroke(color.opacity(0.16), lineWidth: lineWidth)
+            Circle().stroke(palette.raised, lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: min(max(shown, 0), 1))
                 .stroke(AngularGradient(colors: ringColors, center: .center, startAngle: .degrees(0), endAngle: .degrees(360 * min(max(shown, 0.01), 1))),
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                .shadow(color: GlowStyle.on || palette.glass ? color.opacity(0.65) : .clear, radius: lineWidth * 0.8)
                 .rotationEffect(.degrees(-90))
             if shown > 1 {
                 Circle()
                     .trim(from: 0, to: min(shown - 1, 1))
-                    .stroke(color.mix(with: .black, by: 0.35), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .stroke(palette.warn, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))     // over target: the second lap
                     .rotationEffect(.degrees(-90))
-                    .shadow(color: .black.opacity(0.35), radius: 2)
             }
         }
         .padding(lineWidth / 2)
         .accessibilityElement(children: .ignore)
         .accessibilityValue("\(Int((progress * 100).rounded())) percent")
         .scaleEffect(closed && !Motion.reduceMotion ? 1.05 : 1)
-        .shadow(color: closed ? color.opacity(0.7) : .clear, radius: closed ? lineWidth * 1.6 : 0)
         .onAppear { animate(Motion.smooth) { shown = progress } }
         .onChange(of: progress) { old, p in
             animate(Motion.smooth) { shown = p }
@@ -496,7 +326,7 @@ struct MacroBar: View {
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(macro.color.opacity(0.16))
-                    Capsule().fill(LinearGradient(colors: [macro.color.opacity(0.75), macro.color], startPoint: .leading, endPoint: .trailing))
+                    Capsule().fill(macro.color)
                         .frame(width: max(10, g.size.width * min(1, target > 0 ? eaten / target : 0)))
                         .opacity(eaten > 0 ? 1 : 0)
                 }

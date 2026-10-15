@@ -177,6 +177,28 @@ struct Tokens: Equatable {
         return out
     }
 
+    /// Competition plate colours (25 red, 20 blue, 15 yellow, 10 green, 5 white), muted to sit in the palette.
+    static func plate(_ kg: Double) -> RGB {
+        switch kg {
+        case 25: return .hsb(2, 0.55, 0.72)
+        case 20: return .hsb(220, 0.50, 0.70)
+        case 15: return .hsb(46, 0.55, 0.85)
+        case 10: return .hsb(150, 0.45, 0.62)
+        case 5: return .hsb(0, 0, 0.86)
+        default: return .hsb(230, 0.05, 0.45)
+        }
+    }
+
+    /// Text and icons on a data-coloured fill (a done set, a macro block): the page tone.
+    var onData: RGB { isDark ? background : card }
+
+    /// The few fixed colours: for masks (only the alpha counts), over a camera or photo, and paper
+    /// behind a QR code. Nothing else in the app is a literal.
+    static let maskSolid = Color.black
+    static let scrim = Color.black.opacity(0.55)
+    static let onScrim = Color.white
+    static let paper = Color.white
+
     static var all: [Tokens] {
         [Appearance.light, .dark, .black].flatMap { a in Finish.allCases.map { make(a, $0) } }
     }

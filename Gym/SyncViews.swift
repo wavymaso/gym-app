@@ -18,7 +18,7 @@ struct SyncSection: View {
             Toggle("Sync with your iPhone", isOn: Binding(get: { server.enabled }, set: { server.enabled = $0 }))
             if server.enabled {
                 if let e = server.error {
-                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning)
                 }
                 TextField("This Mac's address", text: Binding(get: { server.address }, set: { server.address = $0 }),
                           prompt: Text("https://your-mac.your-tailnet.ts.net:8443"))
@@ -32,7 +32,7 @@ struct SyncSection: View {
                 if !server.address.isEmpty, let qr = qrImage("gymsync:\(SyncClient.normalise(server.address))#\(server.code)") {
                     HStack {
                         Image(nsImage: qr).interpolation(.none).resizable().frame(width: 220, height: 220)
-                            .padding(10).background(.white, in: RoundedRectangle(cornerRadius: Radius.m))
+                            .padding(10).background(Tokens.paper, in: RoundedRectangle(cornerRadius: Radius.m))
                         Text("On your iPhone: Gym → Settings → Connect to your Mac → Scan the code.")
                             .font(.callout).foregroundStyle(.secondary)
                     }
@@ -152,7 +152,7 @@ struct ConnectMacView: View {
                 } header: {
                     Text("Or type them")
                 } footer: {
-                    if let error { Text(error).foregroundStyle(.red) }
+                    if let error { Text(error).foregroundStyle(palette.warn) }
                 }
             }
             .themedForm()

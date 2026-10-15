@@ -139,7 +139,7 @@ struct PhotoLogView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                 Button { jpeg = nil; self.preview = nil } label: {
                     Image(systemName: "xmark.circle.fill").font(.title2).symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, .black.opacity(0.5))
+                        .foregroundStyle(Tokens.onScrim, Tokens.scrim)
                 }
                 .buttonStyle(.plain).padding(10)
             }
@@ -190,7 +190,7 @@ struct PhotoLogView: View {
             if let preview {
                 Image(decorative: preview, scale: 1).resizable().scaledToFill()
                     .frame(width: 180, height: 180).clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(.black.opacity(0.25)))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Tokens.scrim.opacity(0.45)))
             }
             ProgressView().controlSize(.large)
             Text(jpeg == nil ? "Finding foods…" : "Looking at your meal…").font(.headline)
@@ -232,7 +232,7 @@ struct PhotoLogView: View {
 
     private func failed(_ why: String) -> some View {
         VStack(spacing: 14) {
-            Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
+            Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(palette.warning)
             Text(why).multilineTextAlignment(.center).font(.callout)
             HStack {
                 Button("Try again") { Task { await analyse() } }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
@@ -330,7 +330,7 @@ struct PlateRow: View {
                     HStack(spacing: 6) {
                         Text(item.name).font(.headline).lineLimit(2)
                         if (item.ai?.confidence ?? 1) < 0.5 && item.source != .picked {
-                            Image(systemName: "questionmark.circle").foregroundStyle(.orange).help("Not sure about this one: check it")
+                            Image(systemName: "questionmark.circle").foregroundStyle(palette.warning).help("Not sure about this one: check it")
                         }
                     }
                     HStack(spacing: 6) {

@@ -43,8 +43,7 @@ struct SupplementsCard: View {
                         }
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(on ? palette.good.opacity(0.85) : Color.raisedBackground, in: Capsule())
-                        .foregroundStyle(on ? .white : .primary)
-                        .shadow(color: on && GlowStyle.on ? palette.good.opacity(0.6) : .clear, radius: 6)
+                        .foregroundStyle(on ? palette.onData : .primary)
                     }
                     .buttonStyle(.plain)
                 }

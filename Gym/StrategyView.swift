@@ -116,9 +116,6 @@ struct StrategyView: View {
     private var header: some View {
         HStack {
             Text("STRATEGY").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-                .foregroundStyle(GlowStyle.on || palette.glass
-                                 ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.good], startPoint: .leading, endPoint: .trailing))
-                                 : AnyShapeStyle(.primary))
             Spacer()
             Button { checkingIn = true } label: { roundIcon("calendar.badge.checkmark") }.buttonStyle(.plain)
             Button { editing = true } label: { roundIcon("slider.horizontal.3") }.buttonStyle(.plain)
@@ -135,16 +132,15 @@ struct StrategyView: View {
         let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let now = series.last?.trend
         let startKg = series.first { $0.day >= g.startDay }?.trend ?? g.startWeightKg
-        let tint: Color = g.goalValue == .lose ? palette.calories : g.goalValue == .gain ? palette.protein : palette.good
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("CURRENT PROGRAM").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
-                    Text(g.goalValue.label).font(.number(32)).foregroundStyle(.white)
+                    Text("CURRENT PROGRAM").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(palette.text2)
+                    Text(g.goalValue.label).font(.number(32)).foregroundStyle(palette.text1)
                 }
                 Spacer()
                 Text("Week \(daysBetween(g.startDay, dayKey()) / 7 + 1)").font(.caption.weight(.bold))
-                    .padding(.horizontal, 10).padding(.vertical, 5).background(.white.opacity(0.2), in: Capsule()).foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5).background(Color.raisedBackground, in: Capsule()).foregroundStyle(palette.text1)
             }
             HStack(spacing: 8) {
                 chip(goalDetail(g, p))
@@ -157,39 +153,36 @@ struct StrategyView: View {
                 let done = total != 0 ? max(0, min(1, (now - startKg) / total)) : 1
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("\(p.weight.format(startKg)) → \(p.weight.format(goal))").font(.callout.weight(.semibold)).foregroundStyle(.white)
+                        Text("\(p.weight.format(startKg)) → \(p.weight.format(goal))").font(.callout.weight(.semibold)).foregroundStyle(palette.text1)
                         Spacer()
-                        Text("\(Int(done * 100 + 0.5))%").font(.callout.weight(.bold)).foregroundStyle(.white).monospacedDigit()
+                        Text("\(Int(done * 100 + 0.5))%").font(.callout.weight(.bold)).foregroundStyle(palette.text1).monospacedDigit()
                     }
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            Capsule().fill(.white.opacity(0.22))
-                            Capsule().fill(.white).frame(width: max(8, geo.size.width * done))
+                            Capsule().fill(Color.raisedBackground)
+                            Capsule().fill(palette.accentFill).frame(width: max(8, geo.size.width * done))
                         }
                     }
                     .frame(height: 8)
-                    if let proj = projection(p, goal) { Text(proj).font(.caption).foregroundStyle(.white.opacity(0.85)) }
+                    if let proj = projection(p, goal) { Text(proj).font(.caption).foregroundStyle(palette.text2) }
                 }
             } else {
-                Button("Set a goal weight") { editingGoalWeight = true }.font(.callout.weight(.semibold)).foregroundStyle(.white)
+                Button("Set a goal weight") { editingGoalWeight = true }.font(.callout.weight(.semibold)).foregroundStyle(palette.text1)
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient(colors: [tint, tint.mix(with: palette.accent.mix(with: .purple, by: 0.4), by: 0.5)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .modifier(CardSurface(cornerRadius: 22))
         .overlay(alignment: .topTrailing) {
-            Image(systemName: "target").font(.system(size: 110, weight: .bold)).foregroundStyle(.white.opacity(0.08))
+            Image(systemName: "target").font(.system(size: 110, weight: .bold)).foregroundStyle(palette.text1.opacity(0.045))
                 .offset(x: 24, y: 30).allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: GlowStyle.on || palette.glass ? tint.opacity(0.45) : .clear, radius: 18, y: 6)
     }
 
     private func chip(_ t: String) -> some View {
         Text(t).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
-            .padding(.horizontal, 10).padding(.vertical, 6).background(.white.opacity(0.18), in: Capsule()).foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 6).background(Color.raisedBackground, in: Capsule()).foregroundStyle(palette.text1)
     }
 
     /// This week, Monday to Sunday: each day's calories as a stacked column of protein, fat and carbs.
@@ -221,7 +214,6 @@ struct StrategyView: View {
                                 segment(palette.protein, h * d.protein * 4 / max(d.kcal, 1))
                             }
                             .frame(height: 134, alignment: .bottom)
-                            .shadow(color: GlowStyle.on && i == sel ? palette.accent.opacity(0.6) : .clear, radius: 6)
                             Text(date(fromKey: days[i]).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
                                 .font(.caption.weight(i == sel ? .bold : .regular)).foregroundStyle(i == sel ? .primary : .secondary)
                         }
@@ -255,7 +247,7 @@ struct StrategyView: View {
     }
 
     private func segment(_ c: Color, _ h: Double) -> some View {
-        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(c.gradient).frame(width: 22, height: max(0, h))
+        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(c).frame(width: 22, height: max(0, h))
     }
 
     // MARK: MacroFactor's Strategy top: the countdown, then the program and goal
@@ -274,7 +266,6 @@ struct StrategyView: View {
                 Circle().stroke(Color.raisedBackground, lineWidth: 10)
                 Circle().trim(from: 0, to: progress).stroke(palette.good, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .shadow(color: GlowStyle.on || palette.glass ? palette.good.opacity(0.6) : .clear, radius: 8)
                 Circle().inset(by: 22).stroke(Color.primary.opacity(0.85), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 VStack(spacing: 2) {
                     Text(due ? "TODAY" : "\(days) DAY\(days == 1 ? "" : "S")").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).monospacedDigit()
@@ -389,7 +380,7 @@ struct StrategyView: View {
     private func checkInCard(_ g: Program) -> some View {
         let due = ctx.dueCheckIn != nil
         return HStack(spacing: 14) {
-            Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(due ? .white : palette.accent)
+            Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(due ? palette.onAccent : palette.accent)
                 .frame(width: 50, height: 50).background(due ? palette.accent : palette.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
             VStack(alignment: .leading, spacing: 2) {
                 Text(due ? "Check-in ready" : "Weekly check-in").font(.headline)
@@ -398,7 +389,7 @@ struct StrategyView: View {
             Spacer()
             Button(due ? "Check in" : "Early") { checkingIn = true }
                 .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(due ? palette.accent : Color.raisedBackground)
-                .foregroundStyle(due ? .white : .primary)
+                .foregroundStyle(due ? palette.onAccent : .primary)
         }
         .padding(16).modifier(CardSurface())
     }

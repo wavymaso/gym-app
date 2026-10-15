@@ -81,7 +81,7 @@ struct MFFoodRow: View {
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: 40, height: 40)
                     .background(added ? palette.good : Color.raisedBackground, in: Circle())
-                    .foregroundStyle(added ? .white : .primary)
+                    .foregroundStyle(added ? palette.onData : .primary)
                     .scaleEffect(added && !Motion.reduceMotion ? 1.1 : 1)
                     .contentShape(Circle())
                     .onLongPressGesture(minimumDuration: 0.4) {

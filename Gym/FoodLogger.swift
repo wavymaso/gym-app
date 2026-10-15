@@ -186,7 +186,7 @@ struct FoodLogger: View {
                 HStack(spacing: -8) {
                     ForEach(cart.suffix(4)) { c in
                         // Each food drops into the cart as a coloured chip.
-                        Circle().fill(dominant(c.nutrients).gradient).frame(width: 22, height: 22)
+                        Circle().fill(dominant(c.nutrients)).frame(width: 22, height: 22)
                             .overlay(Circle().stroke(Color.pageBackground, lineWidth: 2))
                             .transition(.asymmetric(insertion: .scale(scale: 0.2).combined(with: .offset(y: -18)).combined(with: .opacity),
                                                     removal: .opacity))
@@ -200,7 +200,7 @@ struct FoodLogger: View {
                 Image(systemName: cart.isEmpty ? "chevron.down" : "checkmark").font(.headline)
                     .frame(width: 44, height: 44)
                     .background(cart.isEmpty ? Color.primary.opacity(0.1) : palette.accent, in: Circle())
-                    .foregroundStyle(cart.isEmpty ? Color.primary : .white)
+                    .foregroundStyle(cart.isEmpty ? Color.primary : palette.onAccent)
             }
             .buttonStyle(.plain)
         }
@@ -471,7 +471,7 @@ struct ScanPanel: View {
                                        description: Text("Allow camera access for Gym in Settings → Privacy & Security → Camera."))
             }
             if mode == 0 {
-                RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.8), lineWidth: 3)
+                RoundedRectangle(cornerRadius: 14).stroke(Tokens.onScrim.opacity(0.8), lineWidth: 3)
                     .frame(width: 300, height: 170).padding(.top, 200).allowsHitTesting(false)
             }
             HStack {
@@ -489,7 +489,7 @@ struct ScanPanel: View {
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal) }
                 if mode == 1 {
                     Button { Task { await captureLabel() } } label: {
-                        Circle().fill(.white).frame(width: 70, height: 70).overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 4).padding(-6))
+                        Circle().fill(Tokens.onScrim).frame(width: 70, height: 70).overlay(Circle().stroke(Tokens.onScrim.opacity(0.5), lineWidth: 4).padding(-6))
                     }
                     .buttonStyle(.plain).padding(.bottom, 30)
                 } else {
@@ -511,7 +511,7 @@ struct ScanPanel: View {
 
     private func round(_ icon: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.headline).frame(width: 46, height: 46).background(.black.opacity(0.7), in: Circle()).foregroundStyle(.white)
+            Image(systemName: icon).font(.headline).frame(width: 46, height: 46).background(Tokens.scrim, in: Circle()).foregroundStyle(Tokens.onScrim)
         }
         .buttonStyle(.plain)
     }

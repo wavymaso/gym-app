@@ -109,33 +109,33 @@ struct WorkoutsView: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let r = nextRoutine {
-                Text("UP NEXT").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
-                Text(r.name).font(.number(34)).foregroundStyle(.white)
-                Text(routineSummary(r)).font(.callout).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
+                Text("UP NEXT").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(palette.text2)
+                Text(r.name).font(.number(34)).foregroundStyle(palette.text1)
+                Text(routineSummary(r)).font(.callout).foregroundStyle(palette.text2).lineLimit(2)
                 HStack(spacing: 10) {
                     Button { ctx.startWorkout(routine: r) } label: {
                         Label("Start \(r.name)", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
-                            .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.black)
+                            .background(palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.onAccent)
                     }
                     .buttonStyle(.plain)
                     Button { ctx.startWorkout(routine: nil) } label: {
                         Text("Empty").font(.headline).padding(.horizontal, 18).padding(.vertical, 12)
-                            .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white)
+                            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.text1)
                     }
                     .buttonStyle(.plain)
                 }
             } else {
-                Text("READY WHEN YOU ARE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
-                Text("Start training").font(.number(34)).foregroundStyle(.white)
+                Text("READY WHEN YOU ARE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(palette.text2)
+                Text("Start training").font(.number(34)).foregroundStyle(palette.text1)
                 HStack(spacing: 10) {
                     Button { ctx.startWorkout(routine: nil) } label: {
                         Label("Empty workout", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
-                            .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.black)
+                            .background(palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.onAccent)
                     }
                     .buttonStyle(.plain)
                     Button { newRoutine = true } label: {
                         Text("New routine").font(.headline).padding(.horizontal, 18).padding(.vertical, 12)
-                            .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white)
+                            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.text1)
                     }
                     .buttonStyle(.plain)
                 }
@@ -143,15 +143,12 @@ struct WorkoutsView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient(colors: [Macro.protein.color, Macro.protein.color.mix(with: palette.accent, by: 0.55)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing),
-                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .modifier(CardSurface(cornerRadius: 22))
         .overlay(alignment: .topTrailing) {
-            Image(systemName: "dumbbell.fill").font(.system(size: 90, weight: .bold)).foregroundStyle(.white.opacity(0.1))
+            Image(systemName: "dumbbell.fill").font(.system(size: 90, weight: .bold)).foregroundStyle(palette.text1.opacity(0.045))
                 .rotationEffect(.degrees(-25)).offset(x: 10, y: 6).allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: GlowStyle.on || palette.glass ? Macro.protein.color.opacity(0.45) : .clear, radius: 18, y: 6)
     }
 
     /// TRAINING, this week's numbers, and Mon–Sun with the days you trained.
@@ -166,9 +163,6 @@ struct WorkoutsView: View {
             if isPhone {
                 HStack {
                     Text("TRAINING").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-                        .foregroundStyle(GlowStyle.on || palette.glass
-                                         ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.protein], startPoint: .leading, endPoint: .trailing))
-                                         : AnyShapeStyle(.primary))
                     Spacer()
                     NavigationLink { ExercisesView() } label: {
                         Image(systemName: "list.bullet").font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
@@ -189,11 +183,10 @@ struct WorkoutsView: View {
                             .foregroundStyle(d == dayKey() ? .primary : .secondary)
                         ZStack {
                             Circle().fill(trained.contains(d) ? Macro.protein.color : Color.raisedBackground)
-                            if trained.contains(d) { Image(systemName: "checkmark").font(.caption.weight(.black)).foregroundStyle(.white) }
+                            if trained.contains(d) { Image(systemName: "checkmark").font(.caption.weight(.black)).foregroundStyle(palette.onData) }
                         }
                         .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(d == dayKey() ? Color.primary.opacity(0.8) : .clear, lineWidth: 2).padding(-3))
-                        .shadow(color: trained.contains(d) && GlowStyle.on ? Macro.protein.color.opacity(0.7) : .clear, radius: 6)
                     }
                     .frame(maxWidth: .infinity)
                 }

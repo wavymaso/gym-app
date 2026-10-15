@@ -132,7 +132,7 @@ struct DistributionCard: View {
                             Image(systemName: fast ? "moon.zzz.fill" : high ? "dumbbell.fill" : "circle").font(.caption)
                             Text(number(profile.energy.fromKcal(k))).font(.caption2).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                         }
-                        .foregroundStyle(fast ? Color.secondary : high ? Color.white : Color.primary)
+                        .foregroundStyle(fast ? Color.secondary : high ? palette.onData : Color.primary)
                         .frame(maxWidth: .infinity).padding(.vertical, 8)
                         .background(high ? palette.accent : (fast ? Color.raisedBackground.opacity(0.6) : Color.raisedBackground),
                                     in: RoundedRectangle(cornerRadius: 10))

@@ -53,7 +53,7 @@ struct ProgramEditor: View {
                     let total = max(x.protein * 4 + x.fat * 9 + x.carbs * 4, 1)
                     VStack(spacing: 4) {
                         Text(number(energy.fromKcal(x.kcal))).font(.caption.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                            .padding(.vertical, 4).frame(maxWidth: .infinity).background(palette.calories, in: Capsule()).foregroundStyle(.white)
+                            .padding(.vertical, 4).frame(maxWidth: .infinity).background(palette.calories, in: Capsule()).foregroundStyle(palette.onAccent)
                         block("\(number(x.protein)) P", palette.protein, x.protein * 4 / total)
                         block("\(number(x.fat)) F", palette.fat, x.fat * 9 / total)
                         block("\(number(x.carbs)) C", palette.carbs, x.carbs * 4 / total)
@@ -67,7 +67,7 @@ struct ProgramEditor: View {
                     Button { day = d } label: {
                         Text(String(weekdayName(d).prefix(1))).font(.headline).frame(maxWidth: .infinity, minHeight: 44)
                             .background(d == day ? Color.primary : Color.raisedBackground, in: Capsule())
-                            .foregroundStyle(d == day ? (palette.scheme == .dark ? Color.black : .white) : .primary)
+                            .foregroundStyle(d == day ? palette.onInverse : .primary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -79,7 +79,7 @@ struct ProgramEditor: View {
     private func block(_ text: String, _ c: Color, _ share: Double) -> some View {
         Text(text).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(c, in: RoundedRectangle(cornerRadius: 4)).foregroundStyle(.black.opacity(0.8))
+            .background(c, in: RoundedRectangle(cornerRadius: 4)).foregroundStyle(palette.onData)
             .layoutPriority(share)
             .frame(minHeight: 22)
     }

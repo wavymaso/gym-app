@@ -78,9 +78,11 @@ struct EditGoalFlow: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                LinearGradient(colors: [palette.calories, palette.carbs.mix(with: palette.calories, by: 0.4)], startPoint: .top, endPoint: .bottom)
-                Circle().fill(palette.fat.gradient).frame(width: 190).offset(y: -40)
-                Image(systemName: "scalemass.fill").font(.system(size: 90)).foregroundStyle(.white.opacity(0.9)).offset(y: 70)
+                Color.cardBackground
+                Circle().stroke(palette.raised, lineWidth: 14).frame(width: 190).offset(y: -10)
+                Circle().trim(from: 0, to: 0.62).stroke(palette.accentFill, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .frame(width: 190).rotationEffect(.degrees(-90)).offset(y: -10)
+                Image(systemName: "scalemass").font(.system(size: 54, weight: .light)).foregroundStyle(palette.text2).offset(y: -10)
             }
             .frame(height: 340).clipped()
             VStack(alignment: .leading, spacing: 18) {
@@ -99,7 +101,7 @@ struct EditGoalFlow: View {
         HStack(alignment: .top, spacing: 14) {
             Text("\(n)").font(.headline).frame(width: 36, height: 36)
                 .background(on ? Color.primary : Color.raisedBackground, in: Circle())
-                .foregroundStyle(on ? (palette.scheme == .dark ? Color.black : .white) : .secondary)
+                .foregroundStyle(on ? palette.onInverse : .secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline).foregroundStyle(on ? .primary : .secondary)
                 Text(detail).font(.subheadline).foregroundStyle(.secondary)

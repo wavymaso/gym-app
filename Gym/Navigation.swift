@@ -28,7 +28,7 @@ struct QuickActionsSheet: View {
                 tile("Scan barcode", "barcode.viewfinder", Macro.carbs.color) { pick(.scan) }
                 #endif
                 tile("Scan label", "text.viewfinder", Macro.fat.color) { pick(.label) }
-                tile("Quick add", "bolt.fill", Macro.fat.color.mix(with: .orange, by: 0.4)) { pick(.quickAdd) }
+                tile("Quick add", "bolt.fill", Macro.fat.color) { pick(.quickAdd) }
                 tile("Weigh in", "scalemass.fill", DashItem.color("weighIn")) { pick(.weighIn) }
                 tile("Water +250", "drop.fill", Color.waterTone) { ctx.addWater(250); dismiss() }
                 tile("Train", "dumbbell.fill", Macro.protein.color) { dismiss(); train() }
@@ -52,8 +52,9 @@ struct QuickActionsSheet: View {
     private func tile(_ title: String, _ icon: String, _ c: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                Image(systemName: icon).font(.title2.weight(.semibold)).foregroundStyle(c)
-                    .frame(width: 50, height: 50).background(c.opacity(0.16), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                // Monochrome symbols on a tonal tile (no rainbow).
+                Image(systemName: icon).font(.title2.weight(.regular)).foregroundStyle(palette.text1)
+                    .frame(width: 50, height: 50).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m + 2, style: .continuous))
                 Text(title).font(.caption.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity).padding(.vertical, 12)
@@ -96,10 +97,10 @@ struct PhoneTabBar: View {
             item(.dashboard, "Dashboard", "square.grid.2x2")
             item(.food, "Food log", "fork.knife")
             Button(action: plus) {
-                Image(systemName: "plus").font(.title2.weight(.bold)).foregroundStyle(palette.scheme == .dark ? .black : .white)
+                Image(systemName: "plus").font(.title2.weight(.bold)).foregroundStyle(palette.onAccent)
                     .frame(width: 58, height: 58)
-                    .background(palette.scheme == .dark ? Color.white : palette.accent, in: Circle())
-                    .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
+                    .background(palette.accentFill, in: Circle())
+                    .floatShadow()
             }
             .pressable()
             .frame(maxWidth: .infinity)
@@ -108,12 +109,8 @@ struct PhoneTabBar: View {
         }
         .padding(.top, 8).padding(.horizontal, 6)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
-        .padding(.bottom, palette.glass ? 6 : 0)
-        .background {
-            if palette.glass { Color.clear.modifier(GlassCapsule()).padding(.horizontal, 10) }
-            else { Rectangle().fill(.bar).ignoresSafeArea() }
-        }
-        .overlay(alignment: .top) { if !palette.glass { Divider() } }
+        .background { Rectangle().fill(.bar).ignoresSafeArea() }     // a material: content scrolls behind the tab bar
+        .overlay(alignment: .top) { Rectangle().fill(palette.hairline).frame(height: 0.5) }
     }
 
     private func item(_ t: PhoneTab, _ title: String, _ icon: String) -> some View {
@@ -150,9 +147,9 @@ struct PageIcon: View {
     let page: Page
     var size: CGFloat = 32
     var body: some View {
-        Image(systemName: page.icon).font(.system(size: size * 0.48, weight: .semibold)).foregroundStyle(.white)
+        // Monochrome: the symbol alone, in the secondary text colour (the list's selection shows the accent).
+        Image(systemName: page.icon).font(.system(size: size * 0.52, weight: .regular)).foregroundStyle(.secondary)
             .frame(width: size, height: size)
-            .background(page.color.gradient, in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
     }
 }
 
@@ -165,7 +162,7 @@ extension Page {
         case .insights: return Color.waterTone
         case .strategy: return Macro.fat.color
         case .workouts: return Macro.protein.color
-        case .exercises: return Macro.protein.color.mix(with: .orange, by: 0.4)
+        case .exercises: return Macro.protein.color
         case .settings: return Color.neutralTone
         }
     }
@@ -207,10 +204,12 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 16
+    static let version = 17
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("circle.lefthalf.filled", "A new look: Appearance × Finish", "Automatic, Light, Dark or Black, in Titanium, Silver, Graphite, Gold or Rose Gold. Calm, machined, no glow (More → Theme). Your old theme moved over."),
+        ("arrow.down.to.line", "Scroll to the end", "Every page now scrolls clear of the search and tab bars; the timeline runs to midnight."),
         ("paintpalette", "Metal themes", "Noir & Gold, Sterling, Rose Gold, Titanium, Bronze: real metal finishes, film grain, serif titles. Colour themes are calmer too."),
         ("plus.magnifyingglass", "Pinch the charts", "Zoom into any time window on the insight charts; slide it along with the arrows."),
         ("doc.on.clipboard", "Copy and move like MacroFactor", "Pick foods, tap Copy or Move, then tap any hour (any day) to put them there."),

@@ -87,8 +87,8 @@ struct SettingsView: View {
         let first = (try? ctx.fetch(FetchDescriptor<FoodEntry>(sortBy: [SortDescriptor(\.day)])).first?.day)
         let name = UserDefaults.standard.string(forKey: "displayName") ?? ""
         return HStack(spacing: 16) {
-            Text(initials(name)).font(.system(size: 26, weight: .black).width(.expanded)).foregroundStyle(.black)
-                .frame(width: 70, height: 70).background(.white, in: Circle())
+            Text(initials(name)).font(.system(size: 26, weight: .black).width(.expanded)).foregroundStyle(palette.onInverse)
+                .frame(width: 70, height: 70).background(palette.inverseFill, in: Circle())
             VStack(alignment: .leading, spacing: 3) {
                 TextField("Your name", text: Binding(get: { UserDefaults.standard.string(forKey: "displayName") ?? "" },
                                                      set: { UserDefaults.standard.set($0, forKey: "displayName") }))
@@ -254,15 +254,16 @@ struct SettingsView: View {
     }
 }
 
-/// Pick a theme: a small preview of each.
+/// Pick the look: a live preview, Appearance, and the Finish as five small metal discs.
 struct AppearanceSection: View {
-    /// The theme tiles and style picker on their own (for the More page).
+    /// On the More page.
     struct Grid: View {
         var body: some View { AppearanceSection().content }
     }
 
-    @AppStorage("theme") private var theme: AppTheme = .midnight
-    @AppStorage("styleLevel") private var style: StyleLevel = .standard
+    @AppStorage("appearance") private var appearance: Appearance = .automatic
+    @AppStorage("finish") private var finish: Finish = .titanium
+    @AppStorage("reduceDepth") private var reduceDepth = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -270,59 +271,99 @@ struct AppearanceSection: View {
     }
 
     @ViewBuilder var content: some View {
-            ForEach(AppTheme.Group.allCases, id: \.self) { g in
-                Text(g.rawValue.uppercased()).font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary).padding(.top, 4)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 96 : 120), spacing: 12)], spacing: 12) {
-                    ForEach(AppTheme.allCases.filter { $0.group == g }) { t in
-                        Button { theme = t } label: { tile(t) }.buttonStyle(.plain)
-                    }
-                }
-                .padding(.vertical, 4)
+        let t = Tokens.make(appearance.resolved(systemDark: scheme == .dark), finish)
+        VStack(alignment: .leading, spacing: Space.l) {
+            ThemePreview(t: t, flat: reduceDepth)
+            Picker("Appearance", selection: Binding(get: { appearance }, set: { a in Haptics.tick(); appearance = a })) {
+                ForEach(Appearance.allCases) { Text($0.label).tag($0) }
             }
-            Text(theme.detail).font(.callout).foregroundStyle(.secondary)
-            Picker("Style", selection: $style) { ForEach(StyleLevel.allCases) { Text($0.label).tag($0) } }
-                .pickerStyle(.segmented)
-            Text(style == .maximal ? "Glowing rings, bars and charts, gradient card edges." : "Clean and calm.")
-                .font(.caption).foregroundStyle(.secondary)
-    }
-
-    private func tile(_ t: AppTheme) -> some View {
-        let p = t.palette(systemDark: scheme == .dark)
-        return VStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(p.background)
-                if p.glass {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(LinearGradient(colors: [p.calories.opacity(0.7), p.protein.opacity(0.45), p.carbs.opacity(0.5)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                }
-                if t == .system {      // half and half
-                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Palette.daylight.background)
-                        .mask(HStack(spacing: 0) { Color.clear; Color.black })
-                }
-                VStack(spacing: 6) {
-                    ZStack {
-                        Circle().stroke(p.calories.opacity(0.2), lineWidth: 5)
-                        Circle().trim(from: 0, to: 0.7).stroke(p.calories, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
+            .pickerStyle(.segmented).labelsHidden()
+            HStack(spacing: 0) {
+                ForEach(Finish.allCases) { f in
+                    let ft = Tokens.make(t.appearance, f)
+                    Button { Haptics.tick(); finish = f } label: {
+                        VStack(spacing: Space.s) {
+                            Circle().fill(ft.metal).frame(width: 34, height: 34)
+                                .overlay(Circle().strokeBorder(t.separator.color.opacity(t.isDark ? 0 : 1), lineWidth: 0.5))
+                                .padding(4)
+                                .overlay(Circle().strokeBorder(f == finish ? t.accent.color : .clear, lineWidth: 1.5))
+                            Text(f.label).font(.caption2.weight(f == finish ? .semibold : .regular))
+                                .foregroundStyle(f == finish ? Color.primary : .secondary).lineLimit(1).fixedSize()
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(width: 30, height: 30)
-                    HStack(spacing: 4) {
-                        ForEach([p.protein, p.fat, p.carbs], id: \.self) { c in Capsule().fill(c).frame(width: 14, height: 5) }
-                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(f.label)
+                    .accessibilityAddTraits(f == finish ? .isSelected : [])
                 }
-                .padding(10)
-                .background(p.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
-            .frame(height: 78)
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(t == theme ? palette.accent : Color.primary.opacity(0.1), lineWidth: t == theme ? 2.5 : 1))
-            Text(t.label).font(.caption.weight(t == theme ? .bold : .regular))
-                .foregroundStyle(t == theme ? .primary : .secondary)
+            Toggle(isOn: $reduceDepth) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reduce depth")
+                    Text("Flat: no highlights or edge sheens.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
-        .contentShape(Rectangle())
     }
 }
 
+/// A slice of Today in the chosen look: updates as you change Appearance or Finish.
+struct ThemePreview: View {
+    let t: Tokens
+    var flat = false
+
+    var body: some View {
+        HStack(spacing: Space.l) {
+            ZStack {
+                Circle().stroke(t.raised.color, lineWidth: 8)
+                Circle().trim(from: 0, to: 0.66)
+                    .stroke(flat ? AnyShapeStyle(t.accent.color)
+                                 : AnyShapeStyle(AngularGradient(colors: [t.accentLow.color, t.accent.color, t.accentHigh.color, t.accent.color], center: .center)),
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                VStack(spacing: 0) {
+                    Text("1 557").font(.system(.title3, design: .rounded).weight(.semibold)).monospacedDigit().foregroundStyle(t.text1.color)
+                    Text("kcal left").font(.caption2.weight(.medium)).foregroundStyle(t.text2.color)
+                }
+            }
+            .frame(width: 86, height: 86)
+            VStack(alignment: .leading, spacing: Space.s) {
+                bar("Protein", "142 g", t.protein, 0.75)
+                bar("Fat", "48 g", t.fat, 0.6)
+                bar("Carbs", "201 g", t.carbs, 0.9)
+            }
+        }
+        .padding(Space.l)
+        .frame(maxWidth: .infinity)
+        .background(t.card.color, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .overlay {
+            if !flat {
+                RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(t.hairline, lineWidth: 0.5)
+                    .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .center))
+            }
+        }
+        .padding(Space.s)
+        .background(t.background.color, in: RoundedRectangle(cornerRadius: Radius.l + Space.s, style: .continuous))
+        .accessibilityHidden(true)
+    }
+
+    private func bar(_ l: String, _ v: String, _ c: RGB, _ f: Double) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(l).font(.caption2.weight(.medium)).foregroundStyle(t.text2.color)
+                Spacer()
+                Text(v).font(.caption2.weight(.semibold)).monospacedDigit().foregroundStyle(t.text1.color)
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(t.raised.color)
+                    Capsule().fill(c.color).frame(width: g.size.width * f)
+                }
+            }
+            .frame(height: 4)
+        }
+    }
+}
 
 struct PrivacySection: View {
     var body: some View {

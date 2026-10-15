@@ -21,19 +21,21 @@ struct GymApp: App {
 
 /// Applies the chosen theme; changing it redraws everything in the new colours.
 struct ThemedRoot: View {
-    @AppStorage("theme") private var theme: AppTheme = .midnight
-    @AppStorage("styleLevel") private var style: StyleLevel = .standard
+    @AppStorage("appearance") private var appearance: Appearance = { ThemeChoice.migrate(); return ThemeChoice.appearance }()
+    @AppStorage("finish") private var finish: Finish = .titanium
+    @AppStorage("reduceDepth") private var reduceDepth = false
     @Environment(\.colorScheme) private var systemScheme
 
     var body: some View {
-        let p = theme.palette(systemDark: systemScheme == .dark)
+        let p = Palette.make(appearance, finish, systemDark: systemScheme == .dark, reduceDepth: reduceDepth)
         palette = p
         return Root()
-            .background { if p.glass { GlassBackdrop() } }
-            .id(p.name + style.rawValue)
+            .id(p.name + (reduceDepth ? "-flat" : ""))           // rebuilt in the new colours (tab and page are kept: NavState)
+            .transition(.opacity)
+            .animation(Motion.pick(.easeInOut(duration: 0.25)), value: p.name + (reduceDepth ? "-flat" : ""))
             .environment(\.locale, appLocale)
             .tint(p.accent)
-            .preferredColorScheme(theme.scheme)
+            .preferredColorScheme(appearance == .automatic ? nil : (p.tokens.isDark ? .dark : .light))
             .modifier(LockGate())                  // outside the theme's .id, so changing theme doesn't lock you out
     }
 }
@@ -163,8 +165,8 @@ struct MainView: View {
     @AppStorage("whatsNewSeen") private var whatsNewSeen = 0
     @State private var whatsNew = false
     #if os(iOS)
-    @State private var tab: PhoneTab = .dashboard
-    @State private var morePath: [Page] = []
+    @State private var tab: PhoneTab = NavState.tab                  // survive a theme change's rebuild
+    @State private var morePath: [Page] = NavState.morePath
     #endif
 
     var body: some View {
@@ -217,6 +219,8 @@ struct MainView: View {
         ZStack {
             ForEach(PhoneTab.allCases.filter { visited.contains($0) || $0 == tab }, id: \.self) { t in
                 tabStack(t)
+                    // Room to scroll the last row clear of the search bar and tab bar.
+                    .contentMargins(.bottom, t == .training || t == .more ? 96 : 156, for: .scrollContent)
                     .opacity(tab == t ? 1 : 0)
                     .scaleEffect(tab == t || Motion.reduceMotion ? 1 : 0.985)
                     .offset(x: tab == t || Motion.reduceMotion ? 0 : (t.order < tab.order ? -20 : 20))
@@ -228,7 +232,8 @@ struct MainView: View {
         .animation(Motion.pick(Motion.smooth), value: tab)
         .overlay(alignment: .top) { StatusBarBackdrop() }
         .undoToast()
-        .onChange(of: tab) { old, new in visited.insert(new); if old != new { Haptics.tick() } }
+        .onChange(of: tab) { old, new in visited.insert(new); NavState.tab = new; if old != new { Haptics.tick() } }
+        .onChange(of: morePath) { _, p in NavState.morePath = p }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 if tab == .food && !selection.ids.isEmpty {
@@ -460,5 +465,14 @@ func addDemoProfile(_ ctx: ModelContext) {
     ctx.saveMeasurements([.waist: 86.5, .chest: 101, .neck: 38.5, .armR: 36, .thighR: 58], day: addDays(dayKey(), -42))
     ctx.saveMeasurements([.waist: 83.8, .chest: 101.5, .neck: 38.2, .armR: 36.6, .thighR: 58.4], day: addDays(dayKey(), -2))
     ctx.commit()
+}
+#endif
+
+
+#if os(iOS)
+/// Where you were, kept across the rebuild a theme change causes.
+@MainActor enum NavState {
+    static var tab: PhoneTab = .dashboard
+    static var morePath: [Page] = []
 }
 #endif

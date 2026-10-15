@@ -85,9 +85,6 @@ extension FoodLogView {
     var header: some View {
         HStack(alignment: .center) {
             Text("FOOD LOG").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-                .foregroundStyle(GlowStyle.on || palette.glass
-                                 ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
-                                 : AnyShapeStyle(.primary))
             Spacer()
             Menu {
                 Button("Copy yesterday", systemImage: "doc.on.doc") { _ = ctx.copyEntries(from: addDays(day, -1), to: day) }
@@ -580,7 +577,6 @@ struct DaySummary: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(m.color.opacity(0.18))
                     Capsule().fill(frac > 1.05 ? palette.warn : m.color).frame(width: g.size.width * min(frac, 1))
-                        .shadow(color: GlowStyle.on ? m.color.opacity(0.7) : .clear, radius: 4)
                 }
             }
             .frame(height: 5)

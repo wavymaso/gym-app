@@ -180,7 +180,7 @@ struct TrainingCard: View {
                     let trained = thisWeek.contains { $0.day == d }
                     VStack(spacing: 4) {
                         Circle().fill(trained ? Macro.protein.color : Color.raisedBackground).frame(width: 26, height: 26)
-                            .overlay { if trained { Image(systemName: "checkmark").font(.caption2.weight(.heavy)).foregroundStyle(.white) } }
+                            .overlay { if trained { Image(systemName: "checkmark").font(.caption2.weight(.heavy)).foregroundStyle(palette.onData) } }
                             .overlay { if d == dayKey() && !trained { Circle().stroke(Macro.protein.color, lineWidth: 2) } }
                         Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale))).font(.caption2).foregroundStyle(.secondary)
                     }

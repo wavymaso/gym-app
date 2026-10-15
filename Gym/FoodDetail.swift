@@ -383,7 +383,7 @@ struct PadButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(fillFor(configuration.isPressed), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .opacity(configuration.isPressed && kind == .primary ? 0.75 : 1)
-            .foregroundStyle(kind == .primary ? Color.black : .primary)
+            .foregroundStyle(kind == .primary ? palette.onAccent : .primary)
             .opacity(enabled ? 1 : 0.45)
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
             .animation(.snappy(duration: 0.15), value: configuration.isPressed)

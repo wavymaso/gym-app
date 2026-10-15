@@ -167,7 +167,7 @@ struct AddFoodView: View {
                     if cartCount > 0, let logFoods {
                         Button(action: logFoods) {
                             Text("Log Foods").font(.headline).padding(.horizontal, 20).frame(height: 54)
-                                .background(.white, in: Capsule()).foregroundStyle(.black)
+                                .background(palette.inverseFill, in: Capsule()).foregroundStyle(palette.onInverse)
                         }
                         .buttonStyle(.plain)
                         .transition(.scale.combined(with: .opacity))

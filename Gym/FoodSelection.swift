@@ -106,7 +106,7 @@ struct SelectionBar: View {
                 Image(systemName: sel.mode == nil ? "xmark" : "chevron.left").font(.headline)
                     .frame(width: 40, height: 40)
                     .background(sel.mode == nil ? Color.primary : Color.clear, in: Circle())
-                    .foregroundStyle(sel.mode == nil ? (palette.scheme == .dark ? Color.black : .white) : .primary)
+                    .foregroundStyle(sel.mode == nil ? palette.onInverse : .primary)
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)

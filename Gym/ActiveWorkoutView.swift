@@ -302,7 +302,7 @@ private struct ExerciseBlock: View {
                         HStack(spacing: 6) {
                             Button { animate(Motion.snappy) { onDone(row) } } label: {
                                 Image(systemName: "checkmark").font(.callout.weight(.heavy))
-                                    .foregroundStyle(row.done ? .white : .secondary)
+                                    .foregroundStyle(row.done ? palette.onData : .secondary)
                                     .frame(width: 32, height: 28)
                                     .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }

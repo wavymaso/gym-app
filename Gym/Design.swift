@@ -190,7 +190,7 @@ struct UndoToast: View {
             .padding(.horizontal, Space.l).padding(.vertical, Space.m)
             .background(.regularMaterial, in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
-            .shadow(color: .black.opacity(0.25), radius: 16, y: 6)
+            .floatShadow()
             .padding(.horizontal, Space.l)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .gesture(DragGesture().onEnded { if $0.translation.height > 20 { center.dismiss() } })
@@ -303,14 +303,15 @@ struct EmptyState: View {
 // MARK: - Meaning colours (the same everywhere they appear)
 
 extension Color {
-    static let weightTone = Color(hex: 0xA77BF3)        // weight, trend, AI photo
-    static let expenditureTone = Color(hex: 0xFF8A5B)
-    static let waterTone = Color(hex: 0x3BB2F6)         // water, activity, insights
-    static let calmTone = Color(hex: 0x7B8CF3)          // describe, sleep
-    static let extraTone = Color(hex: 0xA78BFA)         // other nutrients, supersets
-    static let alertTone = Color(hex: 0xFF6F91)         // sugar, sodium
-    static let linkTone = Color(hex: 0xFF5C86)
-    static let neutralTone = Color(hex: 0x8E8E93)
+    // All from the tokens: the finish's metal for weight, the data colours for the rest.
+    static var weightTone: Color { palette.accent }       // weight, trend, AI photo
+    static var expenditureTone: Color { palette.warning }
+    static var waterTone: Color { palette.carbs }         // water, activity, insights
+    static var calmTone: Color { palette.under }          // describe, sleep
+    static var extraTone: Color { palette.text2 }         // other nutrients, supersets
+    static var alertTone: Color { palette.warn }          // sugar, sodium
+    static var linkTone: Color { palette.accent }
+    static var neutralTone: Color { palette.text3 }
 }
 
 // MARK: - Arriving: a screen's sections come in one after another
@@ -391,9 +392,7 @@ struct OptionsPage<ID: Hashable>: View {
 struct StatusBarBackdrop: View {
     var body: some View {
         GeometryReader { g in
-            Group {
-                if palette.glass { Rectangle().fill(.ultraThinMaterial) } else { Rectangle().fill(Color.pageBackground) }
-            }
+            Rectangle().fill(Color.pageBackground)
             .frame(height: g.safeAreaInsets.top)
             .ignoresSafeArea(edges: .top)
         }
@@ -436,4 +435,13 @@ struct FoodMacroLine: View {
 func foodTitle(_ name: String, _ brand: String?) -> Text {
     guard let b = brand, !b.isEmpty else { return Text(name) }
     return Text(name) + Text(" · \(b)").foregroundStyle(.secondary)
+}
+
+
+extension View {
+    /// The one shadow level: only for things that float (the add button, toasts, the rest timer, tooltips).
+    func floatShadow() -> some View {
+        let s = palette.tokens.floatShadow
+        return shadow(color: palette.reduceDepth ? .clear : s.color, radius: s.radius, y: s.y)
+    }
 }
