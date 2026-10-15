@@ -45,6 +45,7 @@ struct DashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
+                SigningBanner()
                 if let t = target(on: dayKey()), let p = profile {
                     if ctx.dueCheckIn != nil { checkInBanner }
                     let todayN = loggedDays.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }
