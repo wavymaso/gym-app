@@ -302,6 +302,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Gym-macOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Gym-iOS.entitlements";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Gym uses the camera to scan food barcodes.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Gym can lock itself with Face ID so only you see your data.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym reads your weigh-ins from Apple Health so you don't have to type them.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym doesn't write to Apple Health.";
@@ -351,6 +352,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Gym-macOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Gym-iOS.entitlements";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Gym uses the camera to scan food barcodes.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Gym can lock itself with Face ID so only you see your data.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym reads your weigh-ins from Apple Health so you don't have to type them.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym doesn't write to Apple Health.";

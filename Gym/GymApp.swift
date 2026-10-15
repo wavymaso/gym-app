@@ -34,6 +34,7 @@ struct ThemedRoot: View {
             .environment(\.locale, appLocale)
             .tint(p.accent)
             .preferredColorScheme(theme.scheme)
+            .modifier(LockGate())                  // outside the theme's .id, so changing theme doesn't lock you out
     }
 }
 

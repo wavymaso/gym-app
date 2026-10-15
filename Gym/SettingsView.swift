@@ -52,6 +52,7 @@ struct SettingsView: View {
                         row("externaldrive", "Backups", "Daily, restore") { page("Backups") { BackupSection() } },
                         row("square.and.arrow.up", "Data export", "Everything as an archive, or spreadsheets") { page("Export") { ExportSection() } },
                         rowAction("square.and.arrow.down", "Import from MacroFactor", "Quick and granular exports") { importing = true },
+                        row("lock", "Privacy & security", "Face ID lock, what leaves this device") { page("Privacy & security") { PrivacySection() } },
                         row("stethoscope", "Diagnostics", "Version, data health, recent problems") { DiagnosticsView() },
                         rowAction("trash", "Start over", "Delete everything on this device", destructive: true) { confirmReset = true },
                     ])
@@ -318,5 +319,19 @@ struct AppearanceSection: View {
                 .foregroundStyle(t == theme ? .primary : .secondary)
         }
         .contentShape(Rectangle())
+    }
+}
+
+
+struct PrivacySection: View {
+    var body: some View {
+        Section { AppLockToggle() } header: { Text("Lock") }
+        Section {
+            Label("Your data stays on your phone and your Mac. Sync goes directly between them.", systemImage: "iphone.and.arrow.forward")
+            Label("Progress photos never go to any AI and stay out of exports unless you include them.", systemImage: "camera")
+            Label("Food photos go to the AI you choose in Photo logging: your Mac only, or Gemini (Google may use free-tier inputs).", systemImage: "sparkles")
+            Label("API keys are kept in the Keychain.", systemImage: "key")
+        } header: { Text("What leaves this device") }
+        .font(.callout)
     }
 }
