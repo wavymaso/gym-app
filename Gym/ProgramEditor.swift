@@ -12,6 +12,7 @@ struct ProgramEditor: View {
     @State private var day = 2                     // Monday
     @State private var locked = true
     @State private var loaded = false
+    @State private var refused: String?                 // why the last change wasn't allowed
 
     private let order = [2, 3, 4, 5, 6, 7, 1]
 
@@ -119,7 +120,8 @@ struct ProgramEditor: View {
                     if locked { Image(systemName: "lock.fill").foregroundStyle(.secondary) }
                 }
                 .padding(.horizontal, 14).frame(height: 52)
-                .overlay(RoundedRectangle(cornerRadius: Radius.s).stroke(Color.primary.opacity(0.2)))
+                .overlay(RoundedRectangle(cornerRadius: Radius.s).stroke(refused == nil ? Color.primary.opacity(0.2) : palette.warn))
+                if let refused { Label(refused, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(palette.warn) }
             }
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -129,7 +131,12 @@ struct ProgramEditor: View {
                 }
                 Slider(value: Binding(get: { protKg }, set: { set(protein: ($0 * kg).rounded()) }), in: 0...min(4, t.kcal / 4 / kg), step: 0.05)
                     .tint(palette.protein)
-                Text("Between 0 and \(number(min(4, t.kcal / 4 / kg), digits: 2)) g per kg of body weight.").font(.caption).foregroundStyle(.secondary)
+                if protKg < 1.2 {
+                    Label("Below 1,2 g/kg: likely too little to keep muscle while dieting. Most lifters do best at 1,6–2,2.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(palette.warn)
+                } else {
+                    Text("Between 0 and \(number(min(4, t.kcal / 4 / kg), digits: 2)) g per kg of body weight.").font(.caption).foregroundStyle(.secondary)
+                }
             }
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -165,11 +172,26 @@ struct ProgramEditor: View {
     }
 
     /// One day's calories, the week's total unchanged: the difference is spread over the other six days.
+    /// Never below your calorie floor (Strategy → Calorie floor), for this day or the ones that make up for it.
+    private var floorKcal: Double {
+        guard let p = profiles.first else { return 1200 }
+        return p.calorieFloorKcal > 0 ? p.calorieFloorKcal : calorieFloor(p.sexValue)
+    }
+
     private func set(kcal: Double) {
         guard !locked else { return }
         let old = t.kcal
-        let new = min(max(0, kcal), weekTotal)
         let others = order.filter { $0 != day }
+        // The highest this day can go while every other day stays at or above the floor.
+        let room = others.compactMap { plan[$0]?.kcal }.reduce(0) { $0 + max(0, $1 - floorKcal) }
+        var new = min(max(0, kcal), old + room)
+        if new < floorKcal {
+            new = floorKcal
+            refused = "\(number(energy.fromKcal(floorKcal))) \(energy.rawValue) is your calorie floor: a day can't go lower."
+        } else if kcal > old + room {
+            refused = "The other days would drop below your floor (\(number(energy.fromKcal(floorKcal))) \(energy.rawValue)) to make up for it."
+        } else { refused = nil }
+        if refused != nil { Haptics.warning() }
         let delta = (new - old) / Double(others.count)
         for d in [day] + others {
             var x = plan[d] ?? t
