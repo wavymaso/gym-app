@@ -43,6 +43,123 @@ func score(_ e: [String: Double], from: String, to: String) -> (Double, Double, 
     }
     return (errs.map(abs).reduce(0, +) / Double(max(errs.count, 1)), errs.reduce(0, +) / Double(max(errs.count, 1)), errs.count)
 }
+if ProcessInfo.processInfo.environment["TREND"] != nil {
+    // Trend filters compared on forecasting: from each day's state, predict the mean of the actual
+    // weigh-ins 1–4 weeks later (±3 days). Train/test split at two thirds.
+    let all = days(from: weights.first!.day, through: end)
+    let events = ctx.waterEvents(from: all.first!, to: end)
+    let wmap = Dictionary(weights.map { ($0.day, $0.value) }, uniquingKeysWith: { a, _ in a })
+    let edays = all.map { d in EngineDay(key: d, weighIns: wmap[d].map { [$0] } ?? [], intake: intake[d], events: events.contains(d) ? [.tagged] : []) }
+    let split = all[all.count * 2 / 3]
+    func target(_ d: String) -> Double? {
+        let v = (-3...3).compactMap { wmap[addDays(d, $0)] }
+        return v.count >= 2 ? v.reduce(0, +) / Double(v.count) : nil
+    }
+    // Current: the EMA trend; its slope over the last 14 days (or none).
+    let ema = trendSeriesV1(weights, through: end)
+    let emaMap = Dictionary(ema.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+    func evalForecast(_ name: String, _ f: (String, Int) -> Double?) {
+        var line = name.padding(toLength: 34, withPad: " ", startingAt: 0)
+        for (lo, hi, label) in [("0", split, "train"), (split, "9", "test")] {
+            var cells: [String] = []
+            for wk in 1...4 {
+                var errs: [Double] = []
+                for (i, d) in all.enumerated() where i % 3 == 0 && d >= lo && d < hi && i > 30 {
+                    guard wmap[d] != nil, let p = f(d, wk * 7), let t = target(addDays(d, wk * 7)) else { continue }
+                    errs.append(abs(p - t))
+                }
+                cells.append(String(format: "%.2f", errs.reduce(0, +) / Double(max(errs.count, 1))))
+            }
+            line += " \(label) " + cells.joined(separator: "/")
+        }
+        print(line)
+    }
+    print("forecast MAE (kg) at 1/2/3/4 weeks")
+    evalForecast("current EMA, level only") { d, _ in emaMap[d] }
+    evalForecast("current EMA + 14-day slope") { d, h in
+        guard let a = emaMap[d], let b = emaMap[addDays(d, -14)] else { return nil }
+        return a + (a - b) / 14 * Double(h)
+    }
+    func kalman(_ s: TrendSettings, events useEvents: Bool = true) -> [String: TrendPoint] {
+        let input = useEvents ? edays : edays.map { var x = $0; x.events = []; return x }
+        return Dictionary(EngineTrend.run(input, s).map { ($0.day, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+    var best: (Double, TrendSettings)? = nil
+    var cands: [(Double, Double, TrendSettings)] = []
+    if ProcessInfo.processInfo.environment["TUNE"] != nil {
+        for mn in [0.005, 0.01, 0.02] { for rn in [0.0005, 0.001, 0.002, 0.004] { for ws in [0.4, 0.6, 0.9] { for ph in [0.5, 0.75] { for sn in [0.3, 0.5] {
+            var s = TrendSettings(); s.massNoise = mn; s.rateNoise = rn; s.waterSD = ws; s.waterPersistence = ph; s.scaleNoise = sn
+            let tl = EngineTrend.run(edays.filter { $0.key < split }, s)
+            let jumps = zip(tl.dropFirst(14), tl.dropFirst(15)).filter { $0.0.weighed && $0.1.weighed }.map { abs($1.trend - $0.trend) }.sorted()
+            guard !jumps.isEmpty else { continue }
+            let j99 = jumps[jumps.count * 99 / 100]
+            let k = kalman(s)
+            var errs: [Double] = []
+            for (i, d) in all.enumerated() where i % 3 == 0 && d < split && i > 30 {
+                guard wmap[d] != nil, let p = k[d] else { continue }
+                for wk in 1...4 { if let t = target(addDays(d, wk * 7)) { errs.append(abs(p.trend + p.ratePerWeek / 7 * Double(wk * 7) - t)) } }
+            }
+            let m = errs.reduce(0, +) / Double(max(errs.count, 1))
+            cands.append((m, j99, s))
+            if j99 <= 0.3, best == nil || m < best!.0 { best = (m, s) }
+        } } } } }
+        for c in cands.sorted(by: { $0.1 < $1.1 }).prefix(6) { print(String(format: "  jump99 %.2f train err %.2f", c.1, c.0), c.2) }
+        for c in cands.sorted(by: { $0.0 < $1.0 }).prefix(4) { print(String(format: "  best err %.2f jump99 %.2f", c.0, c.1), c.2) }
+        print("tuned on train:", best.map { "\($0.1)" } ?? "none under 0.3")
+    }
+    let ks = best?.1 ?? TrendSettings()
+    let k = kalman(ks)
+    evalForecast("Kalman, level only") { d, _ in k[d]?.trend }
+    evalForecast("Kalman + rate") { d, h in k[d].map { $0.trend + $0.ratePerWeek / 7 * Double(h) } }
+    evalForecast("Kalman + half rate (damped)") { d, h in k[d].map { $0.trend + $0.ratePerWeek / 7 * Double(h) * 0.5 } }
+    for (rn, sn) in [(0.001, 0.3), (0.0015, 0.3), (0.002, 0.25), (0.001, 0.4)] {
+        var v = ks; v.rateNoise = rn; v.scaleNoise = sn
+        let kv = kalman(v)
+        if ProcessInfo.processInfo.environment["TUNE"] != nil { continue }
+        evalForecast("Kalman rate \(rn) scale \(sn)") { d, h in kv[d].map { $0.trend + $0.ratePerWeek / 7 * Double(h) } }
+        let tl = EngineTrend.run(edays, v)
+        let jumps = zip(tl.dropFirst(14), tl.dropFirst(15)).filter { $0.0.weighed && $0.1.weighed }.map { abs($1.trend - $0.trend) }.sorted()
+        print("   between consecutive weigh-in days: max \(String(format: "%.2f", jumps.last ?? 0)) kg, 99th pct \(String(format: "%.2f", jumps[jumps.count * 99 / 100]))")
+    }
+    let kn = kalman(ks, events: false)
+    evalForecast("Kalman without event tags") { d, h in kn[d].map { $0.trend + $0.ratePerWeek / 7 * Double(h) * 0.5 } }
+    // Expenditure: Forbes/Hall density vs the fitted 5 500 kcal/kg baseline. Score: from each day, predict
+    // the weigh-in mean 4 weeks later from the Kalman trend + logged intake − estimate, at each method's density.
+    let bodyAssumed = BodyComposition()
+    func energy(_ fixed: Double?) -> [String: ExpenditureEstimate] {
+        var es = EnergySettings(); es.fixedDensity = fixed
+        let r = EngineEnergy.run(edays, trend: EngineTrend.run(edays, ks), prior: start.kcal, body: bodyAssumed, es)
+        return Dictionary(r.map { ($0.day, $0) }, uniquingKeysWith: { a, _ in a })
+    }
+    let classic = Dictionary(classicExpenditure(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights).map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+    for (name, fixed) in [("engine, Forbes density (20% BF assumed)", nil as Double?), ("engine, fixed 5 500 (baseline)", 5500), ("engine, fixed 7 700", 7700)] {
+        let e = energy(fixed)
+        for (lo, hi, label) in [("0", split, "train"), (split, "9", "test")] {
+            var errs: [Double] = [], mfErr: [Double] = []
+            for (i, d) in all.enumerated() where i % 3 == 0 && d >= lo && d < hi && i > 60 {
+                if let m = mf[d], let x = e[d] { mfErr.append(abs(x.kcal - m)) }
+                guard let x = e[d], let tp = k[d], let t = target(addDays(d, 28)) else { continue }
+                guard (1...28).compactMap({ intake[addDays(d, $0)] }).count >= 20 else { continue }
+                let pred = tp.trend + (1...28).reduce(0.0) { acc, j in intake[addDays(d, j)].map { acc + ($0 - x.kcal) / x.density } ?? acc }
+                errs.append(abs(pred - t))
+            }
+            print(name.padding(toLength: 40, withPad: " ", startingAt: 0), label, String(format: "4-wk weight error %.2f kg (n %d) · vs MacroFactor %.0f kcal", errs.reduce(0, +) / Double(max(errs.count, 1)), errs.count, mfErr.reduce(0, +) / Double(max(mfErr.count, 1))))
+        }
+    }
+    for (lo, hi, label) in [("0", split, "train"), (split, "9", "test")] {
+        var errs: [Double] = []
+        for (i, d) in all.enumerated() where i % 3 == 0 && d >= lo && d < hi && i > 60 {
+            guard let c = classic[d], let tp = emaMap[d], let t = target(addDays(d, 28)) else { continue }
+            guard (1...28).compactMap({ intake[addDays(d, $0)] }).count >= 20 else { continue }
+            errs.append(abs(tp + (1...28).reduce(0.0) { acc, j in intake[addDays(d, j)].map { acc + ($0 - c) / 5500 } ?? acc } - t))
+        }
+        print("current classic (5 500, EMA trend)      ", label, String(format: "4-wk weight error %.2f kg (n %d)", errs.reduce(0, +) / Double(max(errs.count, 1)), errs.count))
+    }
+    var cErr: [Double] = []
+    for (i, d) in all.enumerated() where i % 3 == 0 && d >= split && i > 60 { if let m = mf[d], let c = classic[d] { cErr.append(abs(c - m)) } }
+    print("current classic (5 500, EMA)            test vs MacroFactor", String(format: "%.0f kcal", cErr.reduce(0, +) / Double(max(cErr.count, 1))))
+    exit(0)
+}
 if ProcessInfo.processInfo.environment["GRID"] != nil {
     let all = days(from: start.day, through: end)
     let split = all[all.count * 2 / 3]

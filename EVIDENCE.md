@@ -34,6 +34,13 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `checkin.cap.up.kcal` | At most 150 kcal more per check-in. | 150 kcal | 100–200 | D |
 | `checkin.cap.down.kcal` | At most 150 kcal less per check-in (75 on a bulk). | 150 kcal | 75–200 | D |
 | `trend.alpha` | The trend weight takes in about a tenth of each new day (about a 10-day memory). | 0.1 per day | 0.05–0.2 | D |
+| `body.fallbackBodyFat` | Without a body-fat measurement, the engine assumes 20% body fat for energy density and lean mass, and asks for a tape measurement. | 20 % | 10–35 | D |
+| `limit.deficit.pctExpenditure` | A cut never asks for more than a 25% deficit below expenditure. | 25 % of expenditure | 15–30 | D |
+| `limit.surplus.pctExpenditure` | A bulk never asks for more than a 15% surplus above expenditure. | 15 % of expenditure | 5–20 | D |
+| `carbs.min.gPerKg` | Carbs stay at or above about 1.5 g per kg on training phases before fat goes below its preferred share. | 1.5 g/kg/day | 1–3 | D |
+| `checkin.minDays` | No coaching changes until there are two weeks of data; until then targets come from the formula. | 14 days | 7–21 | D |
+| `checkin.minLogged` | A check-in needs at least 4 of the last 7 days logged and 3 weigh-ins, and no water event in the last 3 days; otherwise it makes no change and says why. | 4 days of 7 | 3–6 | D |
+| `signal.e1rm.rule` | Estimated 1-rep max is worked out only from sets of 3–10 reps (adjusted for reps in reserve). Two weeks in a row of it falling on main lifts while cutting faster than planned raises a flag. | 2 weeks | 2–4 | D |
 | `partialDay.rule` | A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation. | 0.5 share of usual entries | 0.3–0.7 | D |
 
 ## Details
@@ -249,6 +256,59 @@ The trend weight takes in about a tenth of each new day (about a 10-day memory).
 - **Studied in:** —
 - **Note:** Matches MacroFactor's published trend to within 0,01 kg on this user's data.
 - Gym backtest on the user's own data against MacroFactor's exported estimates (Tests/backtest). `tools/backtest.sh`
+
+### `body.fallbackBodyFat` (grade D)
+
+Without a body-fat measurement, the engine assumes 20% body fat for energy density and lean mass, and asks for a tape measurement.
+
+- **Studied in:** —
+- **Note:** A placeholder, not an estimate of you: replaced as soon as a reading or tape measurement exists.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `limit.deficit.pctExpenditure` (grade D)
+
+A cut never asks for more than a 25% deficit below expenditure.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `limit.surplus.pctExpenditure` (grade D)
+
+A bulk never asks for more than a 15% surplus above expenditure.
+
+- **Studied in:** —
+- **Note:** The review suggests a 10–20% surplus for bodybuilders; capped at the middle.
+- Iraki J, Fitschen P, Espinar S, Helms E. 2019. Nutrition recommendations for bodybuilders in the off-season: a narrative review. Sports 7(7):154. <https://doi.org/10.3390/sports7070154>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `carbs.min.gPerKg` (grade D)
+
+Carbs stay at or above about 1.5 g per kg on training phases before fat goes below its preferred share.
+
+- **Studied in:** —
+- **Note:** Our own floor; the off-season review suggests 3–5 g/kg, which most cuts can't fit.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `checkin.minDays` (grade D)
+
+No coaching changes until there are two weeks of data; until then targets come from the formula.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `checkin.minLogged` (grade D)
+
+A check-in needs at least 4 of the last 7 days logged and 3 weigh-ins, and no water event in the last 3 days; otherwise it makes no change and says why.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `signal.e1rm.rule` (grade D)
+
+Estimated 1-rep max is worked out only from sets of 3–10 reps (adjusted for reps in reserve). Two weeks in a row of it falling on main lifts while cutting faster than planned raises a flag.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
 
 ### `partialDay.rule` (grade D)
 
