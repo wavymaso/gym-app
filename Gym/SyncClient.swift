@@ -23,6 +23,13 @@ import SwiftData
     var macName: String { defaults.string(forKey: "macName") ?? "your Mac" }
     var connected: Bool { !address.isEmpty && !code.isEmpty }
 
+    /// Changes made here that the Mac hasn't got yet.
+    func pendingCount() -> Int {
+        guard let ctx = context else { return 0 }
+        let c = ctx.syncChanges(since: Date(timeIntervalSince1970: pushedUntil))
+        return c.records.count + c.deleted.count
+    }
+
     /// The Mac's clock: what it has sent us up to. And ours: what we've sent it up to.
     private var macCursor: Double {
         get { defaults.double(forKey: "macCursor") }
@@ -128,6 +135,8 @@ import SwiftData
             error = nil
         } catch {
             self.error = (error as? SyncError)?.text ?? "Couldn't reach \(macName). It syncs next time the Mac is on with Gym open and Tailscale connected."
+            // Real failures go to Diagnostics (just being away from the Mac doesn't).
+            if let e = error as? SyncError { Log.problem("sync", e.text) } else { Log.sync.info("Mac not reachable") }
         }
     }
 

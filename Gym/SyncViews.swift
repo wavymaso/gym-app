@@ -80,8 +80,14 @@ struct MacSyncSection: View {
                 LabeledContent("Last synced") {
                     if client.syncing { ProgressView() } else { Text(client.lastSync.map(relative) ?? "Not yet") }
                 }
+                let waiting = client.pendingCount()
+                LabeledContent("Waiting to send") {
+                    Text(waiting == 0 ? "Nothing" : "\(waiting) change\(waiting == 1 ? "" : "s")").monospacedDigit()
+                        .foregroundStyle(waiting > 0 && client.error != nil ? palette.warn : .secondary)
+                }
                 if let e = client.error {
-                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.callout)
+                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warn).font(.callout)
+                    Text("Changes stay safe on this phone and go across as soon as the Mac is reachable.").font(.caption).foregroundStyle(.secondary)
                 }
                 Button("Sync now") { Task { await client.sync() } }.disabled(client.syncing)
                 Button("Disconnect", role: .destructive) { confirmDisconnect = true }
