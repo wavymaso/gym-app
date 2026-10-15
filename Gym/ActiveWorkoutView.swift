@@ -53,7 +53,8 @@ struct ActiveWorkoutView: View {
             .frame(maxWidth: .infinity)
         }
         .pageBackground()
-        .sensoryFeedback(.success, trigger: sets.filter(\.done).count) { old, new in new > old }
+        .undoToast()
+        .onChange(of: sets.filter(\.done).count) { old, new in if new > old { Haptics.tap() } }
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 0)
                 .onChange(of: restEnds) { _, e in
@@ -267,7 +268,7 @@ private struct ExerciseBlock: View {
                                 Button(k.label) { row.kind = k.rawValue; ctx.commit() }
                             }
                             Divider()
-                            Button("Delete set", role: .destructive) { ctx.delete(row); ctx.commit() }
+                            Button("Delete set", role: .destructive) { ctx.deleteWithUndo([row], "Set deleted") }
                         } label: {
                             Text((row.kindValue == .normal ? "\(row.side == "R" ? working - 1 : working)" : row.kindValue.short) + row.side)
                                 .fontWeight(.semibold).frame(width: 26)

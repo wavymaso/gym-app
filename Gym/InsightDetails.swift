@@ -692,7 +692,7 @@ struct EditWeighIn: View {
                         #endif
                     Text(unit.rawValue).foregroundStyle(.secondary)
                 }
-                Button("Delete weigh-in", role: .destructive) { ctx.delete(entry); ctx.commit(); dismiss() }
+                Button("Delete weigh-in", role: .destructive) { dismiss(); ctx.deleteWithUndo([entry], "Weigh-in deleted") }
             }
             .themedForm()
             .navigationTitle("Weigh-in")

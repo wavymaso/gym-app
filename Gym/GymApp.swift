@@ -181,6 +181,7 @@ struct MainView: View {
         .sheet(item: $quick) { quickSheet($0) }
         .sheet(isPresented: $weighing) { WeighInSheet() }
         .sheet(isPresented: $whatsNew) { WhatsNewSheet() }
+        .undoToast(bottom: Space.l)
         .background {
             // Keyboard: ⌘1–⌘8 for the pages, ⌘⇧W to weigh in.
             ForEach(Array([Page.dashboard, .food, .weight, .insights, .strategy, .workouts, .exercises, .settings].enumerated()), id: \.offset) { i, p in
@@ -205,6 +206,7 @@ struct MainView: View {
             }
         }
         .animation(Motion.pick(Motion.smooth), value: tab)
+        .undoToast()
         .onChange(of: tab) { old, new in visited.insert(new); if old != new { Haptics.tick() } }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {

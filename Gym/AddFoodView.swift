@@ -625,7 +625,7 @@ struct EntryEditor: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .destructiveAction) {
-                        Button("Delete", role: .destructive) { ctx.delete(entry); ctx.commit(); dismiss() }
+                        Button("Delete", role: .destructive) { dismiss(); ctx.deleteWithUndo([entry], "\(entry.name) removed") }
                     }
                 }
         }

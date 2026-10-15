@@ -403,7 +403,7 @@ struct DayEntries: View {
             }
         }
         Divider()
-        Button("Delete", systemImage: "trash", role: .destructive) { animate { ctx.delete(e); ctx.commit() } }
+        Button("Delete", systemImage: "trash", role: .destructive) { ctx.deleteWithUndo([e], "\(e.name) removed") }
     }
 
     private func move(_ ids: [String], to hour: Int) -> Bool {
@@ -657,7 +657,9 @@ struct SelectionBar: View {
     }
 
     private func remove() {
-        animate { for e in chosen { ctx.delete(e) }; ctx.commit(); sel.ids = [] }
+        let c = chosen
+        sel.ids = []
+        ctx.deleteWithUndo(c, c.count == 1 ? "\(c[0].name) removed" : "\(c.count) foods removed")
     }
 
     private func duplicate() {

@@ -109,7 +109,7 @@ struct SavedMealsList: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .contextMenu { Button("Delete meal", role: .destructive) { ctx.delete(m); ctx.commit() } }
+            .contextMenu { Button("Delete meal", role: .destructive) { ctx.deleteWithUndo([m], "\(m.name) deleted") } }
         }
     }
 }

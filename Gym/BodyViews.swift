@@ -213,9 +213,9 @@ struct MeasurementDetail: View {
                         Spacer()
                         Text(unit.formatLength(m.cm)).monospacedDigit()
                     }
-                    .contextMenu { Button("Delete", role: .destructive) { ctx.delete(m); ctx.commit() } }
+                    .contextMenu { Button("Delete", role: .destructive) { ctx.deleteWithUndo([m], "Measurement deleted") } }
                 }
-                .onDelete { idx in for i in idx { ctx.delete(list.reversed()[i]) }; ctx.commit() }
+                .onDelete { idx in ctx.deleteWithUndo(idx.map { list.reversed()[$0] }, "Measurement deleted") }
             }
             .themedList()
             .navigationTitle(site.label)
@@ -333,10 +333,10 @@ struct PhotoViewer: View {
                 #endif
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .destructiveAction) { Button("Delete", role: .destructive) { confirmDelete = true } }
+                    ToolbarItem(placement: .destructiveAction) { Button("Delete", role: .destructive) { dismiss(); ctx.deleteWithUndo([photo], "Photo deleted") } }
                 }
                 .confirmationDialog("Delete this photo?", isPresented: $confirmDelete) {
-                    Button("Delete", role: .destructive) { ctx.delete(photo); ctx.commit(); dismiss() }
+                    Button("Delete", role: .destructive) { dismiss(); ctx.deleteWithUndo([photo], "Photo deleted") }
                 }
         }
         .appStyle()

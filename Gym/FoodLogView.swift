@@ -362,7 +362,7 @@ struct DayLog: View {
                             }
                         }
                         Divider()
-                        Button("Delete", role: .destructive) { animate { ctx.delete(e); ctx.commit() } }
+                        Button("Delete", role: .destructive) { ctx.deleteWithUndo([e], "\(e.name) removed") }
                     }
                 if e.id != list.last?.id { Divider().padding(.leading, showTime ? 70 : 14) }
             }

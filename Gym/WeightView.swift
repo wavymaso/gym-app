@@ -43,7 +43,7 @@ struct WeightView: View {
                                 Spacer()
                                 Text(unit.format(e.kg)).monospacedDigit()
                             }
-                            .contextMenu { Button("Delete", role: .destructive) { ctx.delete(e); ctx.commit() } }
+                            .contextMenu { Button("Delete", role: .destructive) { ctx.deleteWithUndo([e], "Weigh-in deleted") } }
                             if e.id != entries.prefix(60).last?.id { Divider() }
                         }
                     }

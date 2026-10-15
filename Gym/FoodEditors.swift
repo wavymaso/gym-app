@@ -67,7 +67,7 @@ struct QuickAddView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 if let entry {
                     ToolbarItem(placement: .destructiveAction) {
-                        Button("Delete", role: .destructive) { ctx.delete(entry); ctx.commit(); dismiss() }
+                        Button("Delete", role: .destructive) { dismiss(); ctx.deleteWithUndo([entry], "\(entry.name) removed") }
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
