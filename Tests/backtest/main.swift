@@ -77,7 +77,7 @@ if ProcessInfo.processInfo.environment["MFCMP"] != nil {
     var jv1 = JointSettings(); jv1.waterSD = 0.6; jv1.unloggedMass = 0.09
     let cl = Dictionary(classicExpenditure(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights).map { ($0.day, $0.kcal) }, uniquingKeysWith: { x, _ in x })
     let algos: [(String, [String: Double])] = [("classic", cl), ("joint (now)", j), ("joint old", series(jv1)), ("V1 standard", v1)] +
-        ExpenditureAlgorithm.allCases.filter { $0 != .joint }.map { a in ("V1 \(a.rawValue)", Dictionary(expenditureSeries(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights, settings: a.v1Settings).map { ($0.day, $0.kcal) }, uniquingKeysWith: { x, _ in x })) }
+        ExpenditureAlgorithm.allCases.filter { $0 != .joint && $0 != .classic }.map { a in ("V1 \(a.rawValue)", Dictionary(expenditureSeries(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights, settings: a.v1Settings).map { ($0.day, $0.kcal) }, uniquingKeysWith: { x, _ in x })) }
     for (n, e) in algos { print(n.padding(toLength: 16, withPad: " ", startingAt: 0), "since 2025:", mae(e, from: "2025-01-01"), " since Jul 26:", mae(e, from: "2026-07-01")) }
     for d in ["2026-09-01","2026-09-15","2026-10-01","2026-10-13"] { print(d, "MF", Int(mf[d] ?? 0), algos.map { "\($0.0.prefix(8)) \(Int($0.1[d] ?? 0))" }.joined(separator: "  ")) }
     exit(0)
