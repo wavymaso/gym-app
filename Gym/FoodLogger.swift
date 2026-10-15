@@ -539,12 +539,12 @@ struct AIPanel: View {
                 } else {
                     Button("Add a description") { mode = 1 }.font(.callout)
                 }
-                if let error { Label(error, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(palette.warn) }
+                if let error, !working {
+                    ProblemCard(title: "The AI couldn't read this", message: error, actions: problemActions)
+                }
                 if working {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text(PhotoAI.engine == .gemini ? "Gemini is looking…" : "Looking at your meal…").foregroundStyle(.secondary)
-                    }
+                    WorkingCard(title: PhotoAI.engine == .gemini ? "Gemini is looking at your meal…" : "Looking at your meal…",
+                                detail: "Splitting it into foods and ingredients. Usually 5–20 seconds; longer when Gemini is busy.")
                 }
             }
             .padding(16)
@@ -557,6 +557,12 @@ struct AIPanel: View {
             .disabled(!canAnalyse || working)
             .padding(.horizontal, 16).padding(.vertical, 8)
         }
+    }
+
+    private var problemActions: [(label: String, run: () -> Void)] {
+        var a: [(label: String, run: () -> Void)] = [("Try again", { Task { await analyse() } })]
+        if !photos.isEmpty && mode != 1 { a.append(("Describe it instead", { animate { mode = 1 } })) }
+        return a
     }
 
     private var canAnalyse: Bool { !photos.isEmpty || text.trimmingCharacters(in: .whitespaces).count >= 3 }

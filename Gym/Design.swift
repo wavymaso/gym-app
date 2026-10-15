@@ -205,3 +205,70 @@ extension View {
         overlay(alignment: .bottom) { UndoToast().padding(.bottom, bottom) }
     }
 }
+
+// MARK: - Problems: what happened, and what you can do
+
+struct ProblemCard: View {
+    let title: String
+    let message: String
+    var icon = "exclamationmark.triangle.fill"
+    var actions: [(label: String, run: () -> Void)] = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Label(title, systemImage: icon).font(.cardTitle).foregroundStyle(palette.warn)
+            Text(message).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if !actions.isEmpty {
+                HStack(spacing: Space.s) {
+                    ForEach(Array(actions.enumerated()), id: \.offset) { i, a in
+                        Button(a.label, action: a.run)
+                            .font(.secondaryText.weight(.semibold))
+                            .padding(.horizontal, Space.m).frame(height: 36)
+                            .background(i == 0 ? palette.accent : Color.raisedBackground, in: Capsule())
+                            .foregroundStyle(i == 0 ? Color.white : .primary)
+                            .pressable()
+                    }
+                }
+                .padding(.top, Space.xs)
+            }
+        }
+        .padding(Space.l).frame(maxWidth: .infinity, alignment: .leading)
+        .background(palette.warn.opacity(0.1), in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .transition(.opacity.combined(with: .move(edge: .top)))
+        .onAppear { Haptics.warning() }
+    }
+}
+
+/// Waiting on the network: a calm, alive line instead of a bare spinner.
+struct WorkingCard: View {
+    let title: String
+    var detail: String? = nil
+    @State private var on = false
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Image(systemName: "sparkles").font(.title2).foregroundStyle(palette.accent)
+                .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !Motion.reduceMotion)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.secondaryText.weight(.semibold))
+                if let detail { Text(detail).font(.fine).foregroundStyle(.secondary) }
+            }
+            Spacer()
+        }
+        .padding(Space.l)
+        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .overlay {
+            // A soft sheen sweeping across while it works.
+            GeometryReader { g in
+                LinearGradient(colors: [.clear, palette.accent.opacity(0.18), .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: g.size.width * 0.4)
+                    .offset(x: on ? g.size.width : -g.size.width * 0.4)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+            .allowsHitTesting(false)
+            .opacity(Motion.reduceMotion ? 0 : 1)
+        }
+        .onAppear { withAnimation(.linear(duration: 1.6).repeatForever(autoreverses: false)) { on = true } }
+        .transition(.opacity)
+    }
+}

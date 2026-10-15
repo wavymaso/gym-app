@@ -114,6 +114,7 @@ extension ModelContext {
 struct CoachCard: View {
     @Environment(\.modelContext) private var ctx
     @ObservedObject private var coach = Coach.shared
+    @State private var force = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -122,19 +123,25 @@ struct CoachCard: View {
                 Spacer()
                 if coach.working { ProgressView().controlSize(.small) }
                 else {
-                    Button { Task { await coach.refresh(ctx, force: true) } } label: { Image(systemName: "arrow.clockwise") }
+                    Button { force = true; Task { await coach.refresh(ctx, force: true); force = false } } label: { Image(systemName: "arrow.clockwise") }
                         .buttonStyle(.borderless)
                 }
             }
-            if let n = coach.note, n.day == dayKey() {
+            if let n = coach.note, n.day == dayKey(), !(coach.working && force) {
                 Text(n.text).font(.callout).fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity.combined(with: .offset(y: 6)))
+                    .id(n.text)
                 Text("By \(n.by) · from your last two weeks").font(.caption2).foregroundStyle(.secondary)
+            } else if coach.working {
+                WorkingCard(title: "Reading your last two weeks…")
             } else {
-                Text(coach.working ? "Reading your last two weeks…" : "Tap refresh for today's note.").font(.callout).foregroundStyle(.secondary)
+                Text("Tap refresh for today's note.").font(.callout).foregroundStyle(.secondary)
             }
         }
         .padding(16)
         .modifier(CardSurface())
+        .animation(Motion.pick(Motion.smooth), value: coach.note)
+        .animation(Motion.pick(Motion.smooth), value: coach.working)
         .task { await coach.refresh(ctx) }
     }
 }
