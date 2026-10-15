@@ -17,6 +17,7 @@ import SwiftData
     var servings: [Serving]
     var isLiquid: Bool
     var isFavorite: Bool
+    var verified: Bool = false                // you checked the numbers against the packet
     var useCount: Int
     var lastUsed: Date?
     var lastAmount: Double?                   // the amount you used last time, offered again

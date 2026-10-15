@@ -136,6 +136,20 @@ struct CustomFoodView: View {
     @State private var satFat = ""
     @State private var sodium = ""
 
+    /// Do the calories match the macros (4 · protein + 4 · carbs + 9 · fat, within 15%)?
+    @ViewBuilder private var atwater: some View {
+        let k = parseNumber(kcal) ?? 0, p = parseNumber(protein) ?? 0, f = parseNumber(fat) ?? 0, c = parseNumber(carbs) ?? 0
+        let est = 4 * p + 4 * c + 9 * f
+        if k > 20 || est > 20 {
+            if abs(est - k) / max(k, est) > 0.15 {
+                Label("These don't add up: the macros make \(Int(est)) kcal, not \(Int(k)). Check the label (fibre and alcohol can explain a little).",
+                      systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warn)
+            } else {
+                Label("Calories and macros agree.", systemImage: "checkmark.circle").foregroundStyle(palette.good)
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -159,7 +173,7 @@ struct CustomFoodView: View {
                     NumberRow(label: "Protein", text: $protein)
                     NumberRow(label: "Fat", text: $fat)
                     NumberRow(label: "Carbs", text: $carbs)
-                } header: { Text("Nutrition") }
+                } header: { Text("Nutrition") } footer: { atwater }
                 Section("More (optional)") {
                     NumberRow(label: "Fibre", text: $fiber)
                     NumberRow(label: "Sugar", text: $sugar)

@@ -259,13 +259,13 @@ extension Food: Syncable {
     func encode() -> [String: Any] {
         ["key": key, "name": name, "brand": n(brand), "barcode": n(barcode), "source": source, "per100": encodeJSON(per100),
          "servings": encodeJSON(servings), "isLiquid": isLiquid, "isFavorite": isFavorite, "useCount": useCount, "lastUsed": t(lastUsed),
-         "lastAmount": n(lastAmount), "lastUnit": n(lastUnit), "recipeServings": n(recipeServings), "createdAt": t(createdAt)]
+         "lastAmount": n(lastAmount), "lastUnit": n(lastUnit), "recipeServings": n(recipeServings), "createdAt": t(createdAt), "verified": verified]
     }
     func decode(_ d: [String: Any]) {
         key = d.str("key"); name = d.str("name"); brand = d.optStr("brand"); barcode = d.optStr("barcode"); source = d.str("source")
         per100 = d.nutrients("per100"); servings = d.servings("servings"); isLiquid = d.bool("isLiquid"); isFavorite = d.bool("isFavorite")
         useCount = d.int("useCount"); lastUsed = d.optDate("lastUsed"); lastAmount = d.optNum("lastAmount"); lastUnit = d.optStr("lastUnit")
-        recipeServings = d.optNum("recipeServings"); createdAt = d.date("createdAt")
+        recipeServings = d.optNum("recipeServings"); createdAt = d.date("createdAt"); verified = d.bool("verified")
     }
     static func blank() -> Self { Self(key: UUID().uuidString, name: "", source: "custom", per100: .zero) }
 }
