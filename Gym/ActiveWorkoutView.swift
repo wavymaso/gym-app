@@ -279,9 +279,11 @@ private struct ExerciseBlock: View {
                         Text(previousText(previous, workingIndex: working - 1, row: row))
                             .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 60 : 90, alignment: .leading)
                             .lineLimit(1).minimumScaleFactor(0.8)
-                        DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commitSoon() }), digits: 2)
+                        DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commitSoon() }), digits: 2,
+                                     step: (unit.fromKg(weightStep(exercise.equipmentValue)) * 100).rounded() / 100, onLog: row.done ? nil : { animate(Motion.snappy) { onDone(row) } })
                             .frame(width: isPhone ? 64 : 70)
-                        DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commitSoon() }), digits: 0)
+                        DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commitSoon() }), digits: 0,
+                                     step: 1, onLog: row.done ? nil : { animate(Motion.snappy) { onDone(row) } })
                             .frame(width: isPhone ? 44 : 50)
                         if isPhone {
                             // Reps in reserve: one tap picks it (it makes progression and e1RM honest).
@@ -352,6 +354,8 @@ struct DecimalField: View {
     @Binding var value: Double
     var digits = 1
     var emptyBelowZero = false
+    var step: Double? = nil                 // the keyboard's − / + (a plate's worth, or one rep)
+    var onLog: (() -> Void)? = nil          // the keyboard's "Log set"
     @State private var text = ""
     @FocusState private var focused: Bool
 
@@ -369,6 +373,31 @@ struct DecimalField: View {
             .onChange(of: value) { _, _ in if !focused { load() } }
             .onChange(of: focused) { _, f in if !f { commit() } }
             .onSubmit(commit)
+            #if os(iOS)
+            .toolbar {
+                if focused {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        if let step {
+                            Button { nudge(-step) } label: { Text("−\(trimmed(step, digits: 2))").monospacedDigit() }
+                            Button { nudge(step) } label: { Text("+\(trimmed(step, digits: 2))").monospacedDigit() }
+                        }
+                        Spacer()
+                        if let onLog {
+                            Button { commit(); focused = false; onLog() } label: { Label("Log set", systemImage: "checkmark").labelStyle(.titleAndIcon) }
+                                .fontWeight(.semibold)
+                        } else {
+                            Button("Done") { focused = false }.fontWeight(.semibold)
+                        }
+                    }
+                }
+            }
+            #endif
+    }
+
+    private func nudge(_ d: Double) {
+        let v = max(0, (parseNumber(text) ?? max(value, 0)) + d)
+        text = trimmed(v, digits: digits)
+        Haptics.tick()
     }
 
     private func load() {
