@@ -136,6 +136,9 @@ struct MainView: View {
     }()
 
     @State private var quick: QuickSheet?
+    #if os(iOS)
+    @ObservedObject private var selection = FoodSelection.shared
+    #endif
     @State private var plus = false
     @State private var weighing = false
     @AppStorage("whatsNewSeen") private var whatsNewSeen = 0
@@ -197,7 +200,9 @@ struct MainView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
-                if tab == .dashboard || tab == .food || tab == .strategy {
+                if tab == .food && !selection.ids.isEmpty {
+                    SelectionBar()
+                } else if tab == .dashboard || tab == .food || tab == .strategy {
                     FoodSearchBar(search: { quick = .food }, scan: { quick = .scan })
                 }
                 PhoneTabBar(tab: $tab) { plus = true }
