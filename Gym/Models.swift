@@ -124,7 +124,7 @@ let allModels: [any PersistentModel.Type] = [Profile.self, Program.self, TargetS
                                              Food.self, RecipeIngredient.self, FoodEntry.self,
                                              Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self, Tombstone.self,
                                              WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self,
-                                             Measurement.self, ProgressPhoto.self, Supplement.self, SupplementTake.self]
+                                             Measurement.self, ProgressPhoto.self, Supplement.self, SupplementTake.self, DecisionRecord.self]
 
 // MARK: - Looking things up
 

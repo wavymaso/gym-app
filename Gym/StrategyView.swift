@@ -52,6 +52,14 @@ struct StrategyView: View {
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
                     checkInRing(g)
                     CoachCard()
+                    if ctx.engineBody.isEstimated {
+                        NavigationLink { WeightView() } label: {
+                            Label("Add your waist and neck measurements: the coaching then uses your own lean mass for protein and a personal calorie floor, instead of an assumed 20% body fat.",
+                                  systemImage: "ruler").font(.secondaryText).foregroundStyle(.secondary)
+                                .padding(Space.l).frame(maxWidth: .infinity, alignment: .leading).modifier(CardSurface())
+                        }
+                        .buttonStyle(.plain)
+                    }
                     Text("In Progress").font(.title2.bold()).padding(.top, 4)
                     hero(p, g)
                     weekTargets(p, t)
@@ -455,7 +463,9 @@ struct StrategyView: View {
             rowButton("scalemass", palette.accent, "Scales", p.scaleNames.isEmpty ? "Just one" : "Main + \(p.scaleNames.joined(separator: ", "))") { scaling = true }
             rowLink("flame", palette.warn, "Expenditure", "Algorithm, starting estimate") { ExpenditureSettingsView() }
             rowLink("chart.line.uptrend.xyaxis", Color.weightTone, "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() }
-            rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals", last: true) { NutrientTargetsView() }
+            rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
+            rowLink("questionmark.circle", palette.accent, "Why these targets?", "Every check-in's decision and its evidence") { DecisionHistoryView() }
+            rowLink("books.vertical", palette.accent, "Evidence", "What the coaching is based on, and how strong it is", last: true) { EvidenceListView() }
         }
     }
 

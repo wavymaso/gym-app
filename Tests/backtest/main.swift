@@ -43,6 +43,50 @@ func score(_ e: [String: Double], from: String, to: String) -> (Double, Double, 
     }
     return (errs.map(abs).reduce(0, +) / Double(max(errs.count, 1)), errs.reduce(0, +) / Double(max(errs.count, 1)), errs.count)
 }
+if ProcessInfo.processInfo.environment["REPLAY"] != nil {
+    // Every week of the last year, as if the engine had been live: only data up to that day.
+    let all = ctx.engineDays()
+    let person = ctx.enginePerson!, body = ctx.engineBody
+    let sets = ((try? ctx.fetch(FetchDescriptor<TargetSet>(sortBy: [SortDescriptor(\.fromDay)]))) ?? [])
+    func live(_ d: String) -> TargetSet? { sets.last { $0.fromDay <= d } }
+    var lines: [String] = ["| Week ending | Trend (kg) | Rate kg/wk | Engine expenditure | MacroFactor expenditure | App's live target | Engine target | Rule |", "|---|---|---|---|---|---|---|---|"]
+    var diffs: [Double] = [], expDiff: [Double] = [], changes = 0, noChange = 0
+    var engineCur: MacroTargets? = nil                   // the engine's own targets, carried week to week
+    for k in stride(from: all.count - 365, to: all.count, by: 7) where k > 60 {
+        let slice = Array(all[0...k])
+        let tr = EngineTrend.run(slice)
+        let en = EngineEnergy.run(slice, trend: tr, prior: start.kcal, body: body)
+        guard let t = tr.last, let e = en.last else { continue }
+        let liveSet = live(slice.last!.key)
+        let start = engineCur ?? liveSet.map { MacroTargets(kcal: $0.kcal, protein: $0.protein, fat: $0.fat, carbs: $0.carbs) }
+            ?? EngineTargets.make(phase: .cut, ratePercent: 0.5, expenditure: e.kcal, weight: t.trend, body: body, person: person).targets
+        let week = slice.suffix(8).dropLast(), logged = week.compactMap(\.intake)
+        let i = CheckInInput(day: t.day, phase: "cut", weeksInPhase: 8, targetRatePct: 0.5, trendKg: t.trend, trendSD: t.sd, observedRateKgWeek: t.ratePerWeek,
+                             expenditure: e.kcal, expenditureSD: e.sd, loggedDays: logged.count, weighIns: week.filter { !$0.weighIns.isEmpty }.count,
+                             waterEventLast3Days: slice.suffix(3).contains { !$0.events.isEmpty }, daysOfData: slice.count,
+                             avgIntake: logged.isEmpty ? nil : logged.reduce(0, +) / Double(logged.count),
+                             currentTargets: start, style: "coached")
+        let r = EngineCheckIn.decide(i, person: person, body: body)
+        engineCur = r.output
+        let liveNext = live(addDays(t.day, 7))?.kcal
+        if let l = liveNext { diffs.append(abs(r.output.kcal - l)) }
+        if let m = mf[t.day] { expDiff.append(abs(e.kcal - m)) }
+        if r.changed { changes += 1 } else { noChange += 1 }
+        lines.append("| \(t.day) | \(String(format: "%.1f", t.trend)) | \(String(format: "%+.2f", t.ratePerWeek)) | \(Int(e.kcal)) ± \(Int(e.sd)) | \(mf[t.day].map { String(Int($0)) } ?? "–") | \(liveNext.map { String(Int($0)) } ?? "–") | \(Int(start.kcal)) → \(Int(r.output.kcal)) | \(r.reasons.last?.rule ?? "") |")
+    }
+    let summary = String(format: "Weeks: %d · engine changed targets %d times, held %d · average gap to the app's live target (%d weeks where it existed) %.0f kcal · engine expenditure vs MacroFactor %.0f kcal", changes + noChange, changes, noChange, diffs.count, diffs.reduce(0, +) / Double(max(diffs.count, 1)), expDiff.reduce(0, +) / Double(max(expDiff.count, 1)))
+    print(summary)
+    let out = ProcessInfo.processInfo.environment["REPORT"] ?? "/dev/null"
+    try? ("## Weekly replay (last 12 months, as if live)\n\nThe engine runs each week on only the data up to that day, carrying its own targets forward (phase assumed: cut at 0.5%/week; body fat assumed 20%). MacroFactor's export has no target history, so its recommendations can't be compared; its expenditure can.\n\n" + summary + "\n\n" + lines.joined(separator: "\n") + "\n").write(toFile: out, atomically: true, encoding: .utf8)
+    exit(0)
+}
+if ProcessInfo.processInfo.environment["ENGINECHECK"] != nil {
+    print("person", ctx.enginePerson as Any, "program", ctx.activeProgram != nil, "targets", ctx.targets() != nil)
+    let snap = ctx.engineSnapshot()
+    print("snapshot days", snap?.days.count ?? -1, "trend", snap?.trend.last as Any, "exp", snap?.expenditure.last as Any)
+    if let r = ctx.engineCheckIn() { print(r.action, r.input.currentTargets.kcal, "→", r.output.kcal); for x in r.reasons { print(" -", x.rule, ":", x.detail) } } else { print("no record") }
+    exit(0)
+}
 if ProcessInfo.processInfo.environment["TREND"] != nil {
     // Trend filters compared on forecasting: from each day's state, predict the mean of the actual
     // weigh-ins 1–4 weeks later (±3 days). Train/test split at two thirds.

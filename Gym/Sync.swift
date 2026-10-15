@@ -39,7 +39,7 @@ extension Syncable {
 let syncTypes: [any Syncable.Type] = [Profile.self, Program.self, TargetSet.self, WeightEntry.self, Food.self, RecipeIngredient.self,
                                       FoodEntry.self, Exercise.self, Routine.self, RoutineExercise.self, Workout.self, WorkoutSet.self,
                                       WaterEntry.self, DailyActivity.self, SavedMeal.self, DayNote.self, Measurement.self, ProgressPhoto.self,
-                                      Supplement.self, SupplementTake.self]
+                                      Supplement.self, SupplementTake.self, DecisionRecord.self]
 
 extension Notification.Name {
     static let gymDidCommit = Notification.Name("gymDidCommit")
@@ -230,6 +230,14 @@ extension Program: Syncable {
         lastCheckIn = d.optStr("lastCheckIn")
     }
     static func blank() -> Self { Self(goal: .maintain, ratePercent: 0, diet: .balanced, protein: .moderate, startWeightKg: 0, startExpenditure: 0) }
+}
+
+extension DecisionRecord: Syncable {
+    static var syncType: String { "decision" }
+    var naturalID: String { "decision:\(kind):\(day)" }
+    func encode() -> [String: Any] { ["day": day, "kind": kind, "json": json, "live": live] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); kind = d.str("kind"); json = d.str("json"); live = d.bool("live") }
+    static func blank() -> Self { Self(day: "", kind: "", json: "", live: false) }
 }
 
 extension TargetSet: Syncable {

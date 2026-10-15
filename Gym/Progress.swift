@@ -272,6 +272,7 @@ extension ModelContext {
         }
         activeProgram?.lastCheckIn = dayKey()
         commit()
+        saveShadowCheckIn()                 // the new engine's decision, kept alongside (shadow mode)
     }
 }
 

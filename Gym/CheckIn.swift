@@ -33,6 +33,7 @@ struct CheckInView: View {
                             Label("Only \(s.trackedDays) days logged this week, so the estimate barely moved. Logging most days makes check-ins accurate.",
                                   systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
                         }
+                        ShadowEngineCard(liveKcal: s.proposed?.kcal ?? s.current.kcal).arrive(3)
                         if let p = s.proposed {
                             Text("Targets for the week ahead").font(.title2.bold()).padding(.top, 8).arrive(3)
                             Card(title: "Now → suggested", systemImage: "target") {

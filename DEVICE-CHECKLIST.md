@@ -47,3 +47,10 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 - [ ] Travel: change the time zone in Settings → General → Date & Time with the app open; "Today" follows
 - [ ] Gemini key still works after the move to the Keychain (Photo logging shows the key; analyse a photo)
 - [ ] Insight charts (Weight Trend, Expenditure, Calories & Macros…): pinch to zoom around your fingers; the strip shows the dates, ‹ › slide, ✕ back to presets; pinching all the way out returns to "All"; touch-and-hold still shows values
+
+## Coaching engine (shadow mode, 16 Oct)
+- [ ] Check-in shows "New coaching engine (preview)" with what it would do; Why? opens inputs, rules and evidence (source links open)
+- [ ] After finishing a check-in, Strategy → Why these targets? lists it (marked shadow); it reaches the Mac after sync
+- [ ] Strategy → Evidence lists the registry by grade
+- [ ] Dashboard asks about half-logged days ("Complete" / "Partly")
+- [ ] Coaching note on Strategy contains no numbers except the "Today: … kcal left · … g protein to go" line
