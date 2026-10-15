@@ -33,3 +33,16 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 ## Text size
 - [ ] Settings → Display → Text Size at the largest, and Accessibility Larger Text at XL: calories left, rings and set fields still readable and not cut off
 - [ ] Light themes (Daylight, Paper) and Glass: problem/empty cards and the undo toast readable
+
+## Added 15 Oct (evening)
+- [ ] Food log: select a food → Copy → bar shows To Now / To Today / To Tomorrow / To Date & Time; every hour shows a paste button; swipe to another day and paste there; Undo works
+- [ ] Same for Move
+- [ ] Strategy → Program style / Check-in day / Training open their own page (no pop-up menu)
+- [ ] Settings pickers (units, sex, activity) open a page of choices
+- [ ] Nothing scrolls bare under the clock on any tab
+- [ ] More → Privacy & security → Lock with Face ID: asks on open and after a minute away; theme change doesn't lock you
+- [ ] More → Diagnostics shows real numbers; "Export diagnostics" shares a text file
+- [ ] Dashboard banner appears two days before the signature runs out (next: Monday 19 Oct)
+- [ ] More → Day start set to 03:00: a snack at 01:00 lands on the previous day
+- [ ] Travel: change the time zone in Settings → General → Date & Time with the app open; "Today" follows
+- [ ] Gemini key still works after the move to the Keychain (Photo logging shows the key; analyse a photo)

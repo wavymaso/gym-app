@@ -110,3 +110,21 @@ Status per checklist item: **Done**, **Partial**, **Missing**. Then the ranked p
 5. **Platform:** BGTaskScheduler backup (S, device-check); Face ID lock (S, device-check).
 6. **Code health:** `tools/check.sh` gate (S); ARCHITECTURE.md (S).
 7. **Later / large:** logic Swift package (L), snapshot tests (L), String Catalog + RTL (L), sync protocol + device IDs (M), VoiceOver pass (M), Ramadan mode (M), file splits (M).
+
+## Progress (same day)
+Done since the audit, each with tests where it can be tested off-device:
+- Pre-model-change database copy; recovery screen instead of a crash (no `try!` left on the real store path).
+- Integrity check at launch with safe repairs (`Tests/integrity`).
+- Backups: 14 daily + weekly for 3 months; full JSON archive export (photos opt-in); lossless round trip proven on real data.
+- Day follows your time zone immediately; optional day start; DST and travel tests (`Tests/time`). Backtest outputs identical.
+- Atwater check in the custom food editor; "verified" flag on foods (synced).
+- Keys in the Keychain; optional Face ID lock; Privacy & security page.
+- Food databases retry with backoff; clear outage/rate-limit messages; AI failure → "Search instead" with your text.
+- os.Logger categories, Diagnostics page, MetricKit crash/hang summaries.
+- Signing-expiry banner two days before.
+- `tools/check.sh` gate; ARCHITECTURE.md.
+- VoiceOver labels on the number pad, rings, insight cards, logged foods.
+
+Still open (bigger, or needs a decision): logic Swift package + CLI, snapshot tests, String Catalog/RTL,
+sync behind a protocol + device IDs, Ramadan mode, splitting the 8 files over 600 lines, BGTaskScheduler
+(backups already run every time the app goes to the background), feature flags, per-section settings reset.

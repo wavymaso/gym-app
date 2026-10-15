@@ -207,10 +207,13 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 14
+    static let version = 15
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("doc.on.clipboard", "Copy and move like MacroFactor", "Pick foods, tap Copy or Move, then tap any hour (any day) to put them there."),
+        ("lock.shield", "Safer data", "A copy before every update, a check at every launch, weekly backups for 3 months, Face ID lock, keys in the Keychain."),
+        ("stethoscope", "Diagnostics", "More → Diagnostics: version, data health, recent problems."),
         ("sparkles.rectangle.stack", "Smoother everywhere", "Tabs glide, numbers roll, foods drop into the cart, and every haptic means one thing."),
         ("arrow.uturn.backward", "Undo instead of “Are you sure?”", "Remove foods, sets, weigh-ins or photos at once; Undo for 5 seconds."),
         ("hand.tap", "Fewer taps", "Long-press ＋ on a food to log it straight away; −/+ on the keyboard for weights and weigh-ins."),
