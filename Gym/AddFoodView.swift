@@ -60,6 +60,10 @@ struct AddFoodView: View {
                 .sheet(item: $editingRecipe) { RecipeView(recipe: $0) }
                 .onAppear { if let q = initialQuery, query.isEmpty { query = q }; if embedded == .library { tab = .recent } }
                 .sheet(isPresented: $recipeLink) { RecipeView(recipe: nil, startImport: true) }
+                .sheet(item: $photo) { start in
+                    if case .log(let day, let at) = mode { PhotoLogView(day: day, time: at, start: start) }
+                }
+                .sheet(isPresented: $scanningLabel) { LabelScanView() }
                 .task(id: query) { await search() }
         } else {
             standalone
@@ -252,6 +256,8 @@ struct AddFoodView: View {
         return (meal, score.sorted { $0.value > $1.value }.prefix(8).compactMap { byKey[$0.key] })
     }
 
+    private var nothingAnywhere: Bool { localMatches.isEmpty && local.isEmpty && generic.isEmpty && products.isEmpty && !searching }
+
     private var localMatches: [Food] {
         let words = FoodAPI.fold(query).split(separator: " ").map(String.init)
         guard !words.isEmpty else { return [] }
@@ -274,6 +280,11 @@ struct AddFoodView: View {
             if let correction {
                 Label("Showing results for “\(correction)”", systemImage: "wand.and.stars").font(.callout).foregroundStyle(.secondary)
             }
+            if nothingAnywhere {
+                NoMatch(query: query.trimmingCharacters(in: .whitespaces), describe: { photo = .describe },
+                        create: { newFood = true }, scanLabel: { scanningLabel = true })
+                    .listRowBackground(Color.clear).listRowSeparator(.hidden)
+            }
             if !localMatches.isEmpty {
                 Section("Your foods") { ForEach(localMatches) { f in foodRow(f) } }
             }
@@ -286,12 +297,12 @@ struct AddFoodView: View {
             Section {
                 ForEach(generic) { r in resultRow(r) }
                 if let genericError { Text(genericError).font(.callout).foregroundStyle(.secondary) }
-                else if generic.isEmpty && !searching { Text("No matches").font(.callout).foregroundStyle(.secondary) }
+                else if generic.isEmpty && !searching && !nothingAnywhere { Text("Nothing here").font(.callout).foregroundStyle(.tertiary) }
             } header: { header("Common foods · USDA") }
             Section {
                 ForEach(products.filter { p in !mine.contains(p.key) && !local.contains { $0.key == p.key } }) { r in resultRow(r) }
                 if let productError { Text(productError).font(.callout).foregroundStyle(.secondary) }
-                else if products.isEmpty && !searching { Text("No matches").font(.callout).foregroundStyle(.secondary) }
+                else if products.isEmpty && !searching && !nothingAnywhere { Text("Nothing here").font(.callout).foregroundStyle(.tertiary) }
             } header: { header(local.isEmpty ? "Products · Open Food Facts" : "More products online · Open Food Facts") }
         }
     }
@@ -712,5 +723,40 @@ struct MFFoodRow: View {
         }
         .padding(.vertical, 6)
         .listRowBackground(Color.clear)
+    }
+}
+
+
+/// Nothing found anywhere: three ways to log it anyway.
+struct NoMatch: View {
+    let query: String
+    let describe: () -> Void
+    let create: () -> Void
+    let scanLabel: () -> Void
+
+    var body: some View {
+        VStack(spacing: Space.m) {
+            Image(systemName: "magnifyingglass").font(.title).foregroundStyle(.secondary)
+                .frame(width: 56, height: 56).background(Color.raisedBackground, in: Circle())
+            Text("No “\(query)” anywhere").font(.cardTitle)
+            Text("Not in your foods, USDA or Open Food Facts. Log it another way:").font(.secondaryText).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            VStack(spacing: Space.s) {
+                action("Describe it to the AI", "sparkles", primary: true, describe)
+                action("Scan the nutrition label", "text.viewfinder", primary: false, scanLabel)
+                action("Create “\(query)”", "plus", primary: false, create)
+            }
+            .padding(.top, Space.xs)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, Space.xl)
+    }
+
+    private func action(_ t: String, _ icon: String, primary: Bool, _ f: @escaping () -> Void) -> some View {
+        Button(action: f) {
+            Label(t, systemImage: icon).font(.secondaryText.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 46)
+                .background(primary ? palette.accent : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+                .foregroundStyle(primary ? Color.white : .primary)
+        }
+        .pressable()
     }
 }
