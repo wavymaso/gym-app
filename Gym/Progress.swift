@@ -8,6 +8,7 @@ extension ModelContext {
         let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)"
         if let hit = weightCache[key] { return hit }
         scaleOffsets = profile?.scaleOffsetMap ?? [:]
+        trendWaterEvents = engineWaterEvents()
         let v = ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.trendKg) }
         weightCache = [key: v]
         return v

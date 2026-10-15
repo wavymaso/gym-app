@@ -47,19 +47,26 @@ extension ModelContext {
         guard let first = weights.first?.day else { return [] }
         let wmap = Dictionary(grouping: weights, by: \.day).mapValues { $0.map(\.value) }
         let intake = dailyIntake()
-        let notes = Set(((try? fetch(FetchDescriptor<DayNote>(predicate: #Predicate { $0.waterEvent }))) ?? []).map(\.day))
-        var events: [String: Set<WaterEvent>] = [:]
-        for d in notes { events[d, default: []].insert(.tagged) }
-        if let p = profile {
-            for d in waterEvents(from: first, to: end) where !notes.contains(d) {
-                events[d, default: []].insert(d == p.dietBreakStart || d == addDays(p.dietBreakStart, 1) ? .dietBreakStart
-                                              : (d == addDays(p.dietBreakEnd, 1) || d == addDays(p.dietBreakEnd, 2)) ? .dietBreakEnd : .refeed)
-            }
-        }
+        let events = engineWaterEvents(from: first, to: end)
         let acts = Dictionary(((try? fetch(FetchDescriptor<DailyActivity>())) ?? []).map { ($0.day, Double($0.steps)) }, uniquingKeysWith: { a, _ in a })
         return days(from: first, through: end).map { d in
             EngineDay(key: d, weighIns: wmap[d] ?? [], intake: intake[d], events: events[d] ?? [], steps: acts[d])
         }
+    }
+
+    /// Water events by day: tagged days, refeeds, diet-break starts and ends.
+    func engineWaterEvents(from start: String? = nil, to end: String = dayKey()) -> [String: Set<WaterEvent>] {
+        let from = start ?? addDays(end, -3650)
+        let notes = Set(((try? fetch(FetchDescriptor<DayNote>(predicate: #Predicate { $0.waterEvent }))) ?? []).map(\.day))
+        var events: [String: Set<WaterEvent>] = [:]
+        for d in notes { events[d, default: []].insert(.tagged) }
+        if let p = profile {
+            for d in waterEvents(from: from, to: end) where !notes.contains(d) {
+                events[d, default: []].insert(d == p.dietBreakStart || d == addDays(p.dietBreakStart, 1) ? .dietBreakStart
+                                              : (d == addDays(p.dietBreakEnd, 1) || d == addDays(p.dietBreakEnd, 2)) ? .dietBreakEnd : .refeed)
+            }
+        }
+        return events
     }
 
     func engineSnapshot() -> EngineSnapshot? {

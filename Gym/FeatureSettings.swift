@@ -38,12 +38,15 @@ struct RadioRow: View {
 }
 
 struct WeightTrendSettingsView: View {
-    @AppStorage("trendAlgorithm") private var algorithm = TrendAlgorithm.v1.rawValue
+    @AppStorage("trendAlgorithm") private var algorithm = TrendAlgorithm.engine.rawValue
 
     var body: some View {
         Form {
             Section {
-                RadioRow(title: "Weight Trend (Standard)", badge: "Recommended",
+                RadioRow(title: "Weight Trend (Engine)", badge: "Recommended",
+                         detail: "Tracks your true weight, its rate and water separately, so refeeds, salty days and travel don't move it. Forecasts your weight 1–4 weeks ahead better than the classic trend on your history.",
+                         selected: algorithm == TrendAlgorithm.engine.rawValue) { set(.engine) }
+                RadioRow(title: "Weight Trend (Classic)",
                          detail: "Smooths out day-to-day water and food swings using past weigh-ins. Matches MacroFactor's trend weight on your history.",
                          selected: algorithm == TrendAlgorithm.v1.rawValue) { set(.v1) }
                 RadioRow(title: "Weight Trend V2",
@@ -52,7 +55,7 @@ struct WeightTrendSettingsView: View {
             } header: {
                 Text("Trend algorithm")
             } footer: {
-                Text("Expenditure always works from the Standard trend, so it stays in step with MacroFactor-style numbers.")
+                Text("Expenditure still works from the classic trend, so it stays in step with MacroFactor-style numbers; the new engine's expenditure runs in preview at each check-in.")
             }
         }
         .themedForm()

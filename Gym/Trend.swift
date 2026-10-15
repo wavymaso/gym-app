@@ -21,17 +21,26 @@ struct DayValue: Equatable {
 
 /// Which trend to show: V1 (exponential moving average, past only) or V2 (robust two-sided smoothing).
 enum TrendAlgorithm: String, CaseIterable, Identifiable {
-    case v1, v2
+    case v1, v2, engine
     var id: String { rawValue }
-    static var current: TrendAlgorithm { TrendAlgorithm(rawValue: UserDefaults.standard.string(forKey: "trendAlgorithm") ?? "") ?? .v1 }   // V1 by default: matches MacroFactor's trend to 0,01 kg on your history
+    /// The coaching engine's model by default (it beat V1 on 1–4 week forecasts: BACKTEST.md). Choices made
+    /// before it existed move over once.
+    static var current: TrendAlgorithm {
+        let d = UserDefaults.standard
+        if !d.bool(forKey: "trendEngineDefault") { d.set(true, forKey: "trendEngineDefault"); if d.string(forKey: "trendAlgorithm") != "v2" { d.removeObject(forKey: "trendAlgorithm") } }
+        return TrendAlgorithm(rawValue: d.string(forKey: "trendAlgorithm") ?? "") ?? .engine
+    }
 }
+
+/// Water events by day (refeeds, diet breaks, tagged days), set by the app so the engine trend can use them.
+nonisolated(unsafe) var trendWaterEvents: [String: Set<WaterEvent>] = [:]
 
 /// Every day from the first weigh-in to `through`: interpolated scale weight and trend, with the chosen algorithm.
 private var trendMemo: (key: String, value: [(day: String, scale: Double, trend: Double, logged: Bool)])?
 
 /// (Remembered: many screens ask for the same series on every redraw.)
 func trendSeries(_ weights: [DayValue], through end: String? = nil) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
-    let key = "\(TrendAlgorithm.current.rawValue)|\(weights.count)|\(weights.first?.day ?? "")|\(weights.last?.day ?? "")|\(weights.last?.value ?? 0)|\(weights.reduce(0) { $0 + $1.value })|\(end ?? "")"
+    let key = "\(TrendAlgorithm.current.rawValue)|\(trendWaterEvents.count)|\(weights.count)|\(weights.first?.day ?? "")|\(weights.last?.day ?? "")|\(weights.last?.value ?? 0)|\(weights.reduce(0) { $0 + $1.value })|\(end ?? "")"
     if let m = trendMemo, m.key == key { return m.value }
     let v = trendSeriesUncached(weights, through: end)
     trendMemo = (key, v)
@@ -40,7 +49,16 @@ func trendSeries(_ weights: [DayValue], through end: String? = nil) -> [(day: St
 
 private func trendSeriesUncached(_ weights: [DayValue], through end: String? = nil) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
     let v1 = trendSeriesV1(weights, through: end)
-    return TrendAlgorithm.current == .v2 ? robustTrend(v1) : v1
+    switch TrendAlgorithm.current {
+    case .v1: return v1
+    case .v2: return robustTrend(v1)
+    case .engine:
+        // The engine's state-space trend (water removed), on the same days; scale and logged as before.
+        let wmap = Dictionary(grouping: weights, by: \.day).mapValues { $0.map(\.value) }
+        let input = v1.map { EngineDay(key: $0.day, weighIns: wmap[$0.day] ?? [], events: trendWaterEvents[$0.day] ?? []) }
+        let k = Dictionary(EngineTrend.run(input).map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+        return v1.map { (day: $0.day, scale: $0.scale, trend: k[$0.day] ?? $0.trend, logged: $0.logged) }
+    }
 }
 
 /// Weight trend V2: for each day, a straight line fitted to the weigh-ins around it (±10 days, nearer days
