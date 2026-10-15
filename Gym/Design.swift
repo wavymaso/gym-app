@@ -401,3 +401,39 @@ struct StatusBarBackdrop: View {
     }
 }
 
+
+// MARK: - FoodMacroLine: the line under a food: 230🔥 8P 4F 35C • 1 bowl
+
+/// Macros never shrink or wrap; only the amount is cut short when space runs out.
+struct FoodMacroLine: View {
+    let kcal: Double
+    let protein: Double
+    let fat: Double
+    let carbs: Double
+    var amount: String? = nil
+    var colored = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            (Text(number(kcal)).foregroundStyle(colored ? Color.primary : .secondary)
+             + Text(Image(systemName: "flame.fill")).font(.caption2).foregroundStyle(colored ? palette.calories : .secondary)
+             + part(protein, "P", palette.protein) + part(fat, "F", palette.fat) + part(carbs, "C", palette.carbs))
+                .fixedSize()
+            if let amount, !amount.isEmpty {
+                Text("  •  \(amount)").foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+            }
+        }
+        .font(.subheadline).monospacedDigit()
+    }
+
+    private func part(_ v: Double, _ l: String, _ c: Color) -> Text {
+        Text("  \(number(v))").foregroundStyle(colored ? Color.primary : .secondary)
+            + Text(l).foregroundStyle(colored ? c : .secondary).fontWeight(colored ? .bold : .regular)
+    }
+}
+
+/// "Name · Brand" with the brand quieter.
+func foodTitle(_ name: String, _ brand: String?) -> Text {
+    guard let b = brand, !b.isEmpty else { return Text(name) }
+    return Text(name) + Text(" · \(b)").foregroundStyle(.secondary)
+}

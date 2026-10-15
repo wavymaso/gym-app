@@ -49,13 +49,8 @@ struct EntryCard: View {
                     .background(dominant(n).opacity(0.16), in: Circle())
                 VStack(alignment: .leading, spacing: 3) {
                     Text(entry.name).font(.body.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
-                    (Text("\(number(energy.fromKcal(n.kcal)))").foregroundStyle(.primary)
-                     + Text(Image(systemName: "flame.fill")).font(.caption2).foregroundStyle(palette.calories)
-                     + Text("  \(number(n.protein))").foregroundStyle(.primary) + Text("P").foregroundStyle(palette.protein).fontWeight(.bold)
-                     + Text("  \(number(n.fat))").foregroundStyle(.primary) + Text("F").foregroundStyle(palette.fat).fontWeight(.bold)
-                     + Text("  \(number(n.carbs))").foregroundStyle(.primary) + Text("C").foregroundStyle(palette.carbs).fontWeight(.bold)
-                     + Text(entry.isQuickAdd ? "" : "  •  \(entry.amountText)").foregroundStyle(.secondary))
-                        .font(.subheadline).monospacedDigit().lineLimit(1).minimumScaleFactor(0.75)
+                    FoodMacroLine(kcal: energy.fromKcal(n.kcal), protein: n.protein, fat: n.fat, carbs: n.carbs,
+                              amount: entry.isQuickAdd ? nil : entry.amountText, colored: true)
                 }
                 Spacer(minLength: 4)
                 if tap == nil {

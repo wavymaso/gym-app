@@ -64,13 +64,11 @@ struct MFFoodRow: View {
                     Text(foodEmoji(name: name, brand: brand)).font(.system(size: 30)).frame(width: 46)
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 5) {
-                            Text(brand.map { "\(name) · \($0)" } ?? name).font(.body).lineLimit(2).multilineTextAlignment(.leading)
+                            foodTitle(name, brand).font(.body).lineLimit(2).multilineTextAlignment(.leading)
                             if favorite { Image(systemName: "star.fill").font(.caption2).foregroundStyle(palette.fat) }
                             if n.looksWrong { Image(systemName: "exclamationmark.triangle.fill").font(.caption2).foregroundStyle(palette.warn) }
                         }
-                        (Text("\(number(n.kcal))") + Text(Image(systemName: "flame.fill")).font(.caption2)
-                         + Text("  \(number(n.protein))P  \(number(n.fat))F  \(number(n.carbs))C  •  \(amount)"))
-                            .font(.subheadline).foregroundStyle(.secondary).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                        FoodMacroLine(kcal: n.kcal, protein: n.protein, fat: n.fat, carbs: n.carbs, amount: amount)
                     }
                     Spacer(minLength: 0)
                 }

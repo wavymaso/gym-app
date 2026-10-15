@@ -206,6 +206,9 @@ struct MacroBarsRow: View {
     }
 
     private func row(_ eaten: Targets, _ t: Targets?, remaining: Bool) -> some View {
+        // Calories gets a wider column (its number is longest), so none of the four has to shrink.
+        GeometryReader { geo in
+        let unit = (geo.size.width - 36) / 4
         HStack(spacing: 12) {
             ForEach(Macro.allCases, id: \.self) { m in
                 let v = m.value(eaten), goal = t.map { m.value($0) } ?? 0
@@ -216,10 +219,10 @@ struct MacroBarsRow: View {
                         if m == .calories { Image(systemName: "flame.fill").foregroundStyle(m.color) }
                         else { Text(m.short).fontWeight(.heavy).foregroundStyle(m.color) }
                         Text(remaining ? (goal - v >= 0 ? "\(number(conv(goal - v))) left" : "\(number(conv(v - goal))) over")
-                                       : "\(number(conv(v))) / \(number(conv(goal)))")
+                                       : "\(number(conv(v)))/\(number(conv(goal)))")
                             .liveNumber(v).foregroundStyle(remaining && v > goal ? palette.warn : .primary)
                     }
-                    .font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                    .font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.85)
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.primary.opacity(0.12))
@@ -230,9 +233,11 @@ struct MacroBarsRow: View {
                     }
                     .frame(height: 4)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: unit * (m == .calories ? 1.15 : 0.95), alignment: .leading)
             }
         }
+        }
+        .frame(height: 30)
     }
 }
 
