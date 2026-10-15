@@ -400,3 +400,4 @@ struct StatusBarBackdrop: View {
         .allowsHitTesting(false)
     }
 }
+

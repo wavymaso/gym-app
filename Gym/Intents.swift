@@ -14,7 +14,18 @@ enum Store {
         #else
         let inMemory = false
         #endif
-        let c = try! ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory))
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        if !inMemory { StoreSafety.snapshotIfModelChanged(schema: schema, store: config.url) }
+        let c: ModelContainer
+        do {
+            c = try ModelContainer(for: schema, configurations: config)
+            if !inMemory { StoreSafety.opened(schema: schema) }
+        } catch {
+            // Never crash on a database that won't open: run on an empty one and offer recovery.
+            Log.problem("database", "The database didn't open: \(error.localizedDescription)")
+            StoreSafety.openFailure = error.localizedDescription
+            c = try! ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))   // in memory: can't fail
+        }
         c.mainContext.autosaveEnabled = false        // every save goes through commit(), which stamps changes for sync
         c.mainContext.backfillSyncIDs()              // records from before sync existed
         return c

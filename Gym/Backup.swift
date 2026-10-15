@@ -4,11 +4,31 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // Backups of everything you've logged: one JSON file a day (the same records sync uses, so a
-// restore is exact). Kept inside the app (last 14) and, if you pick one, in a folder of your
-// choice such as iCloud Drive (last 30).
+// restore is exact). Kept inside the app and, if you pick one, in a folder of your choice such
+// as iCloud Drive: every day for the last 14 (30 in your folder), then one a week for 3 months.
 
 enum Backup {
-    static let keepInside = 14, keepOutside = 30
+    static let keepInside = 14, keepOutside = 30, keepWeeks = 13
+
+    /// Which backup files stay: the newest `daily`, then the newest of each older week, for `weeks` weeks.
+    static func keep(_ names: [String], daily: Int, weeks: Int) -> Set<String> {
+        let sorted = names.sorted(by: >)
+        var kept = Set(sorted.prefix(daily))
+        guard let newest = sorted.first.flatMap(day(of:)) else { return kept }
+        let oldest = addDays(newest, -7 * weeks)
+        var seenWeeks = Set(sorted.prefix(daily).compactMap(day(of:)).map(weekStart))
+        for n in sorted.dropFirst(daily) {
+            guard let d = day(of: n), d >= oldest else { continue }
+            if seenWeeks.insert(weekStart(d)).inserted { kept.insert(n) }
+        }
+        return kept
+    }
+
+    /// "Gym backup 2026-10-15.json" → "2026-10-15"
+    static func day(of name: String) -> String? {
+        let d = name.replacingOccurrences(of: "Gym backup ", with: "").replacingOccurrences(of: ".json", with: "")
+        return d.count == 10 ? d : nil
+    }
     static var last: Date? {
         get { UserDefaults.standard.object(forKey: "lastBackup") as? Date }
         set { UserDefaults.standard.set(newValue, forKey: "lastBackup") }
@@ -58,9 +78,13 @@ enum Backup {
             let old = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
             let ours = old.filter { $0.lastPathComponent.hasPrefix("Gym backup ") && $0.pathExtension == "json" }
                 .sorted { $0.lastPathComponent > $1.lastPathComponent }
-            for f in ours.dropFirst(keep) { try? FileManager.default.removeItem(at: f) }
+            let staying = Backup.keep(ours.map(\.lastPathComponent), daily: keep, weeks: keepWeeks)
+            for f in ours where !staying.contains(f.lastPathComponent) { try? FileManager.default.removeItem(at: f) }
             return true
-        } catch { return false }
+        } catch {
+            Log.problem("backup", "Couldn't write a backup to \(folder.lastPathComponent): \(error.localizedDescription)")
+            return false
+        }
     }
 
     // MARK: A folder you choose (kept as a bookmark so it still works after a restart)

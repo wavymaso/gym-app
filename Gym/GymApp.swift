@@ -45,13 +45,25 @@ struct Root: View {
 
     var body: some View {
         Group {
-            if profiles.isEmpty {
+            if let failure = StoreSafety.openFailure {
+                RecoveryView(reason: failure)
+            } else if profiles.isEmpty {
                 SetupView()
             } else {
                 MainView()
             }
         }
         .task {
+            guard StoreSafety.openFailure == nil else { return }
+            // After a recovery: the newest backup comes back into the fresh database.
+            if UserDefaults.standard.bool(forKey: "restoreLatestBackup") {
+                UserDefaults.standard.removeObject(forKey: "restoreLatestBackup")
+                if let u = StoreSafety.latestBackup, let d = try? Data(contentsOf: u) {
+                    let n = Backup.restore(d, into: ctx)
+                    Log.database.notice("Recovery: restored \(n ?? 0) records from \(u.lastPathComponent, privacy: .public)")
+                }
+            }
+            IntegrityReport.last = ctx.integrityCheck()
             #if os(macOS)
             SyncServer.shared.context = ctx
             if SyncServer.shared.enabled { SyncServer.shared.start() }
