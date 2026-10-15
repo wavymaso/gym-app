@@ -211,7 +211,7 @@ struct StrategyView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(days.indices, id: \.self) { i in
                     let d = targets[i]
-                    Button { withAnimation(.snappy) { selectedDay = days[i] } } label: {
+                    Button { animate(Motion.snappy) { selectedDay = days[i] } } label: {
                         VStack(spacing: 6) {
                             Text(number(p.energy.fromKcal(d.kcal))).font(.caption2.weight(.semibold)).monospacedDigit()
                                 .lineLimit(1).minimumScaleFactor(0.6).foregroundStyle(i == sel ? .primary : .secondary)
@@ -283,7 +283,7 @@ struct StrategyView: View {
                 }
             }
             .frame(width: 230, height: 230)
-            .animation(.snappy, value: progress)
+            .animation(Motion.snappy, value: progress)
             HStack(spacing: 28) {
                 Button { editingGoalFlow = true } label: { Label("Goal", systemImage: "target").font(.headline) }
                 Button { checkingIn = true } label: {

@@ -62,7 +62,7 @@ struct ActiveWorkoutView: View {
                     #endif
                 }
             if let restEnds {
-                RestBar(ends: restEnds, total: restTotal) { e in withAnimation(.snappy) { self.restEnds = e } }
+                RestBar(ends: restEnds, total: restTotal) { e in animate(Motion.snappy) { self.restEnds = e } }
                     .padding(.horizontal, pagePadding).padding(.bottom, 8)
                     .frame(maxWidth: 860)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -296,7 +296,7 @@ private struct ExerciseBlock: View {
                                 .frame(width: 44)
                         }
                         HStack(spacing: 6) {
-                            Button { withAnimation(.snappy) { onDone(row) } } label: {
+                            Button { animate(Motion.snappy) { onDone(row) } } label: {
                                 Image(systemName: "checkmark").font(.callout.weight(.heavy))
                                     .foregroundStyle(row.done ? .white : .secondary)
                                     .frame(width: 32, height: 28)
@@ -421,7 +421,7 @@ struct RestBar: View {
         NSSound(named: "Glass")?.play()
         #else
         AudioServicesPlaySystemSound(1005)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        Haptics.success()
         #endif
     }
 }

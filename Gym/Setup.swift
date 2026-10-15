@@ -59,13 +59,13 @@ struct SetupView: View {
                 .frame(maxWidth: .infinity)
             }
             HStack {
-                if step > 0 { Button("Back") { withAnimation { step -= 1 } } }
+                if step > 0 { Button("Back") { animate { step -= 1 } } }
                 #if os(iOS)
                 if step == 0 { Button("Use my Mac's data") { connecting = true } }
                 #endif
                 Spacer()
                 Button(step == steps - 1 ? "Start" : "Continue") {
-                    if step == steps - 1 { finish() } else { withAnimation { step += 1 } }
+                    if step == steps - 1 { finish() } else { animate { step += 1 } }
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)

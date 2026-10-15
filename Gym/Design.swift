@@ -1,0 +1,207 @@
+import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
+
+// The design system: every screen takes its motion, feedback, type, spacing and corners from here.
+// (See DESIGN.md.) Colours come from the theme's Palette.
+
+// MARK: - Motion
+
+enum Motion {
+    /// Taps, toggles, selection: quick and crisp.
+    static let snappy = Animation.spring(response: 0.28, dampingFraction: 0.86)
+    /// Things moving or changing size: cards, sheets of content, tab changes.
+    static let smooth = Animation.spring(response: 0.42, dampingFraction: 0.9)
+    /// Small celebrations and things that should feel alive: a little overshoot.
+    static let bouncy = Animation.spring(response: 0.38, dampingFraction: 0.62)
+
+    /// With Reduce Motion on, nothing travels: changes just cross-fade quickly.
+    static func pick(_ a: Animation) -> Animation {
+        reduceMotion ? .easeOut(duration: 0.15) : a
+    }
+
+    static var reduceMotion: Bool {
+        #if os(iOS)
+        UIAccessibility.isReduceMotionEnabled
+        #else
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #endif
+    }
+}
+
+/// `withAnimation`, through the design system (and Reduce Motion).
+@discardableResult
+func animate<R>(_ a: Animation = Motion.snappy, _ body: () throws -> R) rethrows -> R {
+    try withAnimation(Motion.pick(a), body)
+}
+
+// MARK: - Haptics
+
+/// The whole vocabulary. Nothing else in the app makes haptics.
+enum Haptics {
+    /// Pickers, steppers, the day strip, scrubbing a chart, switching tab.
+    static func tick() {
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    /// Adding to the cart, logging a set, a weigh-in saved.
+    static func tap() {
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
+    }
+
+    /// A firmer tap: long-press actions, something that moved for good.
+    static func press() {
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+    }
+
+    /// Finishing something: a workout, a check-in, logging the cart.
+    static func success() {
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+    }
+
+    /// Something went wrong (the AI failed, a scan found nothing).
+    static func warning() {
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        #endif
+    }
+
+    /// A personal record: a rising double tap no other action uses.
+    static func record() {
+        #if os(iOS)
+        let a = UIImpactFeedbackGenerator(style: .rigid), b = UIImpactFeedbackGenerator(style: .heavy)
+        a.prepare(); b.prepare()
+        a.impactOccurred(intensity: 0.7)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { b.impactOccurred() }
+        #endif
+    }
+}
+
+// MARK: - Spacing and corners (a 4/8 pt grid)
+
+enum Space {
+    static let xxs: CGFloat = 2
+    static let xs: CGFloat = 4
+    static let s: CGFloat = 8
+    static let m: CGFloat = 12
+    static let l: CGFloat = 16
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+}
+
+enum Radius {
+    static let s: CGFloat = 8       // chips, small fields
+    static let m: CGFloat = 12      // buttons, inputs, tiles
+    static let l: CGFloat = 18      // cards and rows
+    static let xl: CGFloat = 24     // big cards, sheets
+}
+
+// MARK: - Type
+
+extension Font {
+    // Text roles (all scale with Dynamic Type).
+    static let screenTitle = Font.largeTitle.weight(.black)
+    static let sectionTitle = Font.title2.bold()
+    static let cardTitle = Font.headline
+    static let bodyText = Font.body
+    static let secondaryText = Font.subheadline
+    static let label = Font.caption.weight(.semibold)
+    static let fine = Font.caption2
+
+    // Number roles: rounded, tabular, and they scale with Dynamic Type too.
+    static let numberHero = Font.system(.largeTitle, design: .rounded).weight(.bold)      // calories left, the weigh-in
+    static let numberLarge = Font.system(.title, design: .rounded).weight(.bold)          // card values
+    static let numberMedium = Font.system(.title3, design: .rounded).weight(.semibold)    // tiles, set fields
+    static let numberSmall = Font.system(.subheadline, design: .rounded).weight(.semibold)
+}
+
+extension View {
+    /// A number that changes: tabular digits, and it rolls to the new value.
+    func liveNumber(_ value: Double) -> some View {
+        monospacedDigit().contentTransition(.numericText(value: value)).animation(Motion.pick(Motion.snappy), value: value)
+    }
+
+    /// A unit after a value: same size, lighter.
+    func unitStyle() -> some View { foregroundStyle(.secondary).fontWeight(.medium) }
+
+    /// A button that sinks a little when pressed.
+    func pressable() -> some View { buttonStyle(PressableStyle()) }
+}
+
+struct PressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !Motion.reduceMotion ? 0.96 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(Motion.snappy, value: configuration.isPressed)
+    }
+}
+
+// MARK: - Undo instead of "Are you sure?"
+
+/// "Removed · Undo" for a few seconds at the bottom of the screen.
+@MainActor final class UndoCenter: ObservableObject {
+    static let shared = UndoCenter()
+    struct Item: Identifiable { let id = UUID(); let message: String; let undo: () -> Void }
+    @Published private(set) var item: Item?
+    private var timer: Task<Void, Never>?
+
+    func offer(_ message: String, undo: @escaping () -> Void) {
+        timer?.cancel()
+        animate(Motion.smooth) { item = Item(message: message, undo: undo) }
+        Haptics.tap()
+        let id = item?.id
+        timer = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled, self?.item?.id == id else { return }
+            animate(Motion.smooth) { self?.item = nil }
+        }
+    }
+
+    func perform() {
+        guard let i = item else { return }
+        i.undo()
+        Haptics.tick()
+        animate(Motion.smooth) { item = nil }
+    }
+
+    func dismiss() { animate(Motion.smooth) { item = nil } }
+}
+
+struct UndoToast: View {
+    @ObservedObject private var center = UndoCenter.shared
+
+    var body: some View {
+        if let i = center.item {
+            HStack(spacing: Space.m) {
+                Text(i.message).font(.secondaryText.weight(.medium)).lineLimit(2)
+                Spacer(minLength: Space.s)
+                Button("Undo") { center.perform() }.font(.secondaryText.weight(.bold)).foregroundStyle(palette.accent)
+            }
+            .padding(.horizontal, Space.l).padding(.vertical, Space.m)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
+            .shadow(color: .black.opacity(0.25), radius: 16, y: 6)
+            .padding(.horizontal, Space.l)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .gesture(DragGesture().onEnded { if $0.translation.height > 20 { center.dismiss() } })
+            .id(i.id)
+        }
+    }
+}
+
+extension View {
+    /// The undo toast, floating above this screen's bottom bars.
+    func undoToast(bottom: CGFloat = Space.s) -> some View {
+        overlay(alignment: .bottom) { UndoToast().padding(.bottom, bottom) }
+    }
+}

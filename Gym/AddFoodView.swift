@@ -170,7 +170,7 @@ struct AddFoodView: View {
                     }
                 }
                 .padding(.horizontal, 14).padding(.bottom, 6)
-                .animation(.snappy, value: cartCount)
+                .animation(Motion.snappy, value: cartCount)
             }
         }
     }
@@ -688,11 +688,11 @@ struct MFFoodRow: View {
             if let plus {
                 Button {
                     plus()
-                    withAnimation(.snappy) { added = true }
+                    animate(Motion.snappy) { added = true }
                     #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    Haptics.press()
                     #endif
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { withAnimation { added = false } }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { animate { added = false } }
                 } label: {
                     Image(systemName: added ? "checkmark" : "plus").font(.headline)
                         .frame(width: 40, height: 40)

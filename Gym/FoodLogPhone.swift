@@ -70,7 +70,7 @@ struct PhoneFoodLog: View {
                     .foregroundStyle(GlowStyle.on || palette.glass
                                      ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPoint: .trailing))
                                      : AnyShapeStyle(.primary))
-                    .onTapGesture(count: 2) { withAnimation(.snappy) { day = dayKey() } }
+                    .onTapGesture(count: 2) { animate(Motion.snappy) { day = dayKey() } }
                 Spacer(minLength: 4)
                 round("calendar") { picking = true }
                 round("slider.horizontal.3") { details = true }
@@ -141,7 +141,7 @@ struct DayPills: View {
                 let d = addDays(monday, i)
                 let t = ctx.dayTargets(on: d)?.kcal ?? 0
                 let p = t > 0 ? (kcal[d] ?? 0) / t : 0
-                Button { withAnimation(.snappy) { day = d } } label: { pill(d, p) }
+                Button { animate(Motion.snappy) { day = d } } label: { pill(d, p) }
                     .buttonStyle(.plain)
                     .frame(maxWidth: .infinity)
             }
@@ -149,7 +149,7 @@ struct DayPills: View {
         .contentShape(Rectangle())
         .gesture(DragGesture(minimumDistance: 30).onEnded { g in
             guard abs(g.translation.width) > abs(g.translation.height) else { return }
-            withAnimation(.snappy) { day = addDays(day, g.translation.width < 0 ? 7 : -7) }
+            animate(Motion.snappy) { day = addDays(day, g.translation.width < 0 ? 7 : -7) }
         })
         .capType()
     }
@@ -254,9 +254,9 @@ struct DayEntries: View {
     }
 
     private func toggle(_ e: FoodEntry) {
-        withAnimation(.snappy) { if selected.contains(e.syncID) { selected.remove(e.syncID) } else { selected.insert(e.syncID) } }
+        animate(Motion.snappy) { if selected.contains(e.syncID) { selected.remove(e.syncID) } else { selected.insert(e.syncID) } }
         #if os(iOS)
-        UISelectionFeedbackGenerator().selectionChanged()
+        Haptics.tick()
         #endif
     }
 
@@ -403,7 +403,7 @@ struct DayEntries: View {
             }
         }
         Divider()
-        Button("Delete", systemImage: "trash", role: .destructive) { withAnimation { ctx.delete(e); ctx.commit() } }
+        Button("Delete", systemImage: "trash", role: .destructive) { animate { ctx.delete(e); ctx.commit() } }
     }
 
     private func move(_ ids: [String], to hour: Int) -> Bool {
@@ -414,7 +414,7 @@ struct DayEntries: View {
             let m = cal.component(.minute, from: e.time)
             e.time = cal.date(bySettingHour: hour, minute: m, second: 0, of: date(fromKey: e.day)) ?? e.time
         }
-        withAnimation(.snappy) { ctx.commit() }
+        animate(Motion.snappy) { ctx.commit() }
         return true
     }
 }
@@ -579,7 +579,7 @@ struct SelectionBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Button { withAnimation(.snappy) { sel.ids = [] } } label: {
+            Button { animate(Motion.snappy) { sel.ids = [] } } label: {
                 Image(systemName: "xmark").font(.headline).frame(width: 40, height: 40).background(Color.primary, in: Circle())
                     .foregroundStyle(palette.scheme == .dark ? Color.black : .white)
             }
@@ -657,7 +657,7 @@ struct SelectionBar: View {
     }
 
     private func remove() {
-        withAnimation { for e in chosen { ctx.delete(e) }; ctx.commit(); sel.ids = [] }
+        animate { for e in chosen { ctx.delete(e) }; ctx.commit(); sel.ids = [] }
     }
 
     private func duplicate() {

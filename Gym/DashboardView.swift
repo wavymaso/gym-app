@@ -424,7 +424,7 @@ struct TodayRings: View {
             Ring(progress: target.kcal > 0 ? eaten.kcal / target.kcal : 0, color: Macro.calories.color, lineWidth: 18)
             VStack(spacing: 0) {
                 Text(number(energy.fromKcal(abs(left)))).font(.number(44)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
-                    .contentTransition(.numericText(value: left)).animation(.snappy, value: left)
+                    .contentTransition(.numericText(value: left)).animation(Motion.snappy, value: left)
                 Text("\(energy.rawValue) \(left >= 0 ? "left" : "over")").font(.subheadline.weight(.semibold))
                     .foregroundStyle(left >= 0 ? Color.secondary : palette.warn)
                 Text("\(number(energy.fromKcal(eaten.kcal))) of \(energy.format(target.kcal))").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
@@ -441,7 +441,7 @@ struct TodayRings: View {
                 Ring(progress: t > 0 ? e / t : 0, color: m.color, lineWidth: 9)
                 VStack(spacing: -2) {
                     Text(number(e)).font(.number(18)).monospacedDigit()
-                        .contentTransition(.numericText(value: e)).animation(.snappy, value: e)
+                        .contentTransition(.numericText(value: e)).animation(Motion.snappy, value: e)
                     Text("/\(number(t))").font(.caption2).foregroundStyle(.secondary).monospacedDigit()
                 }
             }

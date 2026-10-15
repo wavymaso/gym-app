@@ -59,7 +59,7 @@ struct WeightTrendSettingsView: View {
         .navigationTitle("Weight Trend")
     }
 
-    private func set(_ a: TrendAlgorithm) { withAnimation { algorithm = a.rawValue }; dataVersion += 1 }
+    private func set(_ a: TrendAlgorithm) { animate { algorithm = a.rawValue }; dataVersion += 1 }
 }
 
 struct ExpenditureSettingsView: View {

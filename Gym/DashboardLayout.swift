@@ -181,7 +181,7 @@ struct CustomizeDashboardView: View {
     }
 
     private func move(_ i: Int, _ by: Int) {
-        withAnimation { layout.sections.swapAt(i, i + by) }
+        animate { layout.sections.swapAt(i, i + by) }
     }
 }
 

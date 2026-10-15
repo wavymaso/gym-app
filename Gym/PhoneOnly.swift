@@ -66,7 +66,7 @@ private struct ScannerView: UIViewControllerRepresentable {
             for case .barcode(let b) in items {
                 if let code = b.payloadStringValue, !done {
                     done = true
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    Haptics.success()
                     found(code)
                 }
             }

@@ -376,8 +376,8 @@ struct Ring: View {
             }
         }
         .padding(lineWidth / 2)
-        .onAppear { withAnimation(.spring(duration: 0.9)) { shown = progress } }
-        .onChange(of: progress) { _, p in withAnimation(.spring(duration: 0.6)) { shown = p } }
+        .onAppear { animate(Motion.smooth) { shown = progress } }
+        .onChange(of: progress) { _, p in animate(Motion.smooth) { shown = p } }
     }
 }
 

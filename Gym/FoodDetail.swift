@@ -125,7 +125,7 @@ struct FoodDetailView: View {
         let f = Food(key: "custom:\(UUID().uuidString)", name: food.name, brand: food.brand, source: "custom", per100: food.per100,
                      servings: food.servings, isLiquid: food.isLiquid)
         ctx.insert(f); ctx.commit()
-        withAnimation { copied = true }
+        animate { copied = true }
     }
 
     // MARK: Impact on targets
@@ -149,7 +149,7 @@ struct FoodDetailView: View {
                                 Text("\(Int(adds * 100 + 0.5))%").font(.callout.weight(.semibold)).monospacedDigit()
                             }
                             .frame(width: 66, height: 66)
-                            .animation(.snappy, value: adds)
+                            .animation(Motion.snappy, value: adds)
                             Text(m.label).font(.caption).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
@@ -231,7 +231,7 @@ struct FoodDetailView: View {
     private var bottom: some View {
         VStack(spacing: 10) {
             HStack(spacing: 8) {
-                Button { withAnimation(.snappy) { keypad.toggle() } } label: {
+                Button { animate(Motion.snappy) { keypad.toggle() } } label: {
                     HStack {
                         Text(text.isEmpty ? "0" : text).font(.title3.weight(.semibold)).monospacedDigit()
                         Spacer()
@@ -312,7 +312,7 @@ struct FoodDetailView: View {
 
     private func tap(_ k: String) {
         #if os(iOS)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Haptics.tap()
         #endif
         if fresh { text = ""; fresh = false }
         switch k {
@@ -357,7 +357,7 @@ struct FoodDetailView: View {
     private func finish(_ action: (Double, String) -> Void) {
         guard amount > 0 else { return }
         #if os(iOS)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        Haptics.success()
         #endif
         action(amount, unit)
     }

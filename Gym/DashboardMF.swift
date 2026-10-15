@@ -50,7 +50,7 @@ struct WeekGrid: View {
     private func grid(_ days: [String], _ byDay: [String: Targets]) -> some View {
         HStack(spacing: 3) {
             ForEach(days, id: \.self) { d in
-                Button { withAnimation(.snappy) { selected = d } } label: {
+                Button { animate(Motion.snappy) { selected = d } } label: {
                     VStack(spacing: rowGap) {
                         ForEach(Macro.allCases, id: \.self) { m in bar(m, byDay[d], target(d), future: d > dayKey()) }
                         Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
@@ -100,7 +100,7 @@ struct WeekGrid: View {
             Text(remaining ? (shown < 0 ? "over" : "left") : "of \(number(m == .calories ? energy.fromKcal(goal) : goal))")
                 .font(.caption).foregroundStyle(.secondary)
         }
-        .animation(.snappy, value: remaining)
+        .animation(Motion.snappy, value: remaining)
     }
 }
 
@@ -219,7 +219,7 @@ struct ShortcutsSheet: View {
                     row("Water +250 ml", "drop.fill", Color(hex: 0x3BB2F6)) {
                         ctx.addWater(250)
                         #if os(iOS)
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        Haptics.success()
                         #endif
                         dismiss()
                     }

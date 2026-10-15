@@ -217,7 +217,7 @@ struct ActivityCard: View {
     }
 
     private func waterButton(_ ml: Double, _ color: Color) -> some View {
-        Button { withAnimation { ctx.addWater(ml) } } label: {
+        Button { animate { ctx.addWater(ml) } } label: {
             Text("+\(number(ml))").font(.caption.weight(.bold)).monospacedDigit()
                 .padding(.horizontal, 9).padding(.vertical, 6)
                 .background(color.opacity(0.16), in: Capsule()).foregroundStyle(color)

@@ -214,7 +214,7 @@ struct InsightDetailView: View {
             }
             Spacer()
             if kind != .energyBalance && kind != .goal && kind != .nutrition {
-                Button { withAnimation(.snappy) { zoomed.toggle() } } label: {
+                Button { animate(Motion.snappy) { zoomed.toggle() } } label: {
                     Image(systemName: zoomed ? "arrow.up.and.down.text.horizontal" : "arrow.down.and.line.horizontal.and.arrow.up")
                         .font(.headline).frame(width: 46, height: 46).modifier(GlassCapsule())
                 }
@@ -376,7 +376,7 @@ struct InsightDetailView: View {
         HStack(spacing: 10) {
             HStack(spacing: 2) {
                 ForEach(DetailRange.allCases) { r in
-                    Button { withAnimation(.snappy) { range = r } } label: {
+                    Button { animate(Motion.snappy) { range = r } } label: {
                         Text(r.rawValue).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 40)
                             .background(range == r ? Color.primary : .clear, in: Capsule())
                             .foregroundStyle(range == r ? (palette.scheme == .dark ? Color.black : Color.white) : Color.primary)

@@ -18,7 +18,7 @@ struct NutrientPanel: View {
         let n = total.scaled(k)
         let withMicros = entries.filter { $0.nutrients.micros != nil }.count
         Card(title: title, systemImage: "leaf", accessory: AnyView(
-            Button(open ? "Hide" : "Show") { withAnimation(.snappy) { open.toggle() } }.buttonStyle(.borderless).font(.caption.weight(.semibold))
+            Button(open ? "Hide" : "Show") { animate(Motion.snappy) { open.toggle() } }.buttonStyle(.borderless).font(.caption.weight(.semibold))
         )) {
             if open {
                 VStack(spacing: 9) {

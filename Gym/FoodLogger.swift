@@ -161,12 +161,12 @@ struct FoodLogger: View {
     private func caloriesPill(_ total: Double, _ target: Double) -> some View {
         let p = target > 0 ? total / target : 0
         return Text("\(number(total)) / \(number(target))").font(.callout.weight(.semibold)).monospacedDigit()
-            .contentTransition(.numericText()).animation(.snappy, value: total)
+            .contentTransition(.numericText()).animation(Motion.snappy, value: total)
             .padding(.horizontal, 14).frame(height: 44)
             .overlay(Capsule().stroke(Color.raisedBackground, lineWidth: 3))
             .overlay(Capsule().trim(from: 0, to: min(p, 1)).stroke(p > 1.05 ? palette.warn : palette.calories,
                                                                     style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .animation(.snappy, value: p))
+                .animation(Motion.snappy, value: p))
             .fixedSize()
     }
 
@@ -196,7 +196,7 @@ struct FoodLogger: View {
         }
         .frame(maxWidth: .infinity, minHeight: 44)
         .background(Color.raisedBackground, in: Capsule())
-        .animation(.snappy, value: cart.count)
+        .animation(Motion.snappy, value: cart.count)
     }
 
     /// The colour of the macro that gives most of the calories.
@@ -211,7 +211,7 @@ struct FoodLogger: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
                 ForEach(LoggerTab.available) { t in
-                    Button { withAnimation(.snappy) { tab = t } } label: {
+                    Button { animate(Motion.snappy) { tab = t } } label: {
                         VStack(spacing: 8) {
                             Label(t.label, systemImage: t.icon).font(.subheadline.weight(.semibold))
                                 .foregroundStyle(tab == t ? .primary : .secondary)
@@ -234,11 +234,11 @@ struct FoodLogger: View {
     // MARK: The cart
 
     private func add(_ f: Food, _ amount: Double, _ unit: String) {
-        withAnimation(.snappy) { cart.append(CartItem(food: f, name: f.name, amount: amount, unit: unit)) }
+        animate(Motion.snappy) { cart.append(CartItem(food: f, name: f.name, amount: amount, unit: unit)) }
     }
 
     private func add(quick n: Nutrients, name: String) {
-        withAnimation(.snappy) { cart.append(CartItem(food: nil, name: name, amount: 1, unit: "", quick: n)) }
+        animate(Motion.snappy) { cart.append(CartItem(food: nil, name: name, amount: 1, unit: "", quick: n)) }
     }
 
     private func add(_ meal: SavedMeal) {
@@ -271,7 +271,7 @@ struct FoodLogger: View {
         }
         ctx.commit()
         #if os(iOS)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        Haptics.success()
         #endif
         cart = []
         dismiss()
@@ -571,7 +571,7 @@ struct AIPanel: View {
             var matched = ctx.plate(from: items)
             var skip = found.count
             for i in matched.indices where skip > 0 && matched[i].ai?.packaged == true { matched[i].included = false; skip -= 1 }
-            withAnimation(.snappy) { plate = found + matched }
+            animate(Motion.snappy) { plate = found + matched }
             seenBy = by
             if plate.isEmpty { error = "No food found. Try a closer photo in better light, or describe it." }
         } catch {
@@ -773,7 +773,7 @@ private struct LiveScanner: UIViewControllerRepresentable {
                 guard let code = b.payloadStringValue else { continue }
                 if let l = last, l.0 == code, Date().timeIntervalSince(l.1) < 4 { continue }   // the same code again
                 last = (code, Date())
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                Haptics.success()
                 found(code)
             }
         }
@@ -795,7 +795,7 @@ struct AIPlateCard: View {
             row($item, top: true)
             if item.isDish {
                 Divider().padding(.leading, 16)
-                Button { withAnimation(.snappy) { open.toggle() } } label: {
+                Button { animate(Motion.snappy) { open.toggle() } } label: {
                     HStack {
                         Text(open ? "Collapse Ingredients" : "Show \(item.children.count) Ingredients").font(.subheadline)
                         Spacer()
@@ -819,7 +819,7 @@ struct AIPlateCard: View {
     private func row(_ x: Binding<PlateItem>, top: Bool) -> some View {
         let v = x.wrappedValue, n = v.nutrients
         return HStack(spacing: 12) {
-            Button { withAnimation { x.wrappedValue.included.toggle() } } label: {
+            Button { animate { x.wrappedValue.included.toggle() } } label: {
                 Text(foodEmoji(name: v.name, brand: nil)).font(.system(size: top ? 30 : 26)).frame(width: 44)
                     .overlay(alignment: .bottomTrailing) {
                         if !v.included { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(palette.warn) }

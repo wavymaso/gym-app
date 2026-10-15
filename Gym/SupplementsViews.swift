@@ -29,9 +29,9 @@ struct SupplementsCard: View {
                 FlowChips(items: list) { s in
                     let on = taken.contains(s.key)
                     Button {
-                        withAnimation(.snappy) { ctx.toggleTake(s, on: dayKey()) }
+                        animate(Motion.snappy) { ctx.toggleTake(s, on: dayKey()) }
                         #if os(iOS)
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        Haptics.tap()
                         #endif
                     } label: {
                         HStack(spacing: 6) {

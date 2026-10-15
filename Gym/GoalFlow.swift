@@ -30,7 +30,7 @@ struct EditGoalFlow: View {
             .navigationTitle(step == 0 ? "" : "Edit Goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { if step == 0 { dismiss() } else { withAnimation { step -= 1 } } } label: {
+                    Button { if step == 0 { dismiss() } else { animate { step -= 1 } } } label: {
                         Image(systemName: step == 0 ? "xmark" : "chevron.left")
                     }
                 }
@@ -90,7 +90,7 @@ struct EditGoalFlow: View {
             }
             .padding(20)
             Spacer()
-            primary("Edit Goal Parameters") { withAnimation { step = 1 } }
+            primary("Edit Goal Parameters") { animate { step = 1 } }
         }
         .ignoresSafeArea(edges: .top)
     }
@@ -145,7 +145,7 @@ struct EditGoalFlow: View {
                 }
                 .padding(20)
             }
-            primary("Next") { withAnimation { step = 2 } }
+            primary("Next") { animate { step = 2 } }
         }
     }
 
@@ -237,7 +237,7 @@ struct EditGoalFlow: View {
                 Capsule().fill(Color.primary).frame(width: geo.size.width * v)
             }
         }
-        .frame(height: 4).padding(.horizontal, 20).animation(.snappy, value: v)
+        .frame(height: 4).padding(.horizontal, 20).animation(Motion.snappy, value: v)
     }
 
     private func primary(_ title: String, _ action: @escaping () -> Void) -> some View {

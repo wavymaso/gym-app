@@ -128,7 +128,7 @@ struct WeekStrip: View {
                 Text(title).font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer()
                 if day != dayKey() {
-                    Button("Today") { withAnimation { day = dayKey() } }.buttonStyle(.bordered).controlSize(.small)
+                    Button("Today") { animate { day = dayKey() } }.buttonStyle(.bordered).controlSize(.small)
                 }
                 Button { move(-7) } label: { Image(systemName: "chevron.left") }.buttonStyle(.borderless)
                 Button { move(7) } label: { Image(systemName: "chevron.right") }.buttonStyle(.borderless)
@@ -138,7 +138,7 @@ struct WeekStrip: View {
                     let d = addDays(monday, i)
                     let base = targetSets.first { $0.fromDay <= d }?.targets
                     let t = base.map { b in profiles.first.map { $0.adjust(b, on: d) } ?? b }?.kcal ?? 0
-                    Button { withAnimation(.snappy) { day = d } } label: {
+                    Button { animate(Motion.snappy) { day = d } } label: {
                         VStack(spacing: 6) {
                             Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
                                 .font(.caption2.weight(.semibold)).foregroundStyle(d == day ? .primary : .secondary)
@@ -173,7 +173,7 @@ struct WeekStrip: View {
         return d.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))
     }
 
-    private func move(_ n: Int) { withAnimation(.snappy) { day = addDays(day, n) } }
+    private func move(_ n: Int) { animate(Motion.snappy) { day = addDays(day, n) } }
 }
 
 /// The day's rings and entries (its own view so the query follows the chosen day).
@@ -285,7 +285,7 @@ struct DayLog: View {
             let m = cal.component(.minute, from: e.time)
             e.time = cal.date(bySettingHour: hour, minute: m, second: 0, of: date(fromKey: e.day)) ?? e.time
         }
-        withAnimation(.snappy) { ctx.commit() }
+        animate(Motion.snappy) { ctx.commit() }
         return true
     }
 
@@ -362,7 +362,7 @@ struct DayLog: View {
                             }
                         }
                         Divider()
-                        Button("Delete", role: .destructive) { withAnimation { ctx.delete(e); ctx.commit() } }
+                        Button("Delete", role: .destructive) { animate { ctx.delete(e); ctx.commit() } }
                     }
                 if e.id != list.last?.id { Divider().padding(.leading, showTime ? 70 : 14) }
             }
@@ -543,7 +543,7 @@ struct DaySummary: View {
     @AppStorage("weekGridRemaining") private var remaining = false
 
     var body: some View {
-        Button { withAnimation(.snappy) { remaining.toggle() } } label: {
+        Button { animate(Motion.snappy) { remaining.toggle() } } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(remaining ? "Remaining" : "Consumed").font(.caption.weight(.bold)).textCase(.uppercase).tracking(0.6)
