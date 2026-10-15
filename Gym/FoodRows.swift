@@ -132,7 +132,7 @@ struct NoMatch: View {
         Button(action: f) {
             Label(t, systemImage: icon).font(.secondaryText.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 46)
                 .background(primary ? palette.accent : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-                .foregroundStyle(primary ? Color.white : .primary)
+                .foregroundStyle(primary ? palette.onAccent : .primary)
         }
         .pressable()
     }

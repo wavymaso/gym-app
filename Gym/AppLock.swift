@@ -28,7 +28,7 @@ struct LockGate: ViewModifier {
                         VStack(spacing: Space.l) {
                             Image(systemName: "lock.fill").font(.system(size: 40)).foregroundStyle(palette.accent)
                             Text("Gym is locked").font(.title2.bold())
-                            Button("Unlock") { Task { await tryUnlock() } }.buttonStyle(.borderedProminent)
+                            Button("Unlock") { Task { await tryUnlock() } }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                         }
                     }
                     .transition(.opacity)

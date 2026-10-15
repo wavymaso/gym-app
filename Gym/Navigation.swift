@@ -207,10 +207,12 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 15
+    static let version = 16
     @Environment(\.dismiss) private var dismiss
 
     private let items: [(String, String, String)] = [
+        ("paintpalette", "Noir & Gold, Sterling", "Two matte themes: black with gold or silver, serif titles, no glow (More → Theme)."),
+        ("plus.magnifyingglass", "Pinch the charts", "Zoom into any time window on the insight charts; slide it along with the arrows."),
         ("doc.on.clipboard", "Copy and move like MacroFactor", "Pick foods, tap Copy or Move, then tap any hour (any day) to put them there."),
         ("lock.shield", "Safer data", "A copy before every update, a check at every launch, weekly backups for 3 months, Face ID lock, keys in the Keychain."),
         ("stethoscope", "Diagnostics", "More → Diagnostics: version, data health, recent problems."),
@@ -275,7 +277,7 @@ struct WhatsNewSheet: View {
                 }
             }
             Button { dismiss() } label: { Text("Continue").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6) }
-                .buttonStyle(.borderedProminent).controlSize(.large).padding(.bottom, 20)
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large).padding(.bottom, 20)
         }
         .padding(.horizontal, 24)
         .pageBackground()

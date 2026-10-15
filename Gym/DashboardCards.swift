@@ -200,7 +200,7 @@ struct TrainingCard: View {
                 } label: {
                     Label("Start \(next.name)", systemImage: "play.fill").frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent).controlSize(.large)
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
             } else if let last = finished.first {
                 Text("Last: \(last.name), \(relative(last.day))").font(.callout).foregroundStyle(.secondary)
             }

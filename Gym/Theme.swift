@@ -9,7 +9,7 @@ import UIKit
 
 enum AppTheme: String, CaseIterable, Identifiable {
     // Dark
-    case midnight, graphite, ocean, oled, forest, ember, crimson, amethyst, mocha, nord, neon, slate
+    case noir, sterling, midnight, graphite, ocean, oled, forest, ember, crimson, amethyst, mocha, nord, neon, slate
     // Light
     case daylight, sand, mint, blush, arctic, paper
     // Glass
@@ -31,6 +31,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         switch self {
         case .system: return "Automatic"
         case .oled: return "OLED Black"
+        case .noir: return "Noir & Gold"
+        case .sterling: return "Sterling"
         case .sunsetGlass: return "Sunset Glass"
         case .oceanGlass: return "Ocean Glass"
         default: return rawValue.prefix(1).uppercased() + rawValue.dropFirst()
@@ -39,6 +41,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
+        case .noir: return "Matte black and gold: classic, quiet luxury"
+        case .sterling: return "Matte black and silver: cool and understated"
         case .midnight: return "Near-black, electric colours"
         case .graphite: return "Dark grey, warm orange"
         case .ocean: return "Deep blue, teal"
@@ -96,6 +100,8 @@ struct Palette: Equatable {
     var good = Color(hex: 0x34C77B)
     var warn = Color(hex: 0xFF9F2E)
     var glass = false              // cards are Liquid Glass over a colourful backdrop
+    var matte = false              // no glow or gradients: flat cards with a fine metallic hairline, serif titles
+    var onAccent = Color.white     // text and icons on an accent-filled button
 
     static let midnight = Palette(name: "midnight", scheme: .dark, background: Color(hex: 0x09090C), surface: Color(hex: 0x15151B),
                                   raised: Color(hex: 0x22222B), stroke: .white.opacity(0.06), accent: Color(hex: 0x4C7DFF),
@@ -121,11 +127,18 @@ struct Palette: Equatable {
 
 extension Palette {
     /// A palette from hex colours; the outline follows light or dark.
+    /// The same palette with a different "over / attention" colour (matte themes use copper, not orange).
+    func warn(_ hex: UInt32) -> Palette { var p = self; p.warn = Color(hex: hex); return p }
+
     static func make(_ name: String, dark: Bool = true, bg: UInt32, surface: UInt32, raised: UInt32, accent: UInt32,
-                     kcal: UInt32? = nil, protein: UInt32, fat: UInt32, carbs: UInt32, glass: Bool = false) -> Palette {
+                     kcal: UInt32? = nil, protein: UInt32, fat: UInt32, carbs: UInt32, glass: Bool = false,
+                     matte: Bool = false, onAccent: UInt32? = nil) -> Palette {
         var p = Palette(name: name, scheme: dark ? .dark : .light, background: Color(hex: bg), surface: Color(hex: surface),
                         raised: Color(hex: raised), stroke: dark ? .white.opacity(0.07) : .black.opacity(0.07), accent: Color(hex: accent),
                         calories: Color(hex: kcal ?? accent), protein: Color(hex: protein), fat: Color(hex: fat), carbs: Color(hex: carbs))
+        p.matte = matte
+        if let onAccent { p.onAccent = Color(hex: onAccent) }
+        if matte { p.stroke = Color(hex: accent).opacity(0.18) }
         if glass {
             p.glass = true
             p.surface = dark ? .white.opacity(0.07) : .white.opacity(0.45)
@@ -137,6 +150,10 @@ extension Palette {
 
     static let all: [AppTheme: Palette] = [
         .midnight: .midnight, .graphite: .graphite, .ocean: .ocean, .glass: .glass, .daylight: .daylight,
+        .noir: make("noir", bg: 0x0A0A0A, surface: 0x131313, raised: 0x1F1D1A, accent: 0xC9A55C, kcal: 0xC9A55C,
+                    protein: 0xB86A5E, fat: 0xE0D2AE, carbs: 0x86A08A, matte: true, onAccent: 0x0A0A0A).warn(0xC4835E),
+        .sterling: make("sterling", bg: 0x0B0B0C, surface: 0x151517, raised: 0x222225, accent: 0xC8CCD2, kcal: 0xE2E5E9,
+                        protein: 0xB97C7C, fat: 0xCBB78C, carbs: 0x8DA5B6, matte: true, onAccent: 0x0B0B0C).warn(0xC99172),
         .oled: make("oled", bg: 0x000000, surface: 0x0D0D0F, raised: 0x1C1C1F, accent: 0x5E8BFF, protein: 0xFF4F70, fat: 0xFFB830, carbs: 0x2FD39A),
         .forest: make("forest", bg: 0x0B1410, surface: 0x14211A, raised: 0x1F3127, accent: 0x4CC38A, kcal: 0x8FD16A, protein: 0xFF7A6B, fat: 0xF2C14E, carbs: 0x3DB9A6),
         .ember: make("ember", bg: 0x120D0B, surface: 0x1E1614, raised: 0x2C211D, accent: 0xFF6A2B, protein: 0xFF3D5A, fat: 0xFFC233, carbs: 0x5CCB8A),
@@ -311,7 +328,7 @@ enum StyleLevel: String, CaseIterable, Identifiable {
 }
 
 enum GlowStyle {
-    static var on: Bool { UserDefaults.standard.string(forKey: "styleLevel") == StyleLevel.maximal.rawValue }
+    static var on: Bool { UserDefaults.standard.string(forKey: "styleLevel") == StyleLevel.maximal.rawValue && !palette.matte }
 }
 
 /// Every card's surface: plain, glowing (Maximal) or Liquid Glass (Glass theme).
@@ -333,6 +350,9 @@ struct CardSurface: ViewModifier {
                 .overlay(shape.stroke(LinearGradient(colors: [palette.accent.opacity(0.55), .white.opacity(0.03), palette.protein.opacity(0.3)],
                                                      startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2))
                 .shadow(color: palette.accent.opacity(palette.scheme == .dark ? 0.18 : 0.1), radius: 16, y: 6)
+        } else if palette.matte {
+            // Matte: flat, with a hairline of the metal.
+            content.background(Color.cardBackground, in: shape).overlay(shape.stroke(palette.stroke, lineWidth: 0.75))
         } else {
             content.background(Color.cardBackground, in: shape).overlay(shape.stroke(palette.stroke))
         }

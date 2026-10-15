@@ -392,7 +392,7 @@ struct PadButtonStyle: ButtonStyle {
         switch kind {
         case .key: return Color.primary.opacity(0.16)
         case .dark: return Color.primary.opacity(0.08)
-        case .primary: return .white
+        case .primary: return palette.onAccent
         }
     }
 }

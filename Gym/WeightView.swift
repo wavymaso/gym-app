@@ -77,7 +77,7 @@ struct WeightView: View {
                 Label("Weigh in", systemImage: "plus").font(.headline).padding(.horizontal, 6).padding(.vertical, 4)
                     .frame(maxWidth: isPhone ? .infinity : nil)
             }
-            .buttonStyle(.borderedProminent).controlSize(.large)
+            .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
         }
         .padding(18)
         .modifier(CardSurface(cornerRadius: 20))

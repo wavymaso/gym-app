@@ -225,7 +225,7 @@ struct ProblemCard: View {
                             .font(.secondaryText.weight(.semibold))
                             .padding(.horizontal, Space.m).frame(height: 36)
                             .background(i == 0 ? palette.accent : Color.raisedBackground, in: Capsule())
-                            .foregroundStyle(i == 0 ? Color.white : .primary)
+                            .foregroundStyle(i == 0 ? palette.onAccent : .primary)
                             .pressable()
                     }
                 }
@@ -291,7 +291,7 @@ struct EmptyState: View {
             if let action {
                 Button(action: action.run) {
                     Text(action.label).font(.secondaryText.weight(.semibold)).padding(.horizontal, Space.xl).frame(height: 44)
-                        .background(palette.accent, in: Capsule()).foregroundStyle(.white)
+                        .background(palette.accent, in: Capsule()).foregroundStyle(palette.onAccent)
                 }
                 .pressable().padding(.top, Space.xs)
             }

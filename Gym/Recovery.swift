@@ -23,7 +23,7 @@ struct RecoveryView: View {
                 } label: {
                     Text("Restore my newest backup").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 .disabled(StoreSafety.latestBackup == nil)
                 if StoreSafety.latestBackup == nil {
                     Text("No backup on this device. If your Mac has your data, set up sync again after restoring.").font(.caption).foregroundStyle(.secondary)

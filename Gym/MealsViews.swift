@@ -57,7 +57,7 @@ struct DayNoteCard: View {
                         Button("Fill in") {
                             if let v = parseNumber(estimate), v > 0 { ctx.estimateDay(day, totalKcal: v); estimate = "" }
                         }
-                        .buttonStyle(.borderedProminent).disabled((parseNumber(estimate) ?? 0) <= logged)
+                        .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).disabled((parseNumber(estimate) ?? 0) <= logged)
                     }
                     Text("You've logged \(number(logged)) kcal. The rest goes in as one estimate and the day counts again. A rough guess is fine: for a 3000 kcal day, anything from 2100 to 3900 keeps your expenditure honest.")
                         .font(.caption).foregroundStyle(.secondary)

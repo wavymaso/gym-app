@@ -67,7 +67,7 @@ struct SetupView: View {
                 Button(step == steps - 1 ? "Start" : "Continue") {
                     if step == steps - 1 { finish() } else { animate { step += 1 } }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(step == 2 && draft.weightKg == nil)
             }

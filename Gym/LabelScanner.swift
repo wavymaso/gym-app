@@ -116,10 +116,10 @@ struct LabelScanView: View {
                     .multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal)
                 #if os(iOS)
                 Button { camera = true } label: { Label("Take a photo", systemImage: "camera").frame(maxWidth: 260) }
-                    .buttonStyle(.borderedProminent).controlSize(.large)
+                    .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
                 #else
                 Button { importing = true } label: { Label("Choose an image file…", systemImage: "folder").frame(maxWidth: 260) }
-                    .buttonStyle(.borderedProminent).controlSize(.large)
+                    .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
                 #endif
                 PhotosPicker(selection: $item, matching: .images) { Label("Choose from Photos", systemImage: "photo").frame(maxWidth: 260) }
                     .buttonStyle(.bordered).controlSize(.large)

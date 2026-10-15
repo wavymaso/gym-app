@@ -122,7 +122,7 @@ struct PhotoLogView: View {
                     Label(jpeg == nil ? "Find foods" : "Analyse meal", systemImage: "sparkles")
                         .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent).controlSize(.large)
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
                 .disabled(jpeg == nil && details.trimmingCharacters(in: .whitespaces).count < 3)
                 tips
             }
@@ -235,7 +235,7 @@ struct PhotoLogView: View {
             Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
             Text(why).multilineTextAlignment(.center).font(.callout)
             HStack {
-                Button("Try again") { Task { await analyse() } }.buttonStyle(.borderedProminent)
+                Button("Try again") { Task { await analyse() } }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 Button("Back") { stage = .input }.buttonStyle(.bordered)
             }
         }
@@ -263,7 +263,7 @@ struct PhotoLogView: View {
                 Text("Log \(plate.filter(\.included).count) item\(plate.filter(\.included).count == 1 ? "" : "s")")
                     .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent).controlSize(.large)
+            .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
             .disabled(!plate.contains(where: \.included))
             .padding(.horizontal, 16).padding(.vertical, 10)
             .background(.bar)

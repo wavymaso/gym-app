@@ -7,7 +7,9 @@ import SwiftUI
 
 extension Font {
     /// Wide, heavy page titles ("DASHBOARD").
-    static func pageTitle(_ size: CGFloat = 32) -> Font { .system(size: size, weight: .black).width(.expanded) }
+    static func pageTitle(_ size: CGFloat = 32) -> Font {
+        palette.matte ? .system(size: size * 1.05, weight: .semibold, design: .serif) : .system(size: size, weight: .black).width(.expanded)
+    }
 }
 
 /// Monday to Sunday × calories, protein, fat, carbs: a bar per day against its target (the tick).

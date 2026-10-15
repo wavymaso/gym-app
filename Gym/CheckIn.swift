@@ -56,7 +56,7 @@ struct CheckInView: View {
                                         ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss()
                                     } else if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 }
-                                .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).keyboardShortcut(.defaultAction)
                                 .confirmationDialog("Expenditure moved \(energy.format(abs(s.expenditure - s.previousExpenditure))) since last time", isPresented: $confirmBig, titleVisibility: .visible) {
                                     Button("Apply anyway") { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                     Button("Keep current targets", role: .cancel) { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
@@ -69,7 +69,7 @@ struct CheckInView: View {
                             Text("You set your own targets, so nothing changes automatically. Adjust them in Strategy if you want.")
                                 .foregroundStyle(.secondary)
                             Button("Done") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                         }
                     }
                     .padding(pagePadding)
@@ -102,7 +102,7 @@ struct CheckInView: View {
             Text("\(ctx.activeProgram?.goalValue.label ?? "This phase") is done (\(p.phaseEndText(p.weight) ?? "")). Next: \(next.describe(p.weight)).")
                 .font(.callout)
             HStack {
-                Button("Start it") { ctx.startNextPhase(); refresh += 1 }.buttonStyle(.borderedProminent)
+                Button("Start it") { ctx.startNextPhase(); refresh += 1 }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 Button("Keep going") { p.phaseEnd = ""; ctx.commit(); refresh += 1 }.buttonStyle(.bordered)
             }
             Text("Going from a cut straight into a surplus mostly adds fat back; a few weeks at your new maintenance first settles water, hunger and expenditure.")

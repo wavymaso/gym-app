@@ -251,7 +251,7 @@ struct PlateCalculator: View {
                         .font(.caption2.weight(.bold)).buttonStyle(.plain)
                         .frame(minWidth: 24).padding(.vertical, 5)
                         .background(on ? palette.accent : Color.raisedBackground, in: RoundedRectangle(cornerRadius: 6))
-                        .foregroundStyle(on ? .white : .secondary)
+                        .foregroundStyle(on ? palette.onAccent : .secondary)
                     }
                 }
             }

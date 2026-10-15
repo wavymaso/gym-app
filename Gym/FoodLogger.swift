@@ -419,7 +419,7 @@ struct QuickAddPanel: View {
                 } label: {
                     Text("Add to cart").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent).controlSize(.large).disabled(k <= 0)
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large).disabled(k <= 0)
             }
             .padding(16)
         }

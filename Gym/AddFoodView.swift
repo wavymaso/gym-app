@@ -109,7 +109,7 @@ struct AddFoodView: View {
                                     .font(.caption.weight(.semibold)).buttonStyle(.plain)
                                     .padding(.horizontal, 10).padding(.vertical, 5)
                                     .background(scope == s ? palette.accent : Color.raisedBackground, in: Capsule())
-                                    .foregroundStyle(scope == s ? .white : .primary)
+                                    .foregroundStyle(scope == s ? palette.onAccent : .primary)
                             }
                         }
                     }

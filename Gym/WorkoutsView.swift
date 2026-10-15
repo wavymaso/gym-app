@@ -230,7 +230,7 @@ struct WorkoutsView: View {
             Spacer()
             Button { editingRoutine = r } label: { Image(systemName: "pencil").font(.callout) }.buttonStyle(.borderless)
             Button { ctx.startWorkout(routine: r) } label: {
-                Image(systemName: "play.fill").font(.callout).foregroundStyle(.white).frame(width: 38, height: 38).background(palette.accent, in: Circle())
+                Image(systemName: "play.fill").font(.callout).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accent, in: Circle())
             }
             .buttonStyle(.plain)
         }
@@ -250,7 +250,7 @@ struct WorkoutsView: View {
             Text("\(count) exercises").font(.caption).foregroundStyle(.secondary)
             Text(last.map { "Last \(relative($0.day))" } ?? "Not done yet").font(.caption).foregroundStyle(.secondary)
             HStack {
-                Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent).controlSize(.small)
+                Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.small)
                 Spacer()
                 Button { editingRoutine = r } label: { Image(systemName: "pencil") }.buttonStyle(.borderless)
             }
