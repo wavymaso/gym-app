@@ -80,12 +80,16 @@ struct QuickActionsSheet: View {
 }
 
 #if os(iOS)
-enum PhoneTab: Hashable { case dashboard, food, strategy, training, more }
+enum PhoneTab: Hashable, CaseIterable {
+    case dashboard, food, strategy, training, more
+    var order: Int { PhoneTab.allCases.firstIndex(of: self) ?? 0 }
+}
 
 /// Dashboard · Food log · + · Strategy · Training   (More opens from the Dashboard's top right)
 struct PhoneTabBar: View {
     @Binding var tab: PhoneTab
     let plus: () -> Void
+    @Namespace private var pill
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
@@ -97,9 +101,8 @@ struct PhoneTabBar: View {
                     .background(palette.scheme == .dark ? Color.white : palette.accent, in: Circle())
                     .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
             }
-            .buttonStyle(.plain)
+            .pressable()
             .frame(maxWidth: .infinity)
-            .sensoryFeedback(.impact(weight: .medium), trigger: tab)
             item(.strategy, "Strategy", "target")
             item(.training, "Training", "dumbbell")
         }
@@ -114,11 +117,18 @@ struct PhoneTabBar: View {
     }
 
     private func item(_ t: PhoneTab, _ title: String, _ icon: String) -> some View {
-        Button { tab = t } label: {
+        Button { animate(Motion.smooth) { tab = t } } label: {
             VStack(spacing: 4) {
                 Image(systemName: tab == t && icon != "fork.knife" && icon != "target" ? icon + ".fill" : icon).font(.system(size: 21, weight: .medium))
                     .symbolRenderingMode(.hierarchical)
-                    .frame(height: 26)
+                    .symbolEffect(.bounce.down, options: .speed(1.4), value: tab == t)
+                    .frame(width: 56, height: 30)
+                    .background {
+                        // The selected pill glides from tab to tab.
+                        if tab == t {
+                            Capsule().fill(palette.accent.opacity(0.16)).matchedGeometryEffect(id: "pill", in: pill)
+                        }
+                    }
                 Text(title).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundStyle(tab == t ? palette.accent : Color.secondary)

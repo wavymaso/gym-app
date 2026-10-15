@@ -137,6 +137,9 @@ struct MainView: View {
 
     @State private var quick: QuickSheet?
     #if os(iOS)
+    @State private var visited: Set<PhoneTab> = []
+    #endif
+    #if os(iOS)
     @ObservedObject private var selection = FoodSelection.shared
     #endif
     @State private var plus = false
@@ -188,16 +191,21 @@ struct MainView: View {
         .onAppear { showWhatsNew(); handlePending() }
         .onReceive(NotificationCenter.default.publisher(for: .gymOpenAction)) { _ in handlePending() }
         #else
-        TabView(selection: $tab) {
-            NavigationStack { page(.dashboard) }.tag(PhoneTab.dashboard).toolbar(.hidden, for: .tabBar)
-            NavigationStack { page(.food) }.tag(PhoneTab.food).toolbar(.hidden, for: .tabBar)
-            NavigationStack { page(.strategy) }.tag(PhoneTab.strategy).toolbar(.hidden, for: .tabBar)
-            NavigationStack { page(.workouts) }.tag(PhoneTab.training).toolbar(.hidden, for: .tabBar)
-            NavigationStack(path: $morePath) {
-                MorePage(path: $morePath).navigationDestination(for: Page.self) { page($0) }
+        // The tabs stay alive once opened (scroll position, navigation), and change with a short
+        // spring: the new one fades in from the side it's on, the old one fades back.
+        ZStack {
+            ForEach(PhoneTab.allCases.filter { visited.contains($0) || $0 == tab }, id: \.self) { t in
+                tabStack(t)
+                    .opacity(tab == t ? 1 : 0)
+                    .scaleEffect(tab == t || Motion.reduceMotion ? 1 : 0.985)
+                    .offset(x: tab == t || Motion.reduceMotion ? 0 : (t.order < tab.order ? -20 : 20))
+                    .allowsHitTesting(tab == t)
+                    .accessibilityHidden(tab != t)
+                    .zIndex(tab == t ? 1 : 0)
             }
-            .tag(PhoneTab.more).toolbar(.hidden, for: .tabBar)
         }
+        .animation(Motion.pick(Motion.smooth), value: tab)
+        .onChange(of: tab) { old, new in visited.insert(new); if old != new { Haptics.tick() } }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 if tab == .food && !selection.ids.isEmpty {
@@ -263,6 +271,21 @@ struct MainView: View {
     private func row(_ s: Page) -> some View {
         Label { Text(s.label).font(.body.weight(.medium)) } icon: { PageIcon(page: s, size: 24) }.tag(s)
     }
+
+    #if os(iOS)
+    @ViewBuilder private func tabStack(_ t: PhoneTab) -> some View {
+        switch t {
+        case .dashboard: NavigationStack { page(.dashboard) }
+        case .food: NavigationStack { page(.food) }
+        case .strategy: NavigationStack { page(.strategy) }
+        case .training: NavigationStack { page(.workouts) }
+        case .more:
+            NavigationStack(path: $morePath) {
+                MorePage(path: $morePath).navigationDestination(for: Page.self) { page($0) }
+            }
+        }
+    }
+    #endif
 
     @ViewBuilder private func page(_ s: Page) -> some View {
         switch s {
