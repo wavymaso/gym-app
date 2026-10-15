@@ -231,7 +231,7 @@ struct InsightDetailView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.subheadline).foregroundStyle(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value).font(.number(34, weight: .semibold)).monospacedDigit().contentTransition(.numericText())
+                Text(value).font(.number(34, weight: .semibold)).monospacedDigit().contentTransition(.numericText()).animation(Motion.pick(Motion.snappy), value: value)
                 Text(unit).font(.callout).foregroundStyle(.secondary)
             }
         }

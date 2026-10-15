@@ -78,6 +78,7 @@ struct WeekGrid: View {
                 RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(LinearGradient(colors: [m.color, m.color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
                     .frame(width: 8, height: min(rowHeight, (rowHeight - tickY) * frac))
+                    .animation(Motion.pick(Motion.smooth), value: frac)
                     .shadow(color: GlowStyle.on ? m.color.opacity(0.6) : .clear, radius: 5)
             }
             Capsule().fill(frac >= 0.9 && frac <= 1.1 ? Color.white : Color.white.opacity(0.35))
@@ -94,7 +95,7 @@ struct WeekGrid: View {
             HStack(spacing: 3) {
                 Text("\(number(m == .calories ? energy.fromKcal(shown) : shown))\(unit)").font(.number(20, weight: .semibold)).monospacedDigit()
                     .foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
-                    .contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.7)
+                    .liveNumber(shown).lineLimit(1).minimumScaleFactor(0.7)
                 if m == .calories { Image(systemName: "flame.fill").font(.caption).foregroundStyle(m.color) }
             }
             Text(remaining ? (shown < 0 ? "over" : "left") : "of \(number(m == .calories ? energy.fromKcal(goal) : goal))")

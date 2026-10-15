@@ -401,7 +401,7 @@ struct RestBar: View {
                 }
                 .frame(width: 44, height: 44)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(left > 0 ? clock(left) : "Go!").font(.number(24)).monospacedDigit()
+                    Text(left > 0 ? clock(left) : "Go!").font(.number(24)).liveNumber(Double(left))
                     Text(left > 0 ? "Rest" : "Rest over, next set").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()

@@ -84,7 +84,7 @@ struct FoodDetailView: View {
             }
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(number(energy.fromKcal(n.kcal))).font(.number(46)).monospacedDigit().contentTransition(.numericText())
+                    Text(number(energy.fromKcal(n.kcal))).font(.number(46)).liveNumber(n.kcal)
                     Text(energy == .kcal ? "Calories" : "kJ").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
@@ -93,7 +93,7 @@ struct FoodDetailView: View {
                         Text("\(Int((share[m] ?? 0) * 100 + 0.5))%").font(.caption2.weight(.bold))
                             .padding(.horizontal, 8).padding(.vertical, 3)
                             .background(m.color.opacity(0.28), in: Capsule()).foregroundStyle(m.color)
-                        Text(number(m.value(n.targets), digits: 1)).font(.number(22)).monospacedDigit().contentTransition(.numericText())
+                        Text(number(m.value(n.targets), digits: 1)).font(.number(22)).liveNumber(m.value(n.targets))
                         Text(m.label).font(.caption).foregroundStyle(.secondary)
                     }
                     .frame(minWidth: 62)

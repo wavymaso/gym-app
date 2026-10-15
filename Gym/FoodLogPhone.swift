@@ -217,7 +217,7 @@ struct MacroBarsRow: View {
                         else { Text(m.short).fontWeight(.heavy).foregroundStyle(m.color) }
                         Text(remaining ? (goal - v >= 0 ? "\(number(conv(goal - v))) left" : "\(number(conv(v - goal))) over")
                                        : "\(number(conv(v))) / \(number(conv(goal)))")
-                            .monospacedDigit().foregroundStyle(remaining && v > goal ? palette.warn : .primary)
+                            .liveNumber(v).foregroundStyle(remaining && v > goal ? palette.warn : .primary)
                     }
                     .font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6)
                     GeometryReader { g in
@@ -225,6 +225,7 @@ struct MacroBarsRow: View {
                             Capsule().fill(Color.primary.opacity(0.12))
                             Capsule().fill(frac > 1.05 ? palette.warn : m.color).frame(width: g.size.width * min(frac, 1))
                                 .shadow(color: GlowStyle.on ? m.color.opacity(0.8) : .clear, radius: 4)
+                                .animation(Motion.pick(Motion.smooth), value: frac)
                         }
                     }
                     .frame(height: 4)

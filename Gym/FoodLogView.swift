@@ -572,7 +572,7 @@ struct DaySummary: View {
             HStack(spacing: 2) {
                 Text(number(conv(abs(shown)))).font(.number(m == .calories ? 22 : 20, weight: .semibold)).monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.6)
-                    .contentTransition(.numericText()).foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
+                    .liveNumber(shown).foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
                 if m != .calories { Text(m.short).font(.subheadline.weight(.semibold)).foregroundStyle(m.color) }
             }
             Text(remaining && shown < 0 ? "over" : "of \(number(conv(goal)))").font(.caption).foregroundStyle(.secondary).lineLimit(1)
