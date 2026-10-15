@@ -312,3 +312,24 @@ extension Color {
     static let linkTone = Color(hex: 0xFF5C86)
     static let neutralTone = Color(hex: 0x8E8E93)
 }
+
+// MARK: - Arriving: a screen's sections come in one after another
+
+private struct Arrive: ViewModifier {
+    let order: Int
+    @State private var shown = false
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown || Motion.reduceMotion ? 0 : 12)
+            .onAppear {
+                guard !shown else { return }
+                withAnimation(Motion.pick(Motion.smooth).delay(Motion.reduceMotion ? 0 : Double(order) * 0.06)) { shown = true }
+            }
+    }
+}
+
+extension View {
+    /// Fades and rises in, `order` steps after the first (60 ms apart).
+    func arrive(_ order: Int) -> some View { modifier(Arrive(order: order)) }
+}

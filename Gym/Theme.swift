@@ -368,6 +368,7 @@ struct Ring: View {
     let color: Color
     var lineWidth: CGFloat = 10
     @State private var shown: Double = 0
+    @State private var closed = false          // the moment it reaches 100%: one soft glow
 
     var body: some View {
         ZStack {
@@ -387,8 +388,16 @@ struct Ring: View {
             }
         }
         .padding(lineWidth / 2)
+        .scaleEffect(closed && !Motion.reduceMotion ? 1.05 : 1)
+        .shadow(color: closed ? color.opacity(0.7) : .clear, radius: closed ? lineWidth * 1.6 : 0)
         .onAppear { animate(Motion.smooth) { shown = progress } }
-        .onChange(of: progress) { _, p in animate(Motion.smooth) { shown = p } }
+        .onChange(of: progress) { old, p in
+            animate(Motion.smooth) { shown = p }
+            if old < 0.98, p >= 0.98, p <= 1.1 {
+                animate(Motion.bouncy) { closed = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { animate(Motion.smooth) { closed = false } }
+            }
+        }
     }
 }
 

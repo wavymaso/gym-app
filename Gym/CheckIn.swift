@@ -20,20 +20,21 @@ struct CheckInView: View {
                 if let s = ctx.checkInSummary() {
                     VStack(alignment: .leading, spacing: 16) {
                         if ctx.phaseDone, let p = profiles.first { phaseCard(p) }
-                        if !fast { WeeklyReview() }
-                        Text(fast ? "How your week went" : "The numbers").font(.title2.bold())
+                        if !fast { WeeklyReview().arrive(0) }
+                        Text(fast ? "How your week went" : "The numbers").font(.title2.bold()).arrive(1)
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
                             tile("Trend weight", unit.format(s.trendKg), s.weekChangeKg.map { "\(signed(unit, $0)) this week" } ?? "")
                             tile("Average intake", s.avgIntake.map { energy.format($0) } ?? "–", "\(s.trackedDays) of 7 days logged")
                             tile("Expenditure", energy.format(s.expenditure), "Was \(energy.format(ctx.targets()?.expenditure ?? s.expenditure))")
                         }
+                        .arrive(2)
                         if !fast { partialModule(energy) }
                         if s.trackedDays < 4 {
                             Label("Only \(s.trackedDays) days logged this week, so the estimate barely moved. Logging most days makes check-ins accurate.",
                                   systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
                         }
                         if let p = s.proposed {
-                            Text("Targets for the week ahead").font(.title2.bold()).padding(.top, 8)
+                            Text("Targets for the week ahead").font(.title2.bold()).padding(.top, 8).arrive(3)
                             Card(title: "Now → suggested", systemImage: "target") {
                                 compare(.calories, s.current, p, energy)
                                 compare(.protein, s.current, p, energy)
@@ -46,19 +47,19 @@ struct CheckInView: View {
                                 }
                             }
                             HStack {
-                                Button("Keep current targets") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
+                                Button("Keep current targets") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 Spacer()
                                 Button(profiles.first?.shadowMode == true ? "Log it (shadow)" : "Apply new targets") {
                                     if let prof = profiles.first, prof.shadowMode {
                                         prof.shadowEntries += [ShadowEntry(day: dayKey(), currentKcal: s.current.kcal, proposedKcal: p.kcal, rawKcal: s.raw?.kcal ?? p.kcal,
                                                                            expenditure: s.expenditure, weekChangeKg: s.weekChangeKg)]
-                                        ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss()
-                                    } else if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
+                                        ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss()
+                                    } else if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 }
                                 .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                                 .confirmationDialog("Expenditure moved \(energy.format(abs(s.expenditure - s.previousExpenditure))) since last time", isPresented: $confirmBig, titleVisibility: .visible) {
-                                    Button("Apply anyway") { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); dismiss() }
-                                    Button("Keep current targets", role: .cancel) { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
+                                    Button("Apply anyway") { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
+                                    Button("Keep current targets", role: .cancel) { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 } message: {
                                     Text("Real changes are slow. A jump this big is usually a half-logged day, a missed weigh-in or water. Check last week's log first.")
                                 }
@@ -67,7 +68,7 @@ struct CheckInView: View {
                         } else {
                             Text("You set your own targets, so nothing changes automatically. Adjust them in Strategy if you want.")
                                 .foregroundStyle(.secondary)
-                            Button("Done") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); dismiss() }
+                            Button("Done") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 .buttonStyle(.borderedProminent)
                         }
                     }

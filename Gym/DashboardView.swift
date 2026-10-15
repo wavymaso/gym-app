@@ -265,6 +265,7 @@ struct DashboardView: View {
             SparkCard(title: "Weight Trend", period: "Last 7 days", values: week.compactMap { byDay[$0] }.map(p.weight.fromKg),
                       color: Color.weightTone, value: series.last.map { number(p.weight.fromKg($0.trend), digits: 1) } ?? "–",
                       unit: p.weight.rawValue) { detail = .weightTrend }
+                .contextMenu { Button("Weigh in", systemImage: "scalemass") { sheet = .weighIn } }
         case "energyBalance":
             let intake = ctx.dailyIntake()
             let exp = Dictionary(ctx.expenditureEstimates().map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
@@ -278,6 +279,7 @@ struct DashboardView: View {
             let vals = week.compactMap { byDay[$0] }.map(p.weight.fromKg)
             SparkCard(title: "Scale Weight", period: "Last 7 days", values: vals, color: palette.good,
                       value: weights.first.map { number(p.weight.fromKg($0.kg), digits: 1) } ?? "–", unit: p.weight.rawValue) { detail = .scaleWeight }
+                .contextMenu { Button("Weigh in", systemImage: "scalemass") { sheet = .weighIn } }
         case "nutritionTrend":
             let intake = ctx.dailyIntake()
             let vals = week.dropLast().compactMap { intake[$0] }.map(p.energy.fromKcal)
@@ -651,6 +653,15 @@ struct WeighInSheet: View {
                         .font(.number(56)).multilineTextAlignment(.center).focused($focused).frame(maxWidth: 220)
                         #if os(iOS)
                         .keyboardType(.decimalPad)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                // From your last weigh-in, a tenth at a time: often no typing at all.
+                                Button { nudge(-0.1) } label: { Text("−0,1").monospacedDigit() }
+                                Button { nudge(0.1) } label: { Text("+0,1").monospacedDigit() }
+                                Spacer()
+                                Button("Save", action: save).fontWeight(.semibold).disabled(kg == nil)
+                            }
+                        }
                         #endif
                         .onSubmit(save)
                     Text(unit.rawValue).font(.title2.weight(.semibold)).foregroundStyle(.secondary)
@@ -688,9 +699,18 @@ struct WeighInSheet: View {
         return (profiles.first?.weight ?? .kg) == .kg ? v : v * 0.45359237
     }
 
+    private func nudge(_ d: Double) {
+        let unit = profiles.first?.weight ?? .kg
+        let last = weights.first.map { unit == .kg ? $0.kg : $0.kg / 0.45359237 } ?? 75
+        let v = ((parseImportNumber(text) ?? last) + d) * 10
+        text = number(v.rounded() / 10, digits: 1)
+        Haptics.tick()
+    }
+
     private func save() {
         guard let kg else { return }
         ctx.logWeight(kg, on: dayKey(day), scale: (profiles.first?.scaleNames ?? []).contains(scale) ? scale : "")
+        Haptics.tap()
         dismiss()
     }
 }
