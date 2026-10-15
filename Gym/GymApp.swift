@@ -64,6 +64,9 @@ struct Root: View {
                 }
             }
             IntegrityReport.last = ctx.integrityCheck()
+            #if os(iOS)
+            MetricsReceiver.shared.start()
+            #endif
             #if os(macOS)
             SyncServer.shared.context = ctx
             if SyncServer.shared.enabled { SyncServer.shared.start() }

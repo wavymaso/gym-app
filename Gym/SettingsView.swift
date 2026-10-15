@@ -50,8 +50,9 @@ struct SettingsView: View {
                     ])
                     group("Data Management", [
                         row("externaldrive", "Backups", "Daily, restore") { page("Backups") { BackupSection() } },
-                        row("square.and.arrow.up", "Data export", "Spreadsheet of weight, calories, macros") { page("Export") { ExportSection() } },
+                        row("square.and.arrow.up", "Data export", "Everything as an archive, or spreadsheets") { page("Export") { ExportSection() } },
                         rowAction("square.and.arrow.down", "Import from MacroFactor", "Quick and granular exports") { importing = true },
+                        row("stethoscope", "Diagnostics", "Version, data health, recent problems") { DiagnosticsView() },
                         rowAction("trash", "Start over", "Delete everything on this device", destructive: true) { confirmReset = true },
                     ])
                     Text("Gym · your data stays on your devices").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
@@ -68,7 +69,7 @@ struct SettingsView: View {
         #endif
         #if DEBUG
         .navigationDestination(isPresented: Binding(get: { debugSub != nil }, set: { if !$0 { debugSub = nil } })) {
-            if debugSub == "expenditure" { ExpenditureSettingsView() } else { WeightTrendSettingsView() }
+            if debugSub == "expenditure" { ExpenditureSettingsView() } else if debugSub == "diagnostics" { DiagnosticsView() } else { WeightTrendSettingsView() }
         }
         #endif
         .sheet(isPresented: $importing) { ImportView() }
