@@ -292,13 +292,16 @@ struct InsightDetailView: View {
                 }
                 if kind == .weightTrend {
                     ForEach(pts.filter { $0.extra != nil }) { p in
+                        // Weigh-ins stay in the background: faint dots and a hairline; the trend is the story.
                         LineMark(x: .value("Day", p.when), y: .value("Scale", p.extra!), series: .value("S", "scale"))
-                            .foregroundStyle(color.opacity(0.4)).lineStyle(StrokeStyle(lineWidth: 1.2))
+                            .foregroundStyle(color.opacity(0.18)).lineStyle(StrokeStyle(lineWidth: 1))
+                        PointMark(x: .value("Day", p.when), y: .value("Scale", p.extra!))
+                            .foregroundStyle(color.opacity(0.45)).symbolSize(pts.count > 120 ? 6 : 14)
                     }
                 }
                 ForEach(pts) { p in
                     LineMark(x: .value("Day", p.when), y: .value(kind.title, p.value), series: .value("S", "main"))
-                        .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.6)).interpolationMethod(.monotone)
+                        .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: kind == .weightTrend ? 3.2 : 2.6, lineCap: .round)).interpolationMethod(.monotone)
                     if pts.count <= 31 || kind == .scaleWeight && pts.count <= 60 {
                         PointMark(x: .value("Day", p.when), y: .value(kind.title, p.value))
                             .symbol { Circle().stroke(color, lineWidth: 2).background(Circle().fill(Color.pageBackground)).frame(width: 9, height: 9) }
@@ -399,7 +402,7 @@ struct InsightDetailView: View {
         HStack(spacing: 22) {
             switch kind {
             case .weightTrend:
-                legendItem("Scale weight", color.opacity(0.45), line: true)
+                legendItem("Scale weight", color.opacity(0.55), dot: true)
                 legendItem("Trend weight", color, dot: true)
             case .scaleWeight: legendItem("Scale weight", color, dot: true)
             case .expenditure:
