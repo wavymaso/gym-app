@@ -1,0 +1,213 @@
+# Theme audit (15 Oct 2026)
+
+## Hard-coded colour literals (.white/.black/.red… outside tokens)
+- AddFoodView.swift:170:                                .background(.white, in: Capsule()).foregroundStyle(.black)
+- AIPanel.swift:74:                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.white, .black.opacity(0.6
+- ChartTip.swift:95:                Divider().overlay(Color.black.opacity(0.2))
+- ChartTip.swift:104:            .padding(10).foregroundStyle(.black)
+- ChartTip.swift:105:            .background(.white.opacity(0.94), in: RoundedRectangle(cornerRadius: 10))
+- DashboardCards.swift:183:                            .overlay { if trained { Image(systemName: "checkmark").font(.caption2.weight(.heavy)).foregroundStyle(.white) } }
+- DashboardView.swift:148:                Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(.white)
+- DashboardView.swift:149:                    .frame(width: 44, height: 44).background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: Radius.m))
+- DashboardView.swift:151:                    Text(isPhone ? "Weekly check-in ready" : "Your weekly check-in is ready").font(.headline).foregroundStyle(.white)
+- DashboardView.swift:153:                        .font(.callout).foregroundStyle(.white.opacity(0.8))
+- DashboardView.swift:156:                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.8))
+- DashboardMF.swift:86:            Capsule().fill(frac >= 0.9 && frac <= 1.1 ? Color.white : Color.white.opacity(0.35))
+- FoodDetail.swift:386:            .foregroundStyle(kind == .primary ? Color.black : .primary)
+- FoodLogger.swift:474:                RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.8), lineWidth: 3)
+- FoodLogger.swift:492:                        Circle().fill(.white).frame(width: 70, height: 70).overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 4).padding(-6))
+- FoodLogger.swift:514:            Image(systemName: icon).font(.headline).frame(width: 46, height: 46).background(.black.opacity(0.7), in: Circle()).foregroundStyle(.whi
+- FoodSelection.swift:109:                    .foregroundStyle(sel.mode == nil ? (palette.scheme == .dark ? Color.black : .white) : .primary)
+- GoalFlow.swift:83:                Image(systemName: "scalemass.fill").font(.system(size: 90)).foregroundStyle(.white.opacity(0.9)).offset(y: 70)
+- GoalFlow.swift:102:                .foregroundStyle(on ? (palette.scheme == .dark ? Color.black : .white) : .secondary)
+- InsightDetails.swift:344:                        .padding(10).foregroundStyle(.black)
+- InsightDetails.swift:345:                        .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+- InsightDetails.swift:461:                            .foregroundStyle(on ? (palette.scheme == .dark ? Color.black : Color.white) : Color.primary)
+- Navigation.swift:101:                    .background(palette.scheme == .dark ? Color.white : palette.accent, in: Circle())
+- Navigation.swift:153:        Image(systemName: page.icon).font(.system(size: size * 0.48, weight: .semibold)).foregroundStyle(.white)
+- PhotoLogView.swift:142:                        .foregroundStyle(.white, .black.opacity(0.5))
+- PhotoLogView.swift:193:                    .overlay(RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(.black.opacity(0.25)))
+- PhotoLogView.swift:235:            Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
+- PhotoLogView.swift:333:                            Image(systemName: "questionmark.circle").foregroundStyle(.orange).help("Not sure about this one: check it")
+- ProgramEditor.swift:56:                            .padding(.vertical, 4).frame(maxWidth: .infinity).background(palette.calories, in: Capsule()).foregroundStyle(.white)
+- ProgramEditor.swift:70:                            .foregroundStyle(d == day ? (palette.scheme == .dark ? Color.black : .white) : .primary)
+- ProgramEditor.swift:82:            .background(c, in: RoundedRectangle(cornerRadius: 4)).foregroundStyle(.black.opacity(0.8))
+- SettingsView.swift:90:            Text(initials(name)).font(.system(size: 26, weight: .black).width(.expanded)).foregroundStyle(.black)
+- SettingsView.swift:91:                .frame(width: 70, height: 70).background(.white, in: Circle())
+- SettingsView.swift:301:                        .mask(HStack(spacing: 0) { Color.clear; Color.black })
+- StrategySheets.swift:135:                        .foregroundStyle(fast ? Color.secondary : high ? Color.white : Color.primary)
+- SyncViews.swift:21:                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+- SyncViews.swift:35:                            .padding(10).background(.white, in: RoundedRectangle(cornerRadius: Radius.m))
+- SyncViews.swift:155:                    if let error { Text(error).foregroundStyle(.red) }
+- StrategyView.swift:142:                    Text("CURRENT PROGRAM").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
+- StrategyView.swift:143:                    Text(g.goalValue.label).font(.number(32)).foregroundStyle(.white)
+- StrategyView.swift:147:                    .padding(.horizontal, 10).padding(.vertical, 5).background(.white.opacity(0.2), in: Capsule()).foregroundStyle(.white)
+- StrategyView.swift:160:                        Text("\(p.weight.format(startKg)) → \(p.weight.format(goal))").font(.callout.weight(.semibold)).foregroundStyle(.white)
+- StrategyView.swift:162:                        Text("\(Int(done * 100 + 0.5))%").font(.callout.weight(.bold)).foregroundStyle(.white).monospacedDigit()
+- StrategyView.swift:166:                            Capsule().fill(.white.opacity(0.22))
+- StrategyView.swift:167:                            Capsule().fill(.white).frame(width: max(8, geo.size.width * done))
+- StrategyView.swift:171:                    if let proj = projection(p, goal) { Text(proj).font(.caption).foregroundStyle(.white.opacity(0.85)) }
+- StrategyView.swift:174:                Button("Set a goal weight") { editingGoalWeight = true }.font(.callout.weight(.semibold)).foregroundStyle(.white)
+- StrategyView.swift:183:            Image(systemName: "target").font(.system(size: 110, weight: .bold)).foregroundStyle(.white.opacity(0.08))
+- StrategyView.swift:192:            .padding(.horizontal, 10).padding(.vertical, 6).background(.white.opacity(0.18), in: Capsule()).foregroundStyle(.white)
+- WorkoutParts.swift:231:                            .overlay { Text(trimmed(p)).font(.system(size: 8, weight: .bold)).rotationEffect(.degrees(-90)).foregroundStyle(.whit
+- WorkoutsView.swift:112:                Text("UP NEXT").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
+- WorkoutsView.swift:113:                Text(r.name).font(.number(34)).foregroundStyle(.white)
+- WorkoutsView.swift:114:                Text(routineSummary(r)).font(.callout).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
+- WorkoutsView.swift:118:                            .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.black)
+- WorkoutsView.swift:123:                            .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white)
+- WorkoutsView.swift:128:                Text("READY WHEN YOU ARE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.white.opacity(0.75))
+- WorkoutsView.swift:129:                Text("Start training").font(.number(34)).foregroundStyle(.white)
+- WorkoutsView.swift:133:                            .background(.white, in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.black)
+- WorkoutsView.swift:138:                            .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 14)).foregroundStyle(.white)
+- WorkoutsView.swift:150:            Image(systemName: "dumbbell.fill").font(.system(size: 90, weight: .bold)).foregroundStyle(.white.opacity(0.1))
+- WorkoutsView.swift:192:                            if trained.contains(d) { Image(systemName: "checkmark").font(.caption.weight(.black)).foregroundStyle(.white) }
+
+## Color(hex:) outside the theme files
+- Design.swift:306:    static let weightTone = Color(hex: 0xA77BF3)        // weight, trend, AI photo
+- Design.swift:307:    static let expenditureTone = Color(hex: 0xFF8A5B)
+- Design.swift:308:    static let waterTone = Color(hex: 0x3BB2F6)         // water, activity, insights
+- Design.swift:309:    static let calmTone = Color(hex: 0x7B8CF3)          // describe, sleep
+- Design.swift:310:    static let extraTone = Color(hex: 0xA78BFA)         // other nutrients, supersets
+- Design.swift:311:    static let alertTone = Color(hex: 0xFF6F91)         // sugar, sodium
+- Design.swift:312:    static let linkTone = Color(hex: 0xFF5C86)
+- Design.swift:313:    static let neutralTone = Color(hex: 0x8E8E93)
+- WorkoutParts.swift:273:        case 25: return Color(hex: 0xE5383B)
+- WorkoutParts.swift:274:        case 20: return Color(hex: 0x3A6FF7)
+- WorkoutParts.swift:275:        case 15: return Color(hex: 0xF2C12E)
+- WorkoutParts.swift:276:        case 10: return Color(hex: 0x2BB673)
+- WorkoutParts.swift:277:        case 5: return Color(hex: 0xF5F5F5).mix(with: .gray, by: 0.3)
+- WorkoutParts.swift:278:        default: return Color(hex: 0x6B6B76)
+
+## Gradients
+- DashboardView.swift:92:                                     ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading,
+- DashboardView.swift:159:            .background(LinearGradient(colors: [palette.accent, palette.accent.mix(with: .purple, by: 0.35)], startPoint: .l
+- Design.swift:263:                LinearGradient(colors: [.clear, palette.accent.opacity(0.18), .clear], startPoint: .leading, endPoint: .trailing)
+- Finish.swift:33:        if let m = metalStops { return AnyShapeStyle(LinearGradient(colors: m, startPoint: .topLeading, endPoint: .bottomTrailing)) 
+- Finish.swift:39:        if let m = metalStops { return AnyShapeStyle(LinearGradient(colors: [m[3], m[2], m[1]], startPoint: .top, endPoint: .bottom)
+- DashboardMF.swift:81:                    .fill(LinearGradient(colors: [m.color, m.color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
+- FoodLogView.swift:89:                                 ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, endPo
+- FoodLogPhone.swift:71:                                     ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.accent], startPoint: .leading, 
+- FoodLogger.swift:189:                        Circle().fill(dominant(c.nutrients).gradient).frame(width: 22, height: 22)
+- GoalFlow.swift:81:                LinearGradient(colors: [palette.calories, palette.carbs.mix(with: palette.calories, by: 0.4)], startPoint: .top, e
+- GoalFlow.swift:82:                Circle().fill(palette.fat.gradient).frame(width: 190).offset(y: -40)
+- Navigation.swift:155:            .background(page.color.gradient, in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+- SettingsView.swift:296:                        .fill(LinearGradient(colors: [p.calories.opacity(0.7), p.protein.opacity(0.45), p.carbs.opacity(0.5)]
+- StrategyView.swift:120:                                 ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.good], startPoint: .leading, endPo
+- StrategyView.swift:179:        .background(LinearGradient(colors: [tint, tint.mix(with: palette.accent.mix(with: .purple, by: 0.4), by: 0.5)],
+- StrategyView.swift:258:        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(c.gradient).frame(width: 22, height: max(0, h))
+- Theme.swift:365:                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: palette.accent, by: 0.07), palette.surface]
+- Theme.swift:367:                .overlay(shape.stroke(LinearGradient(colors: [palette.accent.opacity(0.55), .white.opacity(0.03), palette.protein.op
+- Theme.swift:373:                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: .white, by: 0.035), palette.surface],
+- Theme.swift:376:                .overlay(shape.stroke(LinearGradient(colors: [m[3].opacity(0.55), m[1].opacity(0.18), m[2].opacity(0.4)],
+- Theme.swift:381:                .background(shape.fill(LinearGradient(colors: [palette.surface.mix(with: .white, by: 0.03), palette.surface],
+- Theme.swift:383:                .overlay(shape.stroke(LinearGradient(colors: [.white.opacity(0.09), .white.opacity(0.03)], startPoint: .top, endPoin
+- Theme.swift:435:                .stroke(AngularGradient(colors: ringColors, center: .center, startAngle: .degrees(0), endAngle: .degrees(360 * min(m
+- Theme.swift:499:                    Capsule().fill(LinearGradient(colors: [macro.color.opacity(0.75), macro.color], startPoint: .leading, endPoint: 
+- WeightView.swift:130:                    .foregroundStyle(LinearGradient(colors: [palette.accent.opacity(0.3), palette.accent.opacity(0)], startPoin
+- WorkoutsView.swift:146:        .background(LinearGradient(colors: [Macro.protein.color, Macro.protein.color.mix(with: palette.accent, by: 0.55)],
+- WorkoutsView.swift:170:                                         ? AnyShapeStyle(LinearGradient(colors: [.primary, palette.protein], startPoint: .lea
+
+## Shadows
+- ChartTip.swift:106:            .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
+- Bodybuilding.swift:127:                                .shadow(color: GlowStyle.on && g >= per * 0.85 ? palette.protein.opacity(0.6) : .clear, radiu
+- Design.swift:193:            .shadow(color: .black.opacity(0.25), radius: 16, y: 6)
+- DashboardMF.swift:84:                    .shadow(color: GlowStyle.on ? m.color.opacity(0.6) : .clear, radius: 5)
+- DashboardMF.swift:163:            .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
+- FoodLogPhone.swift:171:            .shadow(color: GlowStyle.on ? palette.calories.opacity(0.7) : .clear, radius: 4))
+- FoodLogPhone.swift:230:                                .shadow(color: GlowStyle.on ? m.color.opacity(0.8) : .clear, radius: 4)
+- FoodLogView.swift:583:                        .shadow(color: GlowStyle.on ? m.color.opacity(0.7) : .clear, radius: 4)
+- InsightDetails.swift:352:            .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
+- Navigation.swift:102:                    .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
+- SupplementsViews.swift:47:                        .shadow(color: on && GlowStyle.on ? palette.good.opacity(0.6) : .clear, radius: 6)
+- Theme.swift:369:                .shadow(color: palette.accent.opacity(palette.scheme == .dark ? 0.18 : 0.1), radius: 16, y: 6)
+- Theme.swift:437:                .shadow(color: GlowStyle.on || palette.glass ? color.opacity(0.65) : .clear, radius: lineWidth * 0.8)
+- Theme.swift:444:                    .shadow(color: .black.opacity(0.35), radius: 2)
+- Theme.swift:451:        .shadow(color: closed ? color.opacity(0.7) : .clear, radius: closed ? lineWidth * 1.6 : 0)
+- StrategyView.swift:187:        .shadow(color: GlowStyle.on || palette.glass ? tint.opacity(0.45) : .clear, radius: 18, y: 6)
+- StrategyView.swift:224:                            .shadow(color: GlowStyle.on && i == sel ? palette.accent.opacity(0.6) : .clear, radius: 6)
+- StrategyView.swift:277:                    .shadow(color: GlowStyle.on || palette.glass ? palette.good.opacity(0.6) : .clear, radius: 8)
+- WorkoutParts.swift:104:            .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+- WorkoutsView.swift:154:        .shadow(color: GlowStyle.on || palette.glass ? Macro.protein.color.opacity(0.45) : .clear, radius: 18, y: 6)
+- WorkoutsView.swift:196:                        .shadow(color: trained.contains(d) && GlowStyle.on ? Macro.protein.color.opacity(0.7) : .clear, radiu
+
+## Glow (GlowStyle / Maximal)
+- Bodybuilding.swift:127:                                .shadow(color: GlowStyle.on && g >= per * 0.85 ? palette.protein.opacity(0.6) : .clear, radiu
+- DashboardView.swift:91:                    .foregroundStyle(GlowStyle.on || palette.glass
+- DashboardMF.swift:84:                    .shadow(color: GlowStyle.on ? m.color.opacity(0.6) : .clear, radius: 5)
+- DashboardMF.swift:163:            .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
+- FoodLogView.swift:88:                .foregroundStyle(GlowStyle.on || palette.glass
+- FoodLogView.swift:583:                        .shadow(color: GlowStyle.on ? m.color.opacity(0.7) : .clear, radius: 4)
+- FoodLogPhone.swift:70:                    .foregroundStyle(GlowStyle.on || palette.glass
+- FoodLogPhone.swift:171:            .shadow(color: GlowStyle.on ? palette.calories.opacity(0.7) : .clear, radius: 4))
+- FoodLogPhone.swift:230:                                .shadow(color: GlowStyle.on ? m.color.opacity(0.8) : .clear, radius: 4)
+- InsightDetails.swift:352:            .shadow(color: GlowStyle.on ? color.opacity(0.5) : .clear, radius: 6)
+- StrategyView.swift:119:                .foregroundStyle(GlowStyle.on || palette.glass
+- StrategyView.swift:187:        .shadow(color: GlowStyle.on || palette.glass ? tint.opacity(0.45) : .clear, radius: 18, y: 6)
+- StrategyView.swift:224:                            .shadow(color: GlowStyle.on && i == sel ? palette.accent.opacity(0.6) : .clear, radius: 6)
+- StrategyView.swift:277:                    .shadow(color: GlowStyle.on || palette.glass ? palette.good.opacity(0.6) : .clear, radius: 8)
+- SupplementsViews.swift:47:                        .shadow(color: on && GlowStyle.on ? palette.good.opacity(0.6) : .clear, radius: 6)
+- Theme.swift:347:enum GlowStyle {
+- Theme.swift:363:        } else if GlowStyle.on {
+- Theme.swift:437:                .shadow(color: GlowStyle.on || palette.glass ? color.opacity(0.65) : .clear, radius: lineWidth * 0.8)
+- WorkoutsView.swift:154:        .shadow(color: GlowStyle.on || palette.glass ? Macro.protein.color.opacity(0.45) : .clear, radius: 18, y: 6)
+- WorkoutsView.swift:169:                        .foregroundStyle(GlowStyle.on || palette.glass
+- WorkoutsView.swift:196:                        .shadow(color: trained.contains(d) && GlowStyle.on ? Macro.protein.color.opacity(0.7) : .clear, radiu
+
+## Materials and blurs
+- AppLock.swift:27:                        Rectangle().fill(.ultraThickMaterial).ignoresSafeArea()
+- Design.swift:191:            .background(.regularMaterial, in: Capsule())
+- Design.swift:395:                if palette.glass { Rectangle().fill(.ultraThinMaterial) } else { Rectangle().fill(Color.pageBackground) }
+- FoodLogger.swift:487:                if looking { ProgressView().padding().background(.ultraThinMaterial, in: Circle()) }
+- FoodLogger.swift:489:                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal) }
+- FoodLogger.swift:497:                        .background(.ultraThinMaterial, in: Capsule()).padding(.bottom, 30)
+- FoodLogPhone.swift:38:                .background { if palette.glass { Rectangle().fill(.ultraThinMaterial).ignoresSafeArea(edges: .top) }
+- FoodLogPhone.swift:98:            if palette.glass { Rectangle().fill(.ultraThinMaterial).ignoresSafeArea(edges: .top) }
+- PhoneOnly.swift:27:                                    .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+- Theme.swift:361:                content.background(.ultraThinMaterial, in: shape).overlay(shape.stroke(palette.stroke))
+- Theme.swift:396:            content.background(palette.glass ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(Color.raisedBackground), in: Capsul
+- Theme.swift:407:            Circle().fill(palette.calories).frame(width: 420).blur(radius: 120).offset(x: -150, y: -320).opacity(0.55)
+- Theme.swift:408:            Circle().fill(palette.protein).frame(width: 360).blur(radius: 130).offset(x: 170, y: -40).opacity(0.38)
+- Theme.swift:409:            Circle().fill(palette.carbs).frame(width: 380).blur(radius: 140).offset(x: -120, y: 360).opacity(0.32)
+- Theme.swift:410:            Circle().fill(Color(hex: 0x9B5CFF)).frame(width: 300).blur(radius: 120).offset(x: 160, y: 520).opacity(0.35)
+- WorkoutParts.swift:102:            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+## Rainbow icon tiles
+- GymApp.swift:299:        Label { Text(s.label).font(.body.weight(.medium)) } icon: { PageIcon(page: s, size: 24) }.tag(s)
+- Navigation.swift:149:struct PageIcon: View {
+- Navigation.swift:155:            .background(page.color.gradient, in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+
+## Macro colour uses (all via palette.* / Macro.color: retuned centrally)
+- 15 Theme.swift
+- 13 StrategyView.swift
+- 13 InsightsView.swift
+- 13 DashboardCards.swift
+- 11 DashboardLayout.swift
+- 10 WorkoutsView.swift
+- 10 Navigation.swift
+- 10 FoodLogger.swift
+- 9 FoodLogView.swift
+- 8 ProgramEditor.swift
+- 8 FoodLogPhone.swift
+- 8 DashboardMF.swift
+- 8 ActiveWorkoutView.swift
+- 7 FoodSelection.swift
+- 6 DashboardView.swift
+- 5 MicrosView.swift
+- 5 Habits.swift
+- 5 Bodybuilding.swift
+- 4 PhotoLogView.swift
+- 4 Meals.swift
+- 4 GoalFlow.swift
+- 4 FoodDetail.swift
+- 4 Design.swift
+- 3 WorkoutHistory.swift
+- 3 ExercisesView.swift
+- 3 AIPanel.swift
+- 2 InsightDetails.swift
+- 2 FoodRows.swift
+- 1 WeeklyReview.swift
+- 1 Setup.swift
+- 1 ImportView.swift
+- 1 FoodAmountView.swift
+- 1 CheckIn.swift
