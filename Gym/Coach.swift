@@ -64,13 +64,23 @@ extension ModelContext {
         return lines.joined(separator: "\n")
     }
 
+    /// The only numbers the note may contain: today's targets and what's left, exactly as Today shows them.
+    func templateLine() -> String? {
+        guard let t = dayTargets(on: dayKey()) else { return nil }
+        let n = entries(on: dayKey()).reduce(Nutrients.zero) { $0 + $1.nutrients }
+        let kLeft = Int((t.kcal - n.kcal).rounded()), pLeft = Int((t.protein - n.protein).rounded())
+        let kcal = kLeft >= 0 ? "\(kLeft) kcal left" : "\(-kLeft) kcal over"
+        let protein = pLeft > 0 ? "\(pLeft) g protein to go" : "protein target reached"
+        return "Today: \(kcal) · \(protein)."
+    }
+
     /// Without an AI: the same idea from fixed rules.
     func ruleNote() -> String {
         guard let t = dayTargets(on: dayKey()) else { return "Set up your goal in Strategy to get daily coaching." }
         let n = entries(on: dayKey()).reduce(Nutrients.zero) { $0 + $1.nutrients }
         var out: [String] = []
         let left = t.protein - n.protein
-        out.append(left > 20 ? "Protein first: \(Int(left)) g to go today, spread over your next meals (30–50 g each)." : "Protein is on track today.")
+        out.append(left > 20 ? "Protein first: \(Int(left)) g to go today, spread over your next meals." : "Protein is on track today.")
         out.append("Aim for \(Int(t.kcal)) kcal; \(Int(max(0, t.kcal - n.kcal))) left.")
         if dueCheckIn != nil { out.append("Your weekly check-in is ready: do it today.") }
         out.append("Weigh in tomorrow morning, after the bathroom, before eating.")
@@ -81,7 +91,13 @@ extension ModelContext {
 @MainActor final class Coach: ObservableObject {
     static let shared = Coach()
     @Published private(set) var note: CoachNote? = {
-        (UserDefaults.standard.data(forKey: "coachNote")).flatMap { try? JSONDecoder().decode(CoachNote.self, from: $0) }
+        // Notes written before the number rule (version 2) may contain invented figures: drop them.
+        guard UserDefaults.standard.integer(forKey: "coachNoteVersion") >= 2 else {
+            UserDefaults.standard.removeObject(forKey: "coachNote")
+            UserDefaults.standard.set(2, forKey: "coachNoteVersion")
+            return nil
+        }
+        return (UserDefaults.standard.data(forKey: "coachNote")).flatMap { try? JSONDecoder().decode(CoachNote.self, from: $0) }
     }()
     @Published private(set) var working = false
 
@@ -93,16 +109,22 @@ extension ModelContext {
         let prompt = """
         You are an experienced natural bodybuilding and nutrition coach. From this athlete's data, write today's coaching note:
         3 or 4 short, specific bullet points (start each with "• "), 70 words at most in total, in English, no title, no greeting.
-        Cover what matters most today: eating to the targets (especially protein), training or recovery, and one thing to adjust
-        based on how the trend compares with the goal. Use their real numbers. Be direct and practical, no medical claims.
+        Cover what matters most today: eating to the targets (especially protein), training or recovery, and how the trend
+        compares with the goal. Be direct and practical, no medical claims.
+        IMPORTANT: write NO numbers at all: no digits, no amounts, no calories, grams, kilos or percentages. The app shows
+        every number itself. Describe quantities in words ("protein is well behind", "slightly above your goal rate").
+        Never suggest a new calorie or macro target: if something should change, point to the weekly check-in.
 
         Data:
         \(ctx.coachFacts())
         """
         var n: CoachNote
-        if let r = try? await PhotoAI.ask(prompt), !r.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            n = CoachNote(day: dayKey(), text: r.text.trimmingCharacters(in: .whitespacesAndNewlines), by: r.by)
+        let header = ctx.templateLine().map { $0 + "\n" } ?? ""
+        if let r = try? await PhotoAI.ask(prompt), case let text = r.text.trimmingCharacters(in: .whitespacesAndNewlines),
+           !text.isEmpty, CoachGuard.isNumberFree(text) {
+            n = CoachNote(day: dayKey(), text: header + text, by: r.by)
         } else {
+            // No AI, or it wrote a number it isn't allowed to: the app's own rules instead.
             n = CoachNote(day: dayKey(), text: ctx.ruleNote(), by: "the app's rules")
         }
         note = n
