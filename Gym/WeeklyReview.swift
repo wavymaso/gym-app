@@ -51,7 +51,7 @@ struct WeeklyReview: View {
         let program = ctx.activeProgram
         let trendKg = trend.last?.trend ?? 75
         let target = program.map { weeklyChangeKg(goal: $0.goalValue, ratePercent: $0.ratePercent, weightKg: trendKg) } ?? 0
-        let exp = ctx.expenditureEstimates().suffix(28)
+        let exp = Array(ctx.expenditureEstimates().suffix(28))
         VStack(alignment: .leading, spacing: 14) {
             Text("Your week").font(.title2.bold())
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {

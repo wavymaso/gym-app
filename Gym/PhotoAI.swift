@@ -137,6 +137,14 @@ enum PhotoAI {
         return p
     }
 
+    /// A text prompt sent as it is (no meal instructions, no JSON): the daily coaching note.
+    static let coachMarker = "\u{1}COACH\n"
+
+    /// Plain text from whichever engine is set (the Mac's model, then Gemini).
+    @MainActor static func ask(_ prompt: String) async throws -> (text: String, by: String) {
+        try await analyseRaw(images: [], text: coachMarker + prompt, recipe: false)
+    }
+
     static func recipePrompt(text: String, hasImage: Bool) -> String {
         """
         You turn a recipe into a list of ingredients with weights. \(hasImage ? "The photos show a recipe (cookbook page, screenshot or the dish)." : "Below is a recipe, often an Instagram or TikTok caption.")
@@ -185,11 +193,14 @@ enum PhotoAI {
     }
 
     static func askLocalRaw(images: [Data], text: String, recipe: Bool) async throws -> String {
-        let p = recipe ? recipePrompt(text: text, hasImage: !images.isEmpty) : prompt(text: text, hasImage: !images.isEmpty, photos: images.count)
+        let coach = text.hasPrefix(coachMarker)
+        let p = coach ? String(text.dropFirst(coachMarker.count))
+            : recipe ? recipePrompt(text: text, hasImage: !images.isEmpty) : prompt(text: text, hasImage: !images.isEmpty, photos: images.count)
         var message: [String: Any] = ["role": "user", "content": p]
         if !images.isEmpty { message["images"] = images.map { $0.base64EncodedString() } }
-        let body: [String: Any] = ["model": localModel, "messages": [message], "stream": false, "format": recipe ? recipeSchema : schema,
-                                   "options": ["temperature": 0.1, "num_ctx": 8192, "num_predict": 1500], "keep_alive": "15m"]
+        var body: [String: Any] = ["model": localModel, "messages": [message], "stream": false,
+                                   "options": ["temperature": coach ? 0.5 : 0.1, "num_ctx": 8192, "num_predict": 1500], "keep_alive": "15m"]
+        if !coach { body["format"] = recipe ? recipeSchema : schema }
         var r = URLRequest(url: URL(string: "\(ollama)/api/chat")!, timeoutInterval: 240)
         r.httpMethod = "POST"; r.setValue("application/json", forHTTPHeaderField: "Content-Type")
         r.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -235,11 +246,14 @@ enum PhotoAI {
     private struct GeminiFailure: Error { let status: Int; let message: String; var tryAnother: Bool { [404, 429, 500, 503].contains(status) } }
 
     private static func askGemini(model: String, images: [Data], text: String, recipe: Bool) async throws -> String {
-        var parts: [[String: Any]] = [["text": recipe ? recipePrompt(text: text, hasImage: !images.isEmpty)
-                                                      : prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]]
+        let coach = text.hasPrefix(coachMarker)
+        var parts: [[String: Any]] = [["text": coach ? String(text.dropFirst(coachMarker.count))
+                                       : recipe ? recipePrompt(text: text, hasImage: !images.isEmpty)
+                                       : prompt(text: text, hasImage: !images.isEmpty, photos: images.count)]]
         for image in images { parts.append(["inline_data": ["mime_type": "image/jpeg", "data": image.base64EncodedString()]]) }
+        let genConfig: [String: Any] = coach ? ["temperature": 0.5] : ["temperature": 0.1, "responseMimeType": "application/json"]
         let body: [String: Any] = ["contents": [["parts": parts]],
-                                   "generationConfig": ["temperature": 0.1, "responseMimeType": "application/json"]]
+                                   "generationConfig": genConfig]
         let m = model.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? model
         var r = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(m):generateContent")!,
                            timeoutInterval: 30)

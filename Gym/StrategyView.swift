@@ -51,6 +51,7 @@ struct StrategyView: View {
                 header
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
                     checkInRing(g)
+                    CoachCard()
                     Text("In Progress").font(.title2.bold()).padding(.top, 4)
                     hero(p, g)
                     weekTargets(p, t)
@@ -80,7 +81,7 @@ struct StrategyView: View {
         .sheet(isPresented: $editingGoalFlow) { EditGoalFlow() }
         #if DEBUG
         .onAppear {       // testing only: -strategySheet goal | program
-            switch UserDefaults.standard.string(forKey: "strategySheet") { case "goal": editingGoalFlow = true; case "program": collaborative = true; default: break }
+            switch UserDefaults.standard.string(forKey: "strategySheet") { case "goal": editingGoalFlow = true; case "program": collaborative = true; case "checkin": checkingIn = true; default: break }
         }
         #endif
         .sheet(isPresented: $refeeding) { if let p = profiles.first { RefeedSheet(profile: p) } }
