@@ -34,8 +34,9 @@ enum Backup {
         set { UserDefaults.standard.set(newValue, forKey: "lastBackup") }
     }
 
-    @MainActor static func data(_ ctx: ModelContext) -> Data {
-        let (records, _) = ctx.syncChanges(since: .distantPast)
+    @MainActor static func data(_ ctx: ModelContext, photos: Bool = true) -> Data {
+        var (records, _) = ctx.syncChanges(since: .distantPast)
+        if !photos { records.removeAll { $0["type"] as? String == ProgressPhoto.syncType } }
         let tombs = ((try? ctx.fetch(FetchDescriptor<Tombstone>())) ?? []).map {
             ["type": $0.type, "id": $0.syncID, "deletedAt": $0.deletedAt.timeIntervalSince1970] as [String: Any]
         }

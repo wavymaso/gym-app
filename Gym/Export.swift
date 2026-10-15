@@ -64,9 +64,15 @@ struct ExportSection: View {
     @State private var exporting: Export?
     @State private var document = CSVDocument(text: "")
     @State private var done: String?
+    @State private var archive: JSONDocument?
+    @State private var withPhotos = false
 
     var body: some View {
         Section {
+            Button {
+                archive = JSONDocument(data: Backup.data(ctx, photos: withPhotos))
+            } label: { Label("Everything (JSON archive)", systemImage: "archivebox") }
+            Toggle("Include progress photos", isOn: $withPhotos)
             ForEach(Export.allCases) { e in
                 Button { document = CSVDocument(text: e.csv(ctx)); exporting = e } label: { Label("\(e.label) (CSV)", systemImage: "square.and.arrow.up") }
             }
@@ -74,7 +80,12 @@ struct ExportSection: View {
         } header: {
             Text("Export your data")
         } footer: {
-            Text("Spreadsheet files with everything you've logged. Your data stays yours.")
+            Text("The archive holds every record exactly (restore it from Backups on any device); the CSV files open in Numbers or Excel. Progress photos stay out unless you include them.")
+        }
+        .fileExporter(isPresented: Binding(get: { archive != nil }, set: { if !$0 { archive = nil } }), document: archive,
+                      contentType: .json, defaultFilename: "Gym archive \(dayKey()).json") { r in
+            if case .success(let url) = r { done = "Saved \(url.lastPathComponent)" }
+            archive = nil
         }
         .fileExporter(isPresented: Binding(get: { exporting != nil }, set: { if !$0 { exporting = nil } }), document: document,
                       contentType: .commaSeparatedText, defaultFilename: exporting?.filename ?? "Gym.csv") { r in
@@ -82,4 +93,13 @@ struct ExportSection: View {
             exporting = nil
         }
     }
+}
+
+
+struct JSONDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+    var data: Data
+    init(data: Data) { self.data = data }
+    init(configuration: ReadConfiguration) throws { data = configuration.file.regularFileContents ?? Data() }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }

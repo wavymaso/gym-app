@@ -23,6 +23,17 @@ MainActor.assumeIsolated {
     let ka = (try? a.fetch(FetchDescriptor<FoodEntry>()))?.reduce(0) { $0 + $1.nutrients.kcal } ?? -1
     let kb = (try? b.fetch(FetchDescriptor<FoodEntry>()))?.reduce(0) { $0 + $1.nutrients.kcal } ?? -2
     check("calorie total identical", abs(ka - kb) < 0.001, (ka, kb))
+    // Lossless: every record, every field, the same after the round trip.
+    func fingerprint(_ x: ModelContext) -> Set<String> {
+        let (recs, _) = x.syncChanges(since: .distantPast)
+        return Set(recs.map { r in
+            let data = (try? JSONSerialization.data(withJSONObject: r, options: [.sortedKeys])) ?? Data()
+            return String(decoding: data, as: UTF8.self)
+        })
+    }
+    let fa = fingerprint(a), fb = fingerprint(b)
+    check("every record identical (\(fa.count))", fa == fb, "\(fa.subtracting(fb).count) differ")
+    check("tombstones carried", ((try? b.fetchCount(FetchDescriptor<Tombstone>())) ?? 0) >= ((try? a.fetchCount(FetchDescriptor<Tombstone>())) ?? 0))
     check("not a Gym file is refused", Backup.restore(Data("{}".utf8), into: b) == nil)
 }
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED"); exit(fails == 0 ? 0 : 1)
