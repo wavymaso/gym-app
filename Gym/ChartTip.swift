@@ -28,10 +28,17 @@ private struct DayTip: ViewModifier {
     let format: Date.FormatStyle
     let rows: (String) -> [TipRow]
     @State private var picked: Date?
+    @State private var lastDay: String?
 
     func body(content: Content) -> some View {
         content
             .chartXSelection(value: $picked)
+            .onChange(of: picked) { _, p in
+                // One tick per point crossed while scrubbing.
+                guard let p else { lastDay = nil; return }
+                let d = days.min(by: { abs(date(fromKey: $0).timeIntervalSince(p)) < abs(date(fromKey: $1).timeIntervalSince(p)) })
+                if d != lastDay { lastDay = d; Haptics.tick() }
+            }
             .chartOverlay { proxy in
                 GeometryReader { geo in
                     if let p = picked, let frame = proxy.plotFrame,
@@ -57,6 +64,7 @@ private struct IndexTip: ViewModifier {
     func body(content: Content) -> some View {
         content
             .chartXSelection(value: $picked)
+            .onChange(of: picked) { old, new in if new != nil, old != new { Haptics.tick() } }
             .chartOverlay { proxy in
                 GeometryReader { geo in
                     if let p = picked, count > 0, let frame = proxy.plotFrame {

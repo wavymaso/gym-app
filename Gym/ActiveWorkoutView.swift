@@ -54,7 +54,6 @@ struct ActiveWorkoutView: View {
         }
         .pageBackground()
         .undoToast()
-        .onChange(of: sets.filter(\.done).count) { old, new in if new > old { Haptics.tap() } }
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 0)
                 .onChange(of: restEnds) { _, e in
@@ -127,7 +126,9 @@ struct ActiveWorkoutView: View {
         if row.done {
             let before = ctx.history(of: row.exerciseKey, excluding: workout.key).map(\.lift)
                 + sets.filter { $0.done && $0.exerciseKey == row.exerciseKey && $0.persistentModelID != row.persistentModelID }.map(\.lift)
-            records[row.persistentModelID] = newRecords(row.lift, before: before)
+            let pr = newRecords(row.lift, before: before)
+            animate(Motion.bouncy) { records[row.persistentModelID] = pr }
+            if pr.isEmpty { Haptics.tap() } else { Haptics.record() }
             // No rest in the middle of a superset (go straight to the next exercise) or between a left and a right set.
             let groupOrders = row.group > 0 ? Set(sets.filter { $0.group == row.group }.map(\.exerciseOrder)).sorted() : []
             let midSuperset = row.group > 0 && row.exerciseOrder != groupOrders.last
@@ -306,6 +307,8 @@ private struct ExerciseBlock: View {
                             .buttonStyle(.plain)
                             if let r = records[row.persistentModelID], !r.isEmpty {
                                 Label(r.joined(separator: " · "), systemImage: "trophy.fill").font(.caption).foregroundStyle(Macro.fat.color)
+                                    .symbolEffect(.bounce, options: .repeat(2), value: r)
+                                    .transition(.scale(scale: 0.4, anchor: .leading).combined(with: .opacity))
                             }
                         }
                     }

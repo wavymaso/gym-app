@@ -39,7 +39,7 @@ struct PhoneFoodLog: View {
                               else { Color.pageBackground.ignoresSafeArea(edges: .top) } }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .onChange(of: day) { _, d in selection.ids = []; selection.day = d }
+        .onChange(of: day) { _, d in selection.ids = []; selection.day = d; Haptics.tick() }
         .onAppear {
             selection.day = day
             #if DEBUG
