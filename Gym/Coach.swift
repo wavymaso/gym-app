@@ -2,168 +2,180 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-// Today's coaching note on the Strategy tab: your last two weeks summed up, read by the AI
-// (your Mac's model or Gemini), turned into a few lines on what to do today. Made once a day;
-// without an AI it falls back to the app's own rules.
-
-struct CoachNote: Codable, Equatable {
-    var day: String
-    var text: String
-    var by: String
-}
+// The day-by-day coach (phase 4). It builds a CoachSnapshot from the engine and your logs, decides
+// whether there's anything worth saying (quiet by default), asks the model with the snapshot only,
+// validates the reply against the snapshot, regenerates once, and otherwise uses the template.
 
 extension ModelContext {
-    /// The facts the coach works from, as short plain lines.
-    func coachFacts() -> String {
-        guard let p = profile else { return "" }
-        let unit = p.weight, today = dayKey()
-        var lines: [String] = []
-        let g = activeProgram
-        let trend = trendSeries(weightValues, through: today)
-        if let t = trend.last?.trend {
-            lines.append("Trend weight \(unit.format(t)); goal \(g?.goalValue.label ?? "none") at \(number(g?.ratePercent ?? 0, digits: 2))% a week" +
-                         (p.goalWeightKg.map { ", target \(unit.format($0))" } ?? ""))
-        }
-        if let w7 = weeklyTrendChange(trend, days: 7), let w21 = weeklyTrendChange(trend, days: 21) {
-            let goal = g.map { weeklyChangeKg(goal: $0.goalValue, ratePercent: $0.ratePercent, weightKg: trend.last?.trend ?? 80) } ?? 0
-            lines.append("Rate: \(signed(unit, w7)) last week, \(signed(unit, w21)) a week over 3 weeks; goal \(signed(unit, goal)) a week")
-        }
-        let intake = dailyIntake()
-        let week = (1...7).map { addDays(today, -$0) }
-        let logged = week.compactMap { intake[$0] }
-        if let t = dayTargets(on: today) {
-            lines.append("Today's targets: \(Int(t.kcal)) kcal, protein \(Int(t.protein)) g, fat \(Int(t.fat)) g, carbs \(Int(t.carbs)) g")
-        }
-        if !logged.isEmpty {
-            let avg = logged.reduce(0, +) / Double(logged.count)
-            let tgt = week.compactMap { dayTargets(on: $0)?.kcal }.reduce(0, +) / 7
-            let prot = week.map { d in entries(on: d).reduce(0) { $0 + $1.nutrients.protein } }
-            let pt = dayTargets(on: today)?.protein ?? 1
-            lines.append("Last 7 days: \(logged.count)/7 logged, average \(Int(avg)) kcal vs target \(Int(tgt)), protein target hit \(prot.filter { $0 >= pt * 0.9 }.count)/7 days")
-        }
-        let eatenToday = entries(on: today).reduce(Nutrients.zero) { $0 + $1.nutrients }
+    func coachSnapshot(_ moment: CoachSnapshot.Moment) -> CoachSnapshot? {
+        guard let p = profile, let g = activeProgram, let t = dayTargets(on: dayKey()) else { return nil }
+        let today = dayKey()
+        let eaten = entries(on: today).reduce(Nutrients.zero) { $0 + $1.nutrients }
         let hour = Calendar.current.component(.hour, from: Date())
-        lines.append("So far today (\(hour):00): \(Int(eatenToday.kcal)) kcal, \(Int(eatenToday.protein)) g protein")
-        if let e = expenditureEstimates().last { lines.append("Expenditure estimate \(Int(e.kcal)) kcal") }
-        let from = addDays(today, -7)
-        let sets = (try? fetch(FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.day >= from && $0.done }))) ?? []
-        let sessions = Set(sets.map(\.day)).count
-        lines.append("Training: \(sessions) sessions in 7 days" + (Set(sets.map(\.day)).contains(today) ? ", trained today" : ""))
-        let counts = setsPerMuscle(sets.compactMap { s in exercise(s.exerciseKey).map { ($0.muscleValue, $0.secondaryValues, s.kindValue) } })
-        let low = Muscle.allCases.filter { m in m != .cardio && m != .fullBody && volumeRange(m).lowerBound > 0 && (counts[m] ?? 0) < volumeRange(m).lowerBound }
-        if sessions > 0, !low.isEmpty { lines.append("Below weekly volume: \(low.map(\.label).joined(separator: ", "))") }
-        let acts = (try? fetch(FetchDescriptor<DailyActivity>(predicate: #Predicate { $0.day >= from }))) ?? []
-        let sl = acts.map(\.sleepHours).filter { $0 > 1 }
-        if !sl.isEmpty { lines.append("Sleep \(number(sl.reduce(0, +) / Double(sl.count), digits: 1)) h a night") }
-        let steps = acts.map(\.steps).filter { $0 > 0 }
-        if !steps.isEmpty { lines.append("Steps \(steps.reduce(0, +) / steps.count) a day") }
-        if p.inDietBreak(today) { lines.append("On a diet break (maintenance)") }
-        if p.refeedWeekday > 0, Calendar(identifier: .gregorian).component(.weekday, from: Date()) == p.refeedWeekday { lines.append("Today is the refeed day") }
-        if dueCheckIn != nil { lines.append("Weekly check-in is due today") }
-        lines.append("Weekday: \(Date().formatted(.dateTime.weekday(.wide).locale(Locale(identifier: "en_GB"))))")
-        return lines.joined(separator: "\n")
+        let mealsLeft = [11, 15, 21].filter { hour < $0 }.count
+        var special: [String] = []
+        let wd = Calendar(identifier: .gregorian).component(.weekday, from: Date())
+        if p.highDaySet.contains(wd) { special.append("training day") }
+        if p.fastDaySet.contains(wd) { special.append("fasting day") }
+        if p.refeedWeekday == wd { special.append("refeed day") }
+        if p.inDietBreak(today) { special.append("diet break") }
+        if ramadanActive { special.append("Ramadan: iftar to suhoor counts as one day") }
+        let snap = engineSnapshot()
+        let tr = snap?.trend.last, ex = snap?.expenditure.last
+        let rec = ((try? fetch(FetchDescriptor<DecisionRecord>(sortBy: [SortDescriptor(\.day, order: .reverse)]))) ?? []).first?.record
+        let engineRec = rec ?? (moment == .checkIn ? engineCheckIn() : nil)
+        let phase = g.goalValue == .lose ? "cut" : g.goalValue == .gain ? "bulk" : "maintain"
+        let days7 = snap?.days.suffix(8).dropLast() ?? []
+        // Very low intake: logged days in the last two weeks under 60% of the floor.
+        let floor = snap.map { EngineTargets.floor($0.person, weight: tr?.trend ?? 75, body: $0.body).kcal } ?? 1500
+        let low = (snap?.days.suffix(15).dropLast() ?? []).compactMap(\.intake).filter { $0 < floor * 0.6 }.count
+        let notes = ((try? fetch(FetchDescriptor<DayNote>())) ?? []).filter { $0.day >= addDays(today, -7) }.map(\.text).joined(separator: " ").lowercased()
+        let distress = ["hate myself", "can't stop", "binge", "purg", "starv", "disgusting", "worthless"].contains { notes.contains($0) }
+        // Your own frequent high-protein foods.
+        let foods = ((try? fetch(FetchDescriptor<Food>(predicate: #Predicate { $0.useCount > 2 }))) ?? [])
+            .filter { $0.per100.protein >= 15 }.sorted { $0.useCount > $1.useCount }.prefix(3).map(\.name)
+        let w = ((try? fetch(FetchDescriptor<Workout>(predicate: #Predicate { $0.end != nil }, sortBy: [SortDescriptor(\.start, order: .reverse)]))) ?? []).first
+        var workout: CoachSnapshot.Workout?
+        if let w, let end = w.end, Date().timeIntervalSince(end) < 6 * 3600 {
+            let key = w.key
+            let sets = ((try? fetch(FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.workoutKey == key && $0.done }))) ?? [])
+            workout = .init(name: w.name, sets: sets.count, prs: 0, volumeChangePct: nil)
+        }
+        let flags = rec?.reasons.filter { ["strength drop on a fast cut", "fast gain, flat strength", "diet break", "short sleep"].contains($0.rule) }.map(\.detail) ?? []
+        let used = Set((engineRec?.evidence ?? []) + ["protein.daily.gPerKg"])
+        return CoachSnapshot(
+            moment: moment, date: today, weekday: Date().formatted(.dateTime.weekday(.wide).locale(appLocale)), phase: phase,
+            phaseWeek: daysBetween(g.startDay, today) / 7 + 1,
+            today: .init(kcalTarget: Int(t.kcal.rounded()), kcalEaten: Int(eaten.kcal.rounded()), kcalLeft: Int((t.kcal - eaten.kcal).rounded()),
+                         proteinTarget: Int(t.protein.rounded()), proteinEaten: Int(eaten.protein.rounded()), proteinLeft: Int((t.protein - eaten.protein).rounded()),
+                         mealsLeftToday: mealsLeft, special: special),
+            trend: .init(kg: ((tr?.trend ?? 0) * 10).rounded() / 10, ratePerWeek: ((tr?.ratePerWeek ?? 0) * 100).rounded() / 100, sd: ((tr?.sd ?? 0) * 10).rounded() / 10,
+                         goalRatePerWeek: (weeklyChangeKg(goal: g.goalValue, ratePercent: g.ratePercent, weightKg: tr?.trend ?? 75) * 100).rounded() / 100),
+            expenditure: .init(kcal: Int(ex?.kcal ?? 0), sd: Int(ex?.sd ?? 0), settling: (ex?.sd ?? 999) > 150),
+            loggedDaysLast7: days7.compactMap(\.intake).count, weighInsLast7: days7.filter { !$0.weighIns.isEmpty }.count,
+            checkIn: .init(due: dueCheckIn != nil, daysUntil: dueCheckIn != nil ? 0 : daysUntilCheckIn(g), lastAction: engineRec?.action,
+                           lastFrom: engineRec.map { Int($0.input.currentTargets.kcal) }, lastTo: engineRec.map { Int($0.output.kcal) },
+                           lastReason: engineRec?.reasons.last?.detail),
+            lastWorkout: workout, flags: flags,
+            waterEvent: snap?.days.suffix(3).first(where: { !$0.events.isEmpty })?.events.first.map { $0 == .tagged ? "salty day or travel" : $0.rawValue },
+            frequentProteinFoods: Array(foods), safety: .init(veryLowIntakeDays: low, distressInNotes: distress),
+            evidence: used.sorted().compactMap { Evidence.entry($0) }.map { .init(id: $0.id, text: $0.description, grade: $0.grade.rawValue) })
     }
 
-    /// The only numbers the note may contain: today's targets and what's left, exactly as Today shows them.
-    func templateLine() -> String? {
-        guard let t = dayTargets(on: dayKey()) else { return nil }
-        let n = entries(on: dayKey()).reduce(Nutrients.zero) { $0 + $1.nutrients }
-        let kLeft = Int((t.kcal - n.kcal).rounded()), pLeft = Int((t.protein - n.protein).rounded())
-        let kcal = kLeft >= 0 ? "\(kLeft) kcal left" : "\(-kLeft) kcal over"
-        let protein = pLeft > 0 ? "\(pLeft) g protein to go" : "protein target reached"
-        return "Today: \(kcal) · \(protein)."
+    private func daysUntilCheckIn(_ g: Program) -> Int {
+        var d = addDays(dayKey(), 1), n = 1
+        while Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d)) != g.checkInWeekday && n < 7 { d = addDays(d, 1); n += 1 }
+        return n
     }
+}
 
-    /// Without an AI: the same idea from fixed rules.
-    func ruleNote() -> String {
-        guard let t = dayTargets(on: dayKey()) else { return "Set up your goal in Strategy to get daily coaching." }
-        let n = entries(on: dayKey()).reduce(Nutrients.zero) { $0 + $1.nutrients }
-        var out: [String] = []
-        let left = t.protein - n.protein
-        out.append(left > 20 ? "Protein first: \(Int(left)) g to go today, spread over your next meals." : "Protein is on track today.")
-        out.append("Aim for \(Int(t.kcal)) kcal; \(Int(max(0, t.kcal - n.kcal))) left.")
-        if dueCheckIn != nil { out.append("Your weekly check-in is ready: do it today.") }
-        out.append("Weigh in tomorrow morning, after the bathroom, before eating.")
-        return out.joined(separator: " ")
-    }
+struct CoachEntry: Codable, Equatable, Identifiable {
+    var id = UUID()
+    var day: String
+    var moment: CoachSnapshot.Moment
+    var message: CoachMessage
 }
 
 @MainActor final class Coach: ObservableObject {
     static let shared = Coach()
-    @Published private(set) var note: CoachNote? = {
-        // Notes written before the number rule (version 2) may contain invented figures: drop them.
-        guard UserDefaults.standard.integer(forKey: "coachNoteVersion") >= 2 else {
-            UserDefaults.standard.removeObject(forKey: "coachNote")
-            UserDefaults.standard.set(2, forKey: "coachNoteVersion")
-            return nil
+    @Published private(set) var entries: [CoachEntry] = {
+        guard UserDefaults.standard.integer(forKey: "coachNoteVersion") >= 3 else {
+            UserDefaults.standard.removeObject(forKey: "coachEntries"); UserDefaults.standard.removeObject(forKey: "coachNote")
+            UserDefaults.standard.set(3, forKey: "coachNoteVersion"); return []
         }
-        return (UserDefaults.standard.data(forKey: "coachNote")).flatMap { try? JSONDecoder().decode(CoachNote.self, from: $0) }
+        return UserDefaults.standard.data(forKey: "coachEntries").flatMap { try? JSONDecoder().decode([CoachEntry].self, from: $0) } ?? []
     }()
     @Published private(set) var working = false
 
-    /// Today's note (made now if there isn't one yet, or when you ask for a fresh one).
+    var today: [CoachEntry] { entries.filter { $0.day == dayKey() } }
+    static var maxPerDay: Int { max(1, UserDefaults.standard.object(forKey: "coachMaxPerDay") as? Int ?? 2) }
+    static var allowGemini: Bool { UserDefaults.standard.bool(forKey: "coachAllowGemini") }
+
+    /// Speak if there's something worth saying now (or `force` a morning brief).
     func refresh(_ ctx: ModelContext, force: Bool = false) async {
-        guard force || note?.day != dayKey(), !working else { return }
+        guard !working else { return }
+        let done = Set(today.map(\.moment))
+        guard let probe = ctx.coachSnapshot(.morning) else { return }
+        let justTrained = probe.lastWorkout != nil
+        var moment = CoachSchedule.moment(hour: Calendar.current.component(.hour, from: Date()), alreadyToday: done, max: Coach.maxPerDay,
+                                          s: probe, justTrained: justTrained, recentWaterJump: probe.waterEvent != nil)
+        if moment == nil, force { moment = .morning }
+        guard let m = moment, let snap = ctx.coachSnapshot(m) else { return }
         working = true
         defer { working = false }
-        let prompt = """
-        You are an experienced natural bodybuilding and nutrition coach. From this athlete's data, write today's coaching note:
-        3 or 4 short, specific bullet points (start each with "• "), 70 words at most in total, in English, no title, no greeting.
-        Cover what matters most today: eating to the targets (especially protein), training or recovery, and how the trend
-        compares with the goal. Be direct and practical, no medical claims.
-        IMPORTANT: write NO numbers at all: no digits, no amounts, no calories, grams, kilos or percentages. The app shows
-        every number itself. Describe quantities in words ("protein is well behind", "slightly above your goal rate").
-        Never suggest a new calorie or macro target: if something should change, point to the weekly check-in.
+        let msg = await Coach.write(snap)
+        entries.append(CoachEntry(day: dayKey(), moment: m, message: msg))
+        entries = entries.filter { $0.day >= addDays(dayKey(), -14) }
+        if let d = try? JSONEncoder().encode(entries) { UserDefaults.standard.set(d, forKey: "coachEntries") }
+    }
 
-        Data:
-        \(ctx.coachFacts())
-        """
-        var n: CoachNote
-        let header = ctx.templateLine().map { $0 + "\n" } ?? ""
-        if let r = try? await PhotoAI.ask(prompt), case let text = r.text.trimmingCharacters(in: .whitespacesAndNewlines),
-           !text.isEmpty, CoachGuard.isNumberFree(text) {
-            n = CoachNote(day: dayKey(), text: header + text, by: r.by)
-        } else {
-            // No AI, or it wrote a number it isn't allowed to: the app's own rules instead.
-            n = CoachNote(day: dayKey(), text: ctx.ruleNote(), by: "the app's rules")
+    /// The model, validated; one retry with the problems listed; then the template.
+    static func write(_ s: CoachSnapshot) async -> CoachMessage {
+        if s.safety.stepBack { return CoachTemplates.message(s) }      // never left to a model
+        var prompt = CoachPrompt.make(s)
+        for _ in 0..<2 {
+            guard let r = try? await PhotoAI.askCoach(prompt, allowGemini: allowGemini), var m = CoachValidator.parse(r.text) else { break }
+            let problems = CoachValidator.check(m, s)
+            if problems.isEmpty { m.source = r.by; return m }
+            Log.ai.notice("Coach message rejected: \(problems.map(\.kind).joined(separator: ", "), privacy: .public)")
+            prompt += "\n\nYour previous reply was rejected: " + problems.map { "\($0.kind) (\($0.detail))" }.joined(separator: "; ") + ". Fix it."
         }
-        note = n
-        if let d = try? JSONEncoder().encode(n) { UserDefaults.standard.set(d, forKey: "coachNote") }
+        return CoachTemplates.message(s)
     }
 }
 
-/// The card on the Strategy tab.
+/// The coach card on Strategy (and the dashboard): today's messages, newest first.
 struct CoachCard: View {
     @Environment(\.modelContext) private var ctx
+    @Environment(\.openPage) private var openPage
     @ObservedObject private var coach = Coach.shared
-    @State private var force = false
+    @State private var checkingIn = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
             HStack {
-                Label("Today's coaching", systemImage: "figure.strengthtraining.traditional").font(.headline)
+                Label("Coach", systemImage: "figure.strengthtraining.traditional").font(.cardTitle)
                 Spacer()
                 if coach.working { ProgressView().controlSize(.small) }
                 else {
-                    Button { force = true; Task { await coach.refresh(ctx, force: true); force = false } } label: { Image(systemName: "arrow.clockwise") }
-                        .buttonStyle(.borderless)
+                    Button { Task { await coach.refresh(ctx, force: true) } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
+                        .accessibilityLabel("Ask the coach")
                 }
             }
-            if let n = coach.note, n.day == dayKey(), !(coach.working && force) {
-                Text(n.text).font(.callout).fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity.combined(with: .offset(y: 6)))
-                    .id(n.text)
-                Text("By \(n.by) · from your last two weeks").font(.caption2).foregroundStyle(.secondary)
-            } else if coach.working {
-                WorkingCard(title: "Reading your last two weeks…")
-            } else {
-                Text("Tap refresh for today's note.").font(.callout).foregroundStyle(.secondary)
+            if coach.today.isEmpty {
+                Text(coach.working ? "Reading today…" : "Nothing to flag right now.").font(.secondaryText).foregroundStyle(.secondary)
+            }
+            ForEach(coach.today.reversed()) { e in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(e.message.headline).font(.secondaryText.weight(.semibold))
+                    Text(e.message.body).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if let a = e.message.action, a.kind == .openCheckIn || a.kind == .openProposal {
+                        Button(a.label.isEmpty ? "Open check-in" : a.label) { checkingIn = true }.font(.secondaryText.weight(.semibold))
+                    }
+                    Text(e.message.source == "template" ? "From the app's rules" : "Written by \(e.message.source), checked against your numbers")
+                        .font(.fine).foregroundStyle(.tertiary)
+                }
+                .transition(.opacity.combined(with: .offset(y: 6)))
             }
         }
-        .padding(16)
+        .padding(Space.l)
         .modifier(CardSurface())
-        .animation(Motion.pick(Motion.smooth), value: coach.note)
-        .animation(Motion.pick(Motion.smooth), value: coach.working)
+        .animation(Motion.pick(Motion.smooth), value: coach.entries)
         .task { await coach.refresh(ctx) }
+        .sheet(isPresented: $checkingIn) { CheckInView() }
+    }
+}
+
+/// Settings → Coach.
+struct CoachSettings: View {
+    @AppStorage("coachMaxPerDay") private var maxPerDay = 2
+    @AppStorage("coachAllowGemini") private var allowGemini = false
+    var body: some View {
+        Section {
+            Stepper("At most \(maxPerDay) message\(maxPerDay == 1 ? "" : "s") a day", value: $maxPerDay, in: 1...4)
+            Toggle("Use Gemini when the Mac can't answer", isOn: $allowGemini)
+        } footer: {
+            Text("The coach speaks only when there's something useful: a morning brief, a protein nudge late in the day, after a workout, on check-in day, or when the scale jumps from water. It only sees a summary of the engine's numbers (never photos or your food log), may only repeat numbers from that summary, and can't change targets. Anything it writes that breaks these rules is replaced by the app's own message.")
+        }
     }
 }

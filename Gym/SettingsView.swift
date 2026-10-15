@@ -53,6 +53,7 @@ struct SettingsView: View {
                         row("externaldrive", "Backups", "Daily, restore") { page("Backups") { BackupSection() } },
                         row("square.and.arrow.up", "Data export", "Everything as an archive, or spreadsheets") { page("Export") { ExportSection() } },
                         rowAction("square.and.arrow.down", "Import from MacroFactor", "Quick and granular exports") { importing = true },
+                        row("text.bubble", "Coach", "How often it speaks, which AI") { page("Coach") { CoachSettings() } },
                         row("lock", "Privacy & security", "Face ID lock, what leaves this device") { page("Privacy & security") { PrivacySection() } },
                         row("stethoscope", "Diagnostics", "Version, data health, recent problems") { DiagnosticsView() },
                         rowAction("trash", "Start over", "Delete everything on this device", destructive: true) { confirmReset = true },

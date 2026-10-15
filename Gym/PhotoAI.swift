@@ -145,6 +145,21 @@ enum PhotoAI {
         try await analyseRaw(images: [], text: coachMarker + prompt, recipe: false)
     }
 
+    /// The coach: your Mac's model first; Gemini only if you've allowed it (Settings → Coach). Only the
+    /// snapshot text is sent, never photos or logs.
+    @MainActor static func askCoach(_ prompt: String, allowGemini: Bool) async throws -> (text: String, by: String) {
+        let text = coachMarker + prompt
+        do {
+            #if os(macOS)
+            return (try await askLocalRaw(images: [], text: text, recipe: false), "this Mac")
+            #else
+            if SyncClient.shared.connected { return (try await SyncClient.shared.photoRaw(images: [], text: text, recipe: false), SyncClient.shared.macName) }
+            #endif
+        } catch {}
+        guard allowGemini, !geminiKey.isEmpty else { throw Failure(message: "No coach model reachable.") }
+        return (try await askGeminiRaw(images: [], text: text, recipe: false), "Gemini")
+    }
+
     static func recipePrompt(text: String, hasImage: Bool) -> String {
         """
         You turn a recipe into a list of ingredients with weights. \(hasImage ? "The photos show a recipe (cookbook page, screenshot or the dish)." : "Below is a recipe, often an Instagram or TikTok caption.")

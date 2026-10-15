@@ -54,3 +54,10 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 - [ ] Strategy → Evidence lists the registry by grade
 - [ ] Dashboard asks about half-logged days ("Complete" / "Partly")
 - [ ] Coaching note on Strategy contains no numbers except the "Today: … kcal left · … g protein to go" line
+
+## AI coach (phase 4)
+- [ ] Strategy → Coach card: a morning brief after 05:00; at most the number of messages set in More → Coach
+- [ ] With the Mac on and synced, messages say "Written by <your Mac>, checked against your numbers"; with it off, "From the app's rules" (Gemini only if allowed in More → Coach)
+- [ ] Every number in a coach message matches one shown elsewhere in the app; the coach never suggests new targets
+- [ ] On check-in day the coach explains the engine's decision; "See why" opens the check-in
+- [ ] After a workout: a short post-workout note
