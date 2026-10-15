@@ -333,3 +333,70 @@ extension View {
     /// Fades and rises in, `order` steps after the first (60 ms apart).
     func arrive(_ order: Int) -> some View { modifier(Arrive(order: order)) }
 }
+
+// MARK: - A page of choices (MacroFactor's "Program Style" page): pushed, not a pop-up menu
+
+struct OptionsPage<ID: Hashable>: View {
+    struct Option: Identifiable { let id: ID; let title: String; var detail: String? = nil }
+    let title: String
+    var header: String? = nil
+    var footer: String? = nil
+    let options: [Option]
+    let selected: ID?
+    let choose: (ID) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.m) {
+                if let header { Text(header).font(.secondaryText).foregroundStyle(.secondary).padding(.horizontal, Space.xs) }
+                VStack(spacing: 0) {
+                    ForEach(options) { o in
+                        Button {
+                            Haptics.tick()
+                            choose(o.id)
+                            dismiss()
+                        } label: {
+                            HStack(alignment: .center, spacing: Space.m) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(o.title).font(.bodyText)
+                                    if let d = o.detail { Text(d).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                                }
+                                Spacer(minLength: Space.s)
+                                Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(palette.accent)
+                                    .opacity(o.id == selected ? 1 : 0)
+                            }
+                            .padding(.horizontal, Space.l).padding(.vertical, 14)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if o.id != options.last?.id { Divider().padding(.leading, Space.l) }
+                    }
+                }
+                .modifier(CardSurface(cornerRadius: Radius.l))
+                if let footer { Text(footer).font(.fine).foregroundStyle(.secondary).padding(.horizontal, Space.xs) }
+            }
+            .padding(Space.l)
+        }
+        .pageBackground()
+        .navigationTitle(title)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+}
+
+// MARK: - Behind the status bar: content never scrolls under the clock bare
+
+struct StatusBarBackdrop: View {
+    var body: some View {
+        GeometryReader { g in
+            Group {
+                if palette.glass { Rectangle().fill(.ultraThinMaterial) } else { Rectangle().fill(Color.pageBackground) }
+            }
+            .frame(height: g.safeAreaInsets.top)
+            .ignoresSafeArea(edges: .top)
+        }
+        .allowsHitTesting(false)
+    }
+}

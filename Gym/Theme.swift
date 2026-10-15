@@ -242,6 +242,9 @@ extension View {
         formStyle(.grouped)
             .scrollContentBackground(.hidden)
             .pageBackground()
+            #if os(iOS)
+            .pickerStyle(.navigationLink)       // choices open a page (MacroFactor-style), not a pop-up menu
+            #endif
     }
 
     /// A list on the theme's background.

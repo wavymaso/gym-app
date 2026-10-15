@@ -57,7 +57,6 @@ struct StrategyView: View {
                     weekTargets(p, t)
                     programButtons(g)
                     goalCard(p, g)
-                    Text("Program settings").font(.title2.bold()).padding(.top, 4)
                     settings(p, g, t)
                     goalHistory(p)
                 }
@@ -338,7 +337,9 @@ struct StrategyView: View {
                     pill("pencil", "Edit Goal") { editingGoalFlow = true }
                     pill("flag.2.crossed", "Phase Plan") { planning = true }
                 }
+                .padding(.horizontal, 16)
             }
+            .padding(.horizontal, -16)          // scrolls to the card's edge instead of being cut at its padding
         }
         .padding(16).modifier(CardSurface())
     }
@@ -410,9 +411,11 @@ struct StrategyView: View {
             rowButton("target", palette.good, "Goal", g.goalValue.label + " · " + goalDetail(g, p)) { editing = true }
             rowButton("flag.checkered", palette.calories, "Goal weight & rate", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalFlow = true }
             rowButton("fork.knife", palette.fat, "Diet & protein", "\(g.dietValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg protein") { editing = true }
-            rowMenu("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein",
+            rowLink("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein",
                     last: g.mode == "coached") {
-                ForEach(TrainingType.allCases) { t in Button(t.label) { p.trainingType = t.rawValue; ctx.commit() } }
+                OptionsPage(title: "Training", header: "What you mainly do. It sets how much protein your targets carry.",
+                            options: TrainingType.allCases.map { .init(id: $0.rawValue, title: $0.label) },
+                            selected: p.trainingType.isEmpty ? TrainingType.resistance.rawValue : p.trainingType) { p.trainingType = $0; ctx.commit() }
             }
             if g.mode == "manual" {
                 rowButton("pencil", palette.accent, "Edit targets", "\(p.energy.format(t.targets.kcal)) a day", last: true) { manual = true }
@@ -422,13 +425,24 @@ struct StrategyView: View {
             }
         }
         category("Coaching", "How targets get updated") {
-            rowMenu("person.crop.circle.badge.checkmark", palette.accent, "Program style", styleText(g.mode)) {
-                Button("Coached: the app sets everything, with guardrails") { g.mode = "coached"; ctx.commit() }
-                Button("Collaborative: your macros, the app's weekly calories") { collaborative = true }
-                Button("Manual: fixed targets you set") { manual = true }
+            rowLink("person.crop.circle.badge.checkmark", palette.accent, "Program style", styleText(g.mode)) {
+                OptionsPage(title: "Program Style",
+                            header: "How much of your targets the app decides. Every style keeps the weekly check-in.",
+                            options: [.init(id: "coached", title: "Coached", detail: "The app sets calories and macros each week from your expenditure and goal, with guardrails."),
+                                      .init(id: "collaborative", title: "Collaborative", detail: "You set protein and your carb/fat split per day; the app moves the calories with your expenditure."),
+                                      .init(id: "manual", title: "Manual", detail: "Fixed targets you set. Check-ins show the numbers but never change them.")],
+                            selected: g.mode) { m in
+                    switch m {
+                    case "coached": g.mode = "coached"; ctx.commit()
+                    case "collaborative": DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { collaborative = true }
+                    default: DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { manual = true }
+                    }
+                }
             }
-            rowMenu("clock.arrow.circlepath", palette.protein, "Check-in day", weekdayName(g.checkInWeekday)) {
-                ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { d in Button(weekdayName(d)) { g.checkInWeekday = d; ctx.commit() } }
+            rowLink("clock.arrow.circlepath", palette.protein, "Check-in day", weekdayName(g.checkInWeekday)) {
+                OptionsPage(title: "Check-In Day", header: "The day each week your targets are reviewed.",
+                            options: [2, 3, 4, 5, 6, 7, 1].map { .init(id: $0, title: weekdayName($0)) },
+                            selected: g.checkInWeekday) { g.checkInWeekday = $0; ctx.commit() }
             }
             if g.mode == "coached" {
                 rowButton("shield.lefthalf.filled", palette.good, "Calorie floor",
@@ -456,19 +470,15 @@ struct StrategyView: View {
 
     /// A titled card of related rows.
     private func category<C: View>(_ title: String, _ subtitle: String, @ViewBuilder _ rows: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title.uppercased()).font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(.secondary)
-                Text(subtitle).font(.caption2).foregroundStyle(.tertiary)
-            }
-            .padding(.leading, 4)
-            VStack(spacing: 0) { rows() }.modifier(CardSurface())
+        VStack(alignment: .leading, spacing: Space.m) {
+            Text(title).font(.sectionTitle).padding(.top, Space.s)
+            VStack(spacing: 0) { rows() }.modifier(CardSurface(cornerRadius: Radius.l))
         }
     }
 
     private func rowContent(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: icon).font(.body.weight(.semibold)).foregroundStyle(c).frame(width: 36, height: 36).background(c.opacity(0.15), in: Circle())
+            Image(systemName: icon).font(.title3).foregroundStyle(.primary).frame(width: 32)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body)
                 Text(value).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -478,7 +488,7 @@ struct StrategyView: View {
         }
         .padding(.horizontal, 14).padding(.vertical, 11)
         .contentShape(Rectangle())
-        .overlay(alignment: .bottom) { if !last { Divider().padding(.leading, 64) } }
+        .overlay(alignment: .bottom) { if !last { Divider().padding(.leading, 60) } }
     }
 
     private func rowButton(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, _ action: @escaping () -> Void) -> some View {

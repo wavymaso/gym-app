@@ -206,6 +206,7 @@ struct MainView: View {
             }
         }
         .animation(Motion.pick(Motion.smooth), value: tab)
+        .overlay(alignment: .top) { StatusBarBackdrop() }
         .undoToast()
         .onChange(of: tab) { old, new in visited.insert(new); if old != new { Haptics.tick() } }
         .safeAreaInset(edge: .bottom, spacing: 0) {

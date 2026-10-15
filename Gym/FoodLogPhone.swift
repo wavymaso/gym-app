@@ -39,14 +39,14 @@ struct PhoneFoodLog: View {
                               else { Color.pageBackground.ignoresSafeArea(edges: .top) } }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .onChange(of: day) { _, d in selection.ids = []; selection.day = d; Haptics.tick() }
+        .onChange(of: day) { _, d in if selection.mode == nil { selection.ids = [] }; selection.day = d; Haptics.tick() }
         .onAppear {
             selection.day = day
             #if DEBUG
-            if UserDefaults.standard.bool(forKey: "selectFirst"), let e = ctx.entries(on: day).first { selection.ids = [e.syncID] }   // testing only
+            if UserDefaults.standard.bool(forKey: "selectFirst"), let e = ctx.entries(on: day).first { selection.sourceDay = day; selection.ids = [e.syncID]; if UserDefaults.standard.bool(forKey: "copyMode") { selection.mode = .copy } }   // testing only
             #endif
         }
-        .onDisappear { selection.ids = [] }
+        .onDisappear { selection.ids = []; selection.mode = nil }
         .onReceive(selection.$editing) { e in if let e { sheet = .edit(e); selection.editing = nil } }
         .sheet(item: $sheet) { s in
             switch s {
@@ -246,6 +246,7 @@ struct DayEntries: View {
     let showEmptyHours: Bool
     @Binding var selected: Set<String>
     let open: (FoodLogView.LogSheet) -> Void
+    @ObservedObject private var sel = FoodSelection.shared
     @State private var targetHour: Int?
 
     init(day: String, energy: EnergyUnit, style: FoodLogView.LogStyle, showEmptyHours: Bool, selected: Binding<Set<String>>,
@@ -255,6 +256,8 @@ struct DayEntries: View {
     }
 
     private func toggle(_ e: FoodEntry) {
+        guard sel.mode == nil else { return }                       // choosing a destination: taps on foods do nothing
+        if selected.isEmpty { sel.sourceDay = day }
         animate(Motion.snappy) { if selected.contains(e.syncID) { selected.remove(e.syncID) } else { selected.insert(e.syncID) } }
         #if os(iOS)
         Haptics.tick()
@@ -288,7 +291,7 @@ struct DayEntries: View {
         let byHour = Dictionary(grouping: entries) { cal.component(.hour, from: $0.time) }
         let now = day == dayKey() ? cal.component(.hour, from: Date()) : 0
         let lo = min(7, byHour.keys.min() ?? 7), hi = max(22, byHour.keys.max() ?? 22, now)
-        let hours = showEmptyHours ? Array(lo...hi) : byHour.keys.sorted()
+        let hours = showEmptyHours || sel.mode != nil ? Array(sel.mode != nil ? min(lo, 5)...max(hi, 23) : lo...hi) : byHour.keys.sorted()
         return VStack(alignment: .leading, spacing: 14) {
             if entries.isEmpty && !showEmptyHours {
                 emptyState
@@ -313,11 +316,28 @@ struct DayEntries: View {
                     .padding(.horizontal, 12).frame(minWidth: 62).frame(height: 34)
                     .background(Color.raisedBackground, in: Capsule())
                     .overlay(Capsule().stroke(targetHour == h ? palette.accent : .clear, lineWidth: 2))
-                Button { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) } label: {
-                    Image(systemName: "plus").font(.subheadline.weight(.bold)).frame(width: 34, height: 34)
-                        .background(Color.raisedBackground, in: Circle())
+                if let m = sel.mode {
+                    // Paste the selected foods at this hour.
+                    Button {
+                        let t = cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)) ?? Date()
+                        let c = ctx.entries(on: sel.sourceDay).filter { sel.ids.contains($0.syncID) }
+                        if m == .copy { ctx.copyEntries(c, to: day, at: t) } else { ctx.moveEntries(c, to: day, at: t) }
+                        sel.clear()
+                    } label: {
+                        Image(systemName: m == .copy ? "doc.on.clipboard.fill" : "arrowshape.turn.up.left.fill")
+                            .font(.subheadline.weight(.bold)).frame(width: 34, height: 34)
+                            .background(Color.raisedBackground, in: Circle()).foregroundStyle(.primary)
+                    }
+                    .pressable()
+                    .transition(.scale.combined(with: .opacity))
+                    .accessibilityLabel(m == .copy ? "Copy here" : "Move here")
+                } else {
+                    Button { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) } label: {
+                        Image(systemName: "plus").font(.subheadline.weight(.bold)).frame(width: 34, height: 34)
+                            .background(Color.raisedBackground, in: Circle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
                 Spacer(minLength: 4)
                 if !items.isEmpty { HourTotals(n: n, energy: energy) }
             }
@@ -555,99 +575,109 @@ struct DayPickerSheet: View {
     }
 }
 
-/// Which logged foods are selected (shared so the bar can sit where the search bar is).
+/// Which logged foods are selected, and whether you're choosing where to copy or move them to.
 @MainActor final class FoodSelection: ObservableObject {
+    enum Mode { case copy, move }
     static let shared = FoodSelection()
     @Published var ids: Set<String> = []
+    @Published var mode: Mode?
     @Published var editing: FoodEntry?
-    var day = dayKey()
+    var day = dayKey()                  // the day on screen
+    var sourceDay = dayKey()            // the day the selected foods are on
+
+    func clear() { animate(Motion.snappy) { ids = []; mode = nil } }
 }
 
-/// MacroFactor's bar for selected foods: Edit, Copy, Move, Move to day, Remove, More.
+/// MacroFactor's bar for selected foods. Copy and Move turn it into a destination bar, and every
+/// hour of the timeline (on any day) becomes a place to paste them.
 struct SelectionBar: View {
     @Environment(\.modelContext) private var ctx
     @ObservedObject private var sel = FoodSelection.shared
-    @State private var moving = false
-    @State private var copying = false
-    @State private var pickingDay = false
-    @State private var copyAfterPick = false
+    @State private var picking = false
     @State private var target = Date()
 
-
-    private var chosen: [FoodEntry] { ctx.entries(on: sel.day).filter { sel.ids.contains($0.syncID) } }
+    private var chosen: [FoodEntry] { ctx.entries(on: sel.sourceDay).filter { sel.ids.contains($0.syncID) } }
+    private var countText: String { "\(sel.ids.count) food\(sel.ids.count == 1 ? "" : "s")" }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Button { animate(Motion.snappy) { sel.ids = [] } } label: {
-                Image(systemName: "xmark").font(.headline).frame(width: 40, height: 40).background(Color.primary, in: Circle())
-                    .foregroundStyle(palette.scheme == .dark ? Color.black : .white)
+        HStack(spacing: Space.m) {
+            Button {
+                if sel.mode != nil { animate(Motion.snappy) { sel.mode = nil } } else { sel.clear() }
+            } label: {
+                Image(systemName: sel.mode == nil ? "xmark" : "chevron.left").font(.headline)
+                    .frame(width: 40, height: 40)
+                    .background(sel.mode == nil ? Color.primary : Color.clear, in: Circle())
+                    .foregroundStyle(sel.mode == nil ? (palette.scheme == .dark ? Color.black : .white) : .primary)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 0) {
-                Text("Select").font(.subheadline.weight(.semibold))
-                Text("\(sel.ids.count) food\(sel.ids.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
+                Text(sel.mode == .copy ? "Copy" : sel.mode == .move ? "Move" : "Select").font(.subheadline.weight(.semibold))
+                Text(countText).font(.caption).foregroundStyle(.secondary)
             }
+            .contentTransition(.opacity)
             Divider().frame(height: 36)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    if sel.ids.count == 1, let e = chosen.first { action("Edit") { sel.ids = []; sel.editing = e } }
-                    action("Copy") { copying = true }
-                    action("Move") { moving = true }
-                    action("Move to day") { pickingDay = true }
-                    action("Remove", destructive: true) { remove() }
-                    Menu {
-                        Button("Duplicate", systemImage: "plus.square.on.square") { duplicate() }
-                        Button("Save as meal", systemImage: "square.and.arrow.down") {
-                            ctx.saveMeal(chosen.first?.name ?? "Meal", from: chosen); sel.ids = []
-                        }
-                        Button("Select all", systemImage: "checkmark.circle") { sel.ids = Set(ctx.entries(on: sel.day).map(\.syncID)) }
-                    } label: { pill("More") }
-                    .menuStyle(.button).buttonStyle(.plain)
+                HStack(spacing: Space.s) {
+                    switch sel.mode {
+                    case .copy?:
+                        action("To Now") { finish { ctx.copyEntries(chosen, to: dayKey(), at: Date()) } }
+                        action("To Today") { finish { ctx.copyEntries(chosen, to: dayKey()) } }
+                        action("To Tomorrow") { finish { ctx.copyEntries(chosen, to: addDays(dayKey(), 1)) } }
+                        action("To Date & Time") { target = Date(); picking = true }
+                    case .move?:
+                        action("To Now") { finish { ctx.moveEntries(chosen, to: dayKey(), at: Date()) } }
+                        action("To Today") { finish { ctx.moveEntries(chosen, to: dayKey()) } }
+                        action("To Tomorrow") { finish { ctx.moveEntries(chosen, to: addDays(dayKey(), 1)) } }
+                        action("To Date & Time") { target = Date(); picking = true }
+                    case nil:
+                        if sel.ids.count == 1, let e = chosen.first { action("Edit") { sel.clear(); sel.editing = e } }
+                        action("Copy") { animate(Motion.snappy) { sel.mode = .copy } }
+                        action("Move") { animate(Motion.snappy) { sel.mode = .move } }
+                        action("Remove", destructive: true) { remove() }
+                        Menu {
+                            Button("Duplicate", systemImage: "plus.square.on.square") { let c = chosen; sel.clear(); ctx.duplicateEntries(c) }
+                            Button("Save as meal", systemImage: "square.and.arrow.down") {
+                                ctx.saveMeal(chosen.first?.name ?? "Meal", from: chosen); sel.clear(); Haptics.success()
+                            }
+                            Button("Select all", systemImage: "checkmark.circle") { sel.ids = Set(ctx.entries(on: sel.sourceDay).map(\.syncID)) }
+                        } label: { pill("More") }
+                        .menuStyle(.button).buttonStyle(.plain)
+                    }
                 }
+                .id(sel.mode.map { "\($0)" } ?? "select")
+                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
             }
         }
-        .padding(.horizontal, 12).padding(.vertical, 10)
+        .padding(.horizontal, Space.m).padding(.vertical, 10)
         .background(.bar)
-        .confirmationDialog("Move \(sel.ids.count) food\(sel.ids.count == 1 ? "" : "s") to", isPresented: $moving, titleVisibility: .visible) {
-            ForEach(Meal.allCases) { m in Button(m.label) { move(to: m) } }
-            Button("Now (\(Date().formatted(.dateTime.hour().minute().locale(appLocale))))") { moveToNow() }
-        }
-        .confirmationDialog("Copy \(sel.ids.count) food\(sel.ids.count == 1 ? "" : "s") to", isPresented: $copying, titleVisibility: .visible) {
-            if sel.day != dayKey() { Button("Today") { copy(to: dayKey()) } }
-            Button("The next day") { copy(to: addDays(sel.day, 1)) }
-            Button("Tomorrow") { copy(to: addDays(dayKey(), 1)) }
-            Button("Another day…") { copyAfterPick = true; pickingDay = true }
-        }
-        .sheet(isPresented: $pickingDay) {
+        .animation(Motion.pick(Motion.smooth), value: sel.mode)
+        .sheet(isPresented: $picking) {
             NavigationStack {
-                DatePicker("Day", selection: $target, displayedComponents: .date).datePickerStyle(.graphical).padding()
-                    .navigationTitle(copyAfterPick ? "Copy to" : "Move to").navigationBarTitleDisplayMode(.inline)
+                DatePicker("When", selection: $target, displayedComponents: [.date, .hourAndMinute])
+                    .datePickerStyle(.graphical).padding()
+                    .navigationTitle(sel.mode == .copy ? "Copy to" : "Move to").navigationBarTitleDisplayMode(.inline)
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { pickingDay = false; copyAfterPick = false } }
+                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { picking = false } }
                         ToolbarItem(placement: .confirmationAction) {
-                            Button(copyAfterPick ? "Copy" : "Move") {
-                                if copyAfterPick { copy(to: dayKey(target)) } else { moveDay(to: dayKey(target)) }
-                                pickingDay = false; copyAfterPick = false
+                            Button(sel.mode == .copy ? "Copy" : "Move") {
+                                let d = dayKey(target), t = target, m = sel.mode
+                                picking = false
+                                finish { if m == .copy { ctx.copyEntries(chosen, to: d, at: t) } else { ctx.moveEntries(chosen, to: d, at: t) } }
                             }
+                            .fontWeight(.semibold)
                         }
                     }
             }
-            .appStyle().presentationDetents([.medium, .large])
+            .appStyle().presentationDetents([.large])
         }
     }
 
-    private func moveDay(to target: String) {
-        let cal = Calendar.current
-        for e in chosen {
-            let hm = cal.dateComponents([.hour, .minute], from: e.time)
-            e.day = target
-            e.time = cal.date(bySettingHour: hm.hour ?? 12, minute: hm.minute ?? 0, second: 0, of: date(fromKey: target)) ?? e.time
-        }
-        ctx.commit(); sel.ids = []
-    }
+    /// Do it, then leave selection.
+    private func finish(_ f: () -> Void) { f(); sel.clear() }
 
     private func action(_ t: String, destructive: Bool = false, _ f: @escaping () -> Void) -> some View {
-        Button(action: f) { pill(t, destructive: destructive) }.buttonStyle(.plain)
+        Button(action: f) { pill(t, destructive: destructive) }.pressable()
     }
 
     private func pill(_ t: String, destructive: Bool = false) -> some View {
@@ -657,42 +687,8 @@ struct SelectionBar: View {
 
     private func remove() {
         let c = chosen
-        sel.ids = []
+        sel.clear()
         ctx.deleteWithUndo(c, c.count == 1 ? "\(c[0].name) removed" : "\(c.count) foods removed")
     }
-
-    private func duplicate() {
-        for e in chosen {
-            ctx.insert(FoodEntry(day: e.day, time: e.time, name: e.name, brand: e.brand, foodKey: e.foodKey, amount: e.amount, unit: e.unit,
-                                 grams: e.grams, nutrients: e.nutrients))
-        }
-        ctx.commit(); sel.ids = []
-    }
-
-    private func move(to m: Meal) {
-        for e in chosen { e.time = m.time(on: e.day) }
-        ctx.commit(); sel.ids = []
-    }
-
-    private func moveToNow() {
-        let cal = Calendar.current, now = Date()
-        for e in chosen {
-            e.time = cal.date(bySettingHour: cal.component(.hour, from: now), minute: cal.component(.minute, from: now), second: 0,
-                              of: date(fromKey: e.day)) ?? e.time
-        }
-        ctx.commit(); sel.ids = []
-    }
-
-    private func copy(to target: String) {
-        let cal = Calendar.current
-        for e in chosen {
-            let hm = cal.dateComponents([.hour, .minute], from: e.time)
-            let t = cal.date(bySettingHour: hm.hour ?? 12, minute: hm.minute ?? 0, second: 0, of: date(fromKey: target)) ?? e.time
-            ctx.insert(FoodEntry(day: target, time: t, name: e.name, brand: e.brand, foodKey: e.foodKey, amount: e.amount, unit: e.unit,
-                                 grams: e.grams, nutrients: e.nutrients))
-        }
-        ctx.commit(); sel.ids = []
-    }
-
 }
 #endif
