@@ -17,9 +17,9 @@ MainActor.assumeIsolated {
         ctx.insert(FoodEntry(day: addDays(monday, i), time: Date(), name: "x", brand: nil, foodKey: nil, amount: 1, unit: "", grams: 0,
                              nutrients: Nutrients(kcal: 1900, protein: 180, fat: 60, carbs: 170)))
     }
-    try! ctx.save()
+    ctx.commit()
     check("off: plain targets", ctx.dayTargets(on: today)?.kcal == 2500)
-    p.weeklyBudget = true; try! ctx.save()
+    p.weeklyBudget = true; ctx.commit()
     let left = Double(7 - daysBefore)
     let expected = 2500 + min(500, 600 * Double(daysBefore) / left)
     let got = ctx.dayTargets(on: today)?.kcal ?? -1

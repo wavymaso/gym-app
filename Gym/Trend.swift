@@ -27,7 +27,18 @@ enum TrendAlgorithm: String, CaseIterable, Identifiable {
 }
 
 /// Every day from the first weigh-in to `through`: interpolated scale weight and trend, with the chosen algorithm.
+private var trendMemo: (key: String, value: [(day: String, scale: Double, trend: Double, logged: Bool)])?
+
+/// (Remembered: many screens ask for the same series on every redraw.)
 func trendSeries(_ weights: [DayValue], through end: String? = nil) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
+    let key = "\(TrendAlgorithm.current.rawValue)|\(weights.count)|\(weights.first?.day ?? "")|\(weights.last?.day ?? "")|\(weights.last?.value ?? 0)|\(weights.reduce(0) { $0 + $1.value })|\(end ?? "")"
+    if let m = trendMemo, m.key == key { return m.value }
+    let v = trendSeriesUncached(weights, through: end)
+    trendMemo = (key, v)
+    return v
+}
+
+private func trendSeriesUncached(_ weights: [DayValue], through end: String? = nil) -> [(day: String, scale: Double, trend: Double, logged: Bool)] {
     let v1 = trendSeriesV1(weights, through: end)
     return TrendAlgorithm.current == .v2 ? robustTrend(v1) : v1
 }

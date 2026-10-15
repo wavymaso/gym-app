@@ -5,13 +5,25 @@ import SwiftData
 
 extension ModelContext {
     var weightValues: [DayValue] {
+        let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)"
+        if let hit = weightCache[key] { return hit }
         scaleOffsets = profile?.scaleOffsetMap ?? [:]
-        return ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.trendKg) }
+        let v = ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.trendKg) }
+        weightCache = [key: v]
+        return v
     }
 
     /// kcal per finished day (before today), for days with anything logged. Days with nothing
     /// logged are left out, not counted as zero, and today is left out because it isn't over yet.
     func dailyIntake() -> [String: Double] {
+        let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)|\(dayKey())"
+        if let hit = intakeCache[key] { return hit }
+        let v = dailyIntakeUncached()
+        intakeCache = [key: v]
+        return v
+    }
+
+    private func dailyIntakeUncached() -> [String: Double] {
         let today = dayKey()
         let partial = partialDays                               // marked "partially logged": treated as not logged
         var out: [String: Double] = [:]
@@ -288,6 +300,9 @@ struct ExpenditureSummary {
 /// Goes up whenever saved data changes (commit or sync), so caches know to start again.
 var dataVersion = 0
 private var expenditureCache: [String: [ExpenditurePoint]] = [:]
+private var weightCache: [String: [DayValue]] = [:]
+private var intakeCache: [String: [String: Double]] = [:]
+private var dayTargetCache: [String: Targets?] = [:]
 
 /// When your trend reaches your goal weight at the current weekly rate (nil if it's moving the other way or too slowly).
 func goalDate(trendKg: Double, goalKg: Double, weeklyKg: Double) -> Date? {
@@ -303,6 +318,15 @@ extension ModelContext {
     /// the weekly budget: what you ate under (or over) target earlier in the week is spread over
     /// the days left, at most ±20% a day. Protein stays put; the difference is mostly carbs.
     func dayTargets(on day: String) -> Targets? {
+        let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)|\(dayKey())|\(day)"
+        if let hit = dayTargetCache[key] { return hit }
+        if dayTargetCache.count > 400 { dayTargetCache = [:] }
+        let v = dayTargetsUncached(on: day)
+        dayTargetCache[key] = v
+        return v
+    }
+
+    private func dayTargetsUncached(on day: String) -> Targets? {
         guard let set = targets(on: day) else { return nil }
         let p = try? fetch(FetchDescriptor<Profile>()).first
         var t = p?.adjust(set.targets, on: day) ?? set.targets

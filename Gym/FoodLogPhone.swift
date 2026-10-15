@@ -16,13 +16,16 @@ struct PhoneFoodLog: View {
     @State private var sheet: FoodLogView.LogSheet?
     @State private var details = false
     @State private var picking = false
+    @State private var selected: Set<String> = []          // syncIDs of tapped foods
+    @State private var moving = false
+    @State private var copying = false
 
     var body: some View {
         let energy = profiles.first?.energy ?? .kcal
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    DayEntries(day: day, energy: energy, style: style, showEmptyHours: showEmptyHours) { sheet = $0 }
+                    DayEntries(day: day, energy: energy, style: style, showEmptyHours: showEmptyHours, selected: $selected) { sheet = $0 }
                         .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 24)
                 } header: {
                     header(energy)
@@ -38,6 +41,17 @@ struct PhoneFoodLog: View {
                               else { Color.pageBackground.ignoresSafeArea(edges: .top) } }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .bottom, spacing: 0) { if !selected.isEmpty { selectionBar } }
+        .onChange(of: day) { _, _ in selected = [] }
+        .confirmationDialog("Move \(selected.count) food\(selected.count == 1 ? "" : "s") to", isPresented: $moving, titleVisibility: .visible) {
+            ForEach(Meal.allCases) { m in Button(m.label) { move(to: m) } }
+            Button("Now (\(Date().formatted(.dateTime.hour().minute().locale(appLocale))))") { moveToNow() }
+        }
+        .confirmationDialog("Copy \(selected.count) food\(selected.count == 1 ? "" : "s") to", isPresented: $copying, titleVisibility: .visible) {
+            if day != dayKey() { Button("Today") { copy(to: dayKey()) } }
+            Button("The next day") { copy(to: addDays(day, 1)) }
+            Button("Tomorrow") { copy(to: addDays(dayKey(), 1)) }
+        }
         .sheet(item: $sheet) { s in
             switch s {
             case .add(let t): FoodLogger(day: day, time: t)
@@ -96,6 +110,90 @@ struct PhoneFoodLog: View {
         if Calendar.current.isDateInYesterday(d) { return "YESTERDAY" }
         if Calendar.current.isDateInTomorrow(d) { return "TOMORROW" }
         return d.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)).uppercased()
+    }
+
+    // MARK: Selected foods: what to do with them
+
+    private var chosen: [FoodEntry] { ctx.entries(on: day).filter { selected.contains($0.syncID) } }
+
+    private var selectionBar: some View {
+        HStack(spacing: 10) {
+            Button { withAnimation(.snappy) { selected = [] } } label: {
+                Image(systemName: "xmark").font(.headline).frame(width: 40, height: 40).background(Color.primary, in: Circle())
+                    .foregroundStyle(palette.scheme == .dark ? Color.black : .white)
+            }
+            .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Select").font(.subheadline.weight(.semibold))
+                Text("\(selected.count) food\(selected.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
+            }
+            Divider().frame(height: 36)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if selected.count == 1, let e = chosen.first { action("Edit") { selected = []; sheet = .edit(e) } }
+                    action("Copy") { copying = true }
+                    action("Move") { moving = true }
+                    action("Remove", destructive: true) { remove() }
+                    Menu {
+                        Button("Duplicate", systemImage: "plus.square.on.square") { duplicate() }
+                        Button("Save as meal", systemImage: "square.and.arrow.down") {
+                            ctx.saveMeal(chosen.first?.name ?? "Meal", from: chosen); selected = []
+                        }
+                        Button("Select all", systemImage: "checkmark.circle") { selected = Set(ctx.entries(on: day).map(\.syncID)) }
+                    } label: { pill("More") }
+                    .menuStyle(.button).buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(.bar)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private func action(_ t: String, destructive: Bool = false, _ f: @escaping () -> Void) -> some View {
+        Button(action: f) { pill(t, destructive: destructive) }.buttonStyle(.plain)
+    }
+
+    private func pill(_ t: String, destructive: Bool = false) -> some View {
+        Text(t).font(.subheadline.weight(.semibold)).foregroundStyle(destructive ? palette.warn : .primary)
+            .padding(.horizontal, 18).frame(height: 40).background(Color.raisedBackground, in: Capsule())
+    }
+
+    private func remove() {
+        withAnimation { for e in chosen { ctx.delete(e) }; ctx.commit(); selected = [] }
+    }
+
+    private func duplicate() {
+        for e in chosen {
+            ctx.insert(FoodEntry(day: e.day, time: e.time, name: e.name, brand: e.brand, foodKey: e.foodKey, amount: e.amount, unit: e.unit,
+                                 grams: e.grams, nutrients: e.nutrients))
+        }
+        ctx.commit(); selected = []
+    }
+
+    private func move(to m: Meal) {
+        for e in chosen { e.time = m.time(on: e.day) }
+        ctx.commit(); selected = []
+    }
+
+    private func moveToNow() {
+        let cal = Calendar.current, now = Date()
+        for e in chosen {
+            e.time = cal.date(bySettingHour: cal.component(.hour, from: now), minute: cal.component(.minute, from: now), second: 0,
+                              of: date(fromKey: e.day)) ?? e.time
+        }
+        ctx.commit(); selected = []
+    }
+
+    private func copy(to target: String) {
+        let cal = Calendar.current
+        for e in chosen {
+            let hm = cal.dateComponents([.hour, .minute], from: e.time)
+            let t = cal.date(bySettingHour: hm.hour ?? 12, minute: hm.minute ?? 0, second: 0, of: date(fromKey: target)) ?? e.time
+            ctx.insert(FoodEntry(day: target, time: t, name: e.name, brand: e.brand, foodKey: e.foodKey, amount: e.amount, unit: e.unit,
+                                 grams: e.grams, nutrients: e.nutrients))
+        }
+        ctx.commit(); selected = []
     }
 
     private func round(_ icon: String, _ action: @escaping () -> Void) -> some View {
@@ -233,12 +331,34 @@ struct DayEntries: View {
     let energy: EnergyUnit
     let style: FoodLogView.LogStyle
     let showEmptyHours: Bool
+    @Binding var selected: Set<String>
     let open: (FoodLogView.LogSheet) -> Void
     @State private var targetHour: Int?
 
-    init(day: String, energy: EnergyUnit, style: FoodLogView.LogStyle, showEmptyHours: Bool, open: @escaping (FoodLogView.LogSheet) -> Void) {
+    init(day: String, energy: EnergyUnit, style: FoodLogView.LogStyle, showEmptyHours: Bool, selected: Binding<Set<String>>,
+         open: @escaping (FoodLogView.LogSheet) -> Void) {
         _entries = Query(filter: #Predicate<FoodEntry> { $0.day == day }, sort: \FoodEntry.time)
-        self.day = day; self.energy = energy; self.style = style; self.showEmptyHours = showEmptyHours; self.open = open
+        self.day = day; self.energy = energy; self.style = style; self.showEmptyHours = showEmptyHours; _selected = selected; self.open = open
+    }
+
+    private func toggle(_ e: FoodEntry) {
+        withAnimation(.snappy) { if selected.contains(e.syncID) { selected.remove(e.syncID) } else { selected.insert(e.syncID) } }
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+
+    /// The food card, tappable to select (the pencil still edits straight away).
+    @ViewBuilder private func card(_ e: FoodEntry) -> some View {
+        HStack(spacing: 10) {
+            if !selected.isEmpty {
+                Image(systemName: selected.contains(e.syncID) ? "checkmark.circle.fill" : "circle").font(.title2)
+                    .foregroundStyle(selected.contains(e.syncID) ? palette.accent : Color.secondary)
+                    .transition(.scale.combined(with: .opacity))
+            }
+            EntryCard(entry: e, energy: energy, tap: { toggle(e) }) { open(.edit(e)) }
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(selected.contains(e.syncID) ? palette.accent : .clear, lineWidth: 2))
+        }
     }
 
     var body: some View {
@@ -272,8 +392,12 @@ struct DayEntries: View {
         let cal = Calendar.current
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                Text(String(format: "%02d:00", h)).font(.subheadline.weight(.medium)).monospacedDigit()
-                    .frame(width: 62, height: 34)
+                let nowHour = day == dayKey() && cal.component(.hour, from: Date()) == h
+                HStack(spacing: 4) {
+                    Text(String(format: "%02d:00", h)).font(.subheadline.weight(.medium)).monospacedDigit()
+                    if nowHour { Circle().fill(palette.accent).frame(width: 6, height: 6) }
+                }
+                    .padding(.horizontal, 12).frame(minWidth: 62).frame(height: 34)
                     .background(Color.raisedBackground, in: Capsule())
                     .overlay(Capsule().stroke(targetHour == h ? palette.accent : .clear, lineWidth: 2))
                 Button { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) } label: {
@@ -292,7 +416,7 @@ struct DayEntries: View {
                         .lineLimit(1).fixedSize()
                         .frame(width: 62)
                         .background { if showTime { Color.pageBackground.padding(.vertical, -2) } }
-                    EntryCard(entry: e, energy: energy) { open(.edit(e)) }
+                    card(e)
                         .contextMenu { menu(e) }
                         .draggable(e.syncID) {
                             Text(e.name).font(.callout.weight(.semibold)).padding(8)
@@ -332,7 +456,7 @@ struct DayEntries: View {
                         if !items.isEmpty { HourTotals(n: n, energy: energy) }
                     }
                     ForEach(items) { e in
-                        EntryCard(entry: e, energy: energy) { open(.edit(e)) }.contextMenu { menu(e) }
+                        card(e).contextMenu { menu(e) }
                     }
                 }
             }
@@ -417,11 +541,12 @@ struct HourTotals: View {
 struct EntryCard: View {
     let entry: FoodEntry
     let energy: EnergyUnit
+    var tap: (() -> Void)? = nil
     let edit: () -> Void
 
     var body: some View {
         let n = entry.nutrients
-        Button(action: edit) {
+        Button(action: tap ?? edit) {
             HStack(spacing: 12) {
                 Text(foodEmoji(entry))
                     .font(.system(size: 26))
@@ -438,8 +563,11 @@ struct EntryCard: View {
                         .font(.subheadline).monospacedDigit().lineLimit(1).minimumScaleFactor(0.75)
                 }
                 Spacer(minLength: 4)
-                Image(systemName: "pencil").font(.subheadline.weight(.semibold))
-                    .frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle())
+                Button(action: edit) {
+                    Image(systemName: "pencil").font(.subheadline.weight(.semibold))
+                        .frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 12).padding(.vertical, 11)
             .modifier(CardSurface(cornerRadius: 18))
