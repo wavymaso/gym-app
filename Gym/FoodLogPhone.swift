@@ -343,11 +343,9 @@ struct DayEntries: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Text("Nothing logged").font(.headline)
-            Text("Tap + by an hour, or search for a food below.").font(.callout).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 40)
+        EmptyState(icon: "fork.knife", title: day == dayKey() ? "Nothing logged yet today" : "Nothing logged",
+                   message: "Tap + by an hour, or search for a food below.",
+                   action: ("Log a food", { open(.add(nil)) }))
     }
 
     // MARK: Meals

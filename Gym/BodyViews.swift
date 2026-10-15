@@ -53,9 +53,9 @@ struct BodySection: View {
                      Button { addingPhoto = true } label: { Label("Add", systemImage: "plus") }.buttonStyle(.borderless)
                  })) {
                 if photos.isEmpty {
-                    Text("Same spot, same light, every few weeks: the mirror changes too slowly to notice day to day. Photos stay on your devices.")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Button("Add a photo") { addingPhoto = true }.buttonStyle(.bordered)
+                    EmptyState(icon: "camera.fill", title: "No progress photos yet",
+                               message: "Same spot, same light, every few weeks: the mirror changes too slowly to notice day to day. Photos stay on your devices.",
+                               action: ("Take your first", { addingPhoto = true }))
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {

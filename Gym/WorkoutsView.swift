@@ -73,8 +73,9 @@ struct WorkoutsView: View {
                 StrengthRetentionCard(unit: unit)
                 StrengthCard(unit: unit)
                 if finished.isEmpty {
-                    ContentUnavailableView("No workouts yet", systemImage: "dumbbell",
-                                           description: Text("Start an empty workout, or make a routine like Push / Pull / Legs first."))
+                    EmptyState(icon: "dumbbell.fill", title: "No workouts yet",
+                               message: "Log your first session and your history, records and volume per muscle build from here.",
+                               action: ("Start a workout", { ctx.startWorkout(routine: nil) }))
                 } else {
                     Text("History").font(.title3.bold()).padding(.top, 4)
                     let months = Dictionary(grouping: finished.prefix(120), by: { monthKey($0.start) }).sorted { $0.key > $1.key }

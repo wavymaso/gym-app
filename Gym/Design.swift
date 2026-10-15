@@ -272,3 +272,30 @@ struct WorkingCard: View {
         .transition(.opacity)
     }
 }
+
+// MARK: - Empty lists: say what goes here, offer the one thing to do
+
+struct EmptyState: View {
+    let icon: String
+    let title: String
+    let message: String
+    var action: (label: String, run: () -> Void)? = nil
+
+    var body: some View {
+        VStack(spacing: Space.m) {
+            Image(systemName: icon).font(.title2.weight(.semibold)).foregroundStyle(palette.accent)
+                .frame(width: 60, height: 60).background(palette.accent.opacity(0.12), in: Circle())
+            Text(title).font(.cardTitle)
+            Text(message).font(.secondaryText).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            if let action {
+                Button(action: action.run) {
+                    Text(action.label).font(.secondaryText.weight(.semibold)).padding(.horizontal, Space.xl).frame(height: 44)
+                        .background(palette.accent, in: Capsule()).foregroundStyle(.white)
+                }
+                .pressable().padding(.top, Space.xs)
+            }
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, Space.xxl).padding(.horizontal, Space.l)
+    }
+}
