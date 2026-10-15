@@ -61,6 +61,7 @@ struct FoodLogger: View {
     @State private var confirmClose = false
     @State private var started = false
     @State private var bump = false
+    @State private var searchSeed: String?            // the AI couldn't: search for what you described
     @Namespace private var underline
 
     var body: some View {
@@ -72,9 +73,11 @@ struct FoodLogger: View {
                     switch tab {
                     case .scan: scanPanel
                     case .search:
-                        AddFoodView(mode: .log(day: day, time: when), embedded: .search, choose: { chosen = $0 }, chooseMeal: add,
+                        AddFoodView(mode: .log(day: day, time: when), initialQuery: searchSeed, embedded: .search, choose: { chosen = $0 }, chooseMeal: add,
                                     quickAdd: { f, a, u in add(f, a, u) }, logFoods: logAll, cartCount: cart.count)
-                    case .ai: AIPanel(startCamera: startCamera && tab == start, describe: describe, add: addPlate)
+                            .id(searchSeed ?? "")
+                    case .ai: AIPanel(startCamera: startCamera && tab == start, describe: describe, add: addPlate,
+                                      searchInstead: { q in searchSeed = q; animate(Motion.smooth) { tab = .search } })
                     case .quickAdd: QuickAddPanel { name, n in add(quick: n, name: name) }
                     case .library:
                         AddFoodView(mode: .log(day: day, time: when), embedded: .library, choose: { chosen = $0 }, chooseMeal: add,
@@ -446,6 +449,7 @@ struct AIPanel: View {
     var startCamera = false
     var describe = false
     let add: ([PlateItem]) -> Void
+    var searchInstead: ((String) -> Void)? = nil
     @Environment(\.modelContext) private var ctx
     @Query private var profiles: [Profile]
     @State private var mode = 0                 // 0 Snap, 1 Describe
@@ -561,6 +565,10 @@ struct AIPanel: View {
 
     private var problemActions: [(label: String, run: () -> Void)] {
         var a: [(label: String, run: () -> Void)] = [("Try again", { Task { await analyse() } })]
+        if let searchInstead {
+            let q = text.split(whereSeparator: { ",.;\n".contains($0) }).first.map { String($0).trimmingCharacters(in: .whitespaces) } ?? ""
+            a.append(("Search instead", { searchInstead(String(q.prefix(40))) }))
+        }
         if !photos.isEmpty && mode != 1 { a.append(("Describe it instead", { animate { mode = 1 } })) }
         return a
     }
