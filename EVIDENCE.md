@@ -1,0 +1,258 @@
+# Evidence registry
+
+Generated from `Gym/EvidenceRegistry.swift` (don't edit by hand: `Tests/evidence/run.sh write`).
+
+Every citation was checked by web search on 15 Oct 2026. Grades: **A** meta-analysis or several RCTs · **B** a single RCT or strong observational/model study · **C** expert consensus, position stand or narrative review · **D** practitioner convention, a fit to data, or the user's choice.
+
+Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep), it says so here and in the app.
+
+| Id | What | Default | Range | Grade |
+|---|---|---|---|---|
+| `protein.daily.gPerKg` | Protein beyond about 1.6 g per kg of body weight a day adds little to muscle gained from lifting; the confidence interval reaches about 2.2. | 1.6 g/kg/day | 1.6–2.2 | A |
+| `protein.cut.gPerKgLean` | During contest dieting, 2.3–3.1 g of protein per kg of lean body mass a day. | 2.6 g/kg lean mass/day | 2.3–3.1 | C |
+| `protein.perMeal.gPerKg` | About 0.4 g of protein per kg per meal across at least four meals reaches at least 1.6 g/kg/day; up to 0.55 g/kg per meal for 2.2 g/kg/day. | 0.4 g/kg/meal | 0.4–0.55 | C |
+| `protein.clamp.gPerKgBody` | Safety clamp: protein from lean mass stays between 1.5 and 2.6 g per kg of body weight, so a wrong body-fat entry can't swing it. | 2.6 g/kg body weight | 1.5–2.6 | D |
+| `rate.cut.pctPerWeek` | Lose about 0.5–1% of body weight a week to keep as much muscle as possible. | 0.5 % body weight/week | 0.25–1 | C |
+| `rate.bulk.pctPerWeek` | Gain about 0.25–0.5% of body weight a week as a novice or intermediate lifter; slower when advanced. | 0.25 % body weight/week | 0.1–0.5 | C |
+| `rate.bulk.byTrainingAge` | A slower gain the more experienced you are: beginner about 0.25%, intermediate 0.15%, advanced 0.1% a week. | 0.15 % body weight/week | 0.1–0.25 | D |
+| `fat.cut.pctCalories` | During a cut, 15–30% of calories from fat. | 25 % of calories | 15–30 | C |
+| `fat.min.gPerKg` | Never below about 0.5 g of fat per kg of body weight a day. | 0.5 g/kg/day | 0.5–1.5 | C |
+| `energy.fat.kcalPerKg` | Changing a kilogram of body fat takes about 39.5 MJ (about 9 400 kcal). | 9440 kcal/kg | 9000–9500 | B |
+| `energy.lean.kcalPerKg` | Changing a kilogram of lean tissue takes about 7.6 MJ (about 1 800 kcal). | 1816 kcal/kg | 1700–1900 | B |
+| `energy.rule.kcalPerKg` | The old rule of thumb: 7 700 kcal per kg (3 500 kcal per pound), the same both ways. | 7700 kcal/kg | — | D |
+| `energy.fitted.kcalPerKg` | 5 500 kcal per kg of trend-weight change: fitted so the expenditure estimate matches MacroFactor on this user's data. | 5500 kcal/kg | — | D |
+| `water.glycogen.gPerG` | Each gram of muscle glycogen is stored with at least 3 g of water. | 3 g water/g glycogen | 3–4 | B |
+| `water.creatine.litres` | Creatine loading causes short-term fluid retention of about 0.5–1 litre, roughly matching the early weight gain. | 0.75 L | 0.5–1 | C |
+| `dietBreak.benefit` | Diet breaks: in obese men, two-week breaks improved weight and fat loss (MATADOR); in resistance-trained adults, one-week breaks gave similar fat loss and lean-mass retention to dieting straight through, with less hunger (ICECAP). | — | — | B |
+| `refeed.benefit` | Two carbohydrate refeed days a week during a diet: the authors reported less fat-free-mass loss; a reanalysis found only dry fat-free mass differed. Fat loss was the same. | — | — | B |
+| `sleep.deficit` | Sleeping 5.5 instead of 8.5 hours during a two-week diet shifted weight loss from fat towards lean mass. | — | — | B |
+| `floor.ea.kcalPerKgFFM` | Energy availability (intake minus exercise energy, per kg of fat-free mass): about 45 is adequate, 30–45 is a reduced range used for fat loss, and 30 or below is a debated risk indicator for low energy availability. | 30 kcal/kg FFM/day | 30–45 | C |
+| `floor.fallback` | Without a body-fat estimate, the calorie floor is the Mifflin–St Jeor resting estimate, and never below 1 500 kcal. | 1500 kcal/day | 1200–2000 | D |
+| `bmr.mifflin` | Resting energy from weight, height, age and sex (Mifflin–St Jeor). | 0 kcal/day | — | B |
+| `recomp.whenSuitable` | Losing fat and gaining muscle at the same time is documented in trained people too, most readily in newer lifters, people with more body fat, or those returning from a break. | — | — | C |
+| `checkin.deadband.kcal` | No change if the new calories are within 50 kcal of the current ones. | 50 kcal | 25–100 | D |
+| `checkin.cap.up.kcal` | At most 150 kcal more per check-in. | 150 kcal | 100–200 | D |
+| `checkin.cap.down.kcal` | At most 150 kcal less per check-in (75 on a bulk). | 150 kcal | 75–200 | D |
+| `trend.alpha` | The trend weight takes in about a tenth of each new day (about a 10-day memory). | 0.1 per day | 0.05–0.2 | D |
+| `partialDay.rule` | A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation. | 0.5 share of usual entries | 0.3–0.7 | D |
+
+## Details
+
+### `protein.daily.gPerKg` (grade A)
+
+Protein beyond about 1.6 g per kg of body weight a day adds little to muscle gained from lifting; the confidence interval reaches about 2.2.
+
+- **Studied in:** Healthy adults doing resistance training, mostly not in a deficit (49 studies, 1 863 people).
+- **Note:** 1.62 g/kg/day is the breakpoint estimate; benefit was larger in trained lifters and smaller with age.
+- Morton RW et al. 2018. A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. Br J Sports Med 52(6):376–384. <https://doi.org/10.1136/bjsports-2017-097608>
+
+### `protein.cut.gPerKgLean` (grade C)
+
+During contest dieting, 2.3–3.1 g of protein per kg of lean body mass a day.
+
+- **Studied in:** Lean, resistance-trained natural bodybuilders in contest preparation.
+- **Note:** A narrative review. Default is mid-range; the higher end suits leaner, longer cuts.
+- Helms ER, Aragon AA, Fitschen PJ. 2014. Evidence-based recommendations for natural bodybuilding contest preparation: nutrition and supplementation. J Int Soc Sports Nutr 11:20. <https://doi.org/10.1186/1550-2783-11-20>
+
+### `protein.perMeal.gPerKg` (grade C)
+
+About 0.4 g of protein per kg per meal across at least four meals reaches at least 1.6 g/kg/day; up to 0.55 g/kg per meal for 2.2 g/kg/day.
+
+- **Studied in:** Young resistance-trained adults (review of acute protein-synthesis studies).
+- **Note:** A soft guide, not a rule: meal frequency matters little if the daily total is met.
+- Schoenfeld BJ, Aragon AA. 2018. How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. J Int Soc Sports Nutr 15:10. <https://doi.org/10.1186/s12970-018-0215-1>
+
+### `protein.clamp.gPerKgBody` (grade D)
+
+Safety clamp: protein from lean mass stays between 1.5 and 2.6 g per kg of body weight, so a wrong body-fat entry can't swing it.
+
+- **Studied in:** —
+- **Note:** Our guardrail, not a research finding.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `rate.cut.pctPerWeek` (grade C)
+
+Lose about 0.5–1% of body weight a week to keep as much muscle as possible.
+
+- **Studied in:** Helms: natural bodybuilders. Garthe: 24 elite athletes, 0.7% vs 1.4% a week.
+- **Note:** Garthe found the slower rate (0.7%) kept more lean mass and strength during the diet, but no difference after 12 months. Default 0.5% is the user's choice (an alternative considered: 0.7% tapering to 0.5% as body fat falls).
+- Helms ER, Aragon AA, Fitschen PJ. 2014. Evidence-based recommendations for natural bodybuilding contest preparation: nutrition and supplementation. J Int Soc Sports Nutr 11:20. <https://doi.org/10.1186/1550-2783-11-20>
+- Garthe I et al. 2011. Effect of two different weight-loss rates on body composition and strength and power-related performance in elite athletes. Int J Sport Nutr Exerc Metab 21(2):97–104. <https://doi.org/10.1123/ijsnem.21.2.97>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `rate.bulk.pctPerWeek` (grade C)
+
+Gain about 0.25–0.5% of body weight a week as a novice or intermediate lifter; slower when advanced.
+
+- **Studied in:** Bodybuilders in the off-season (narrative review).
+- **Note:** Weak evidence; a 10–20% surplus is suggested. Default 0.25% is the user's choice.
+- Iraki J, Fitschen P, Espinar S, Helms E. 2019. Nutrition recommendations for bodybuilders in the off-season: a narrative review. Sports 7(7):154. <https://doi.org/10.3390/sports7070154>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `rate.bulk.byTrainingAge` (grade D)
+
+A slower gain the more experienced you are: beginner about 0.25%, intermediate 0.15%, advanced 0.1% a week.
+
+- **Studied in:** —
+- **Note:** Practitioner convention; the review only says advanced lifters should gain more slowly. Recorded as an alternative, not active.
+- Iraki J, Fitschen P, Espinar S, Helms E. 2019. Nutrition recommendations for bodybuilders in the off-season: a narrative review. Sports 7(7):154. <https://doi.org/10.3390/sports7070154>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `fat.cut.pctCalories` (grade C)
+
+During a cut, 15–30% of calories from fat.
+
+- **Studied in:** Natural bodybuilders in contest preparation.
+- **Note:** Default mid-range.
+- Helms ER, Aragon AA, Fitschen PJ. 2014. Evidence-based recommendations for natural bodybuilding contest preparation: nutrition and supplementation. J Int Soc Sports Nutr 11:20. <https://doi.org/10.1186/1550-2783-11-20>
+
+### `fat.min.gPerKg` (grade C)
+
+Never below about 0.5 g of fat per kg of body weight a day.
+
+- **Studied in:** Bodybuilders in the off-season (narrative review suggests 0.5–1.5 g/kg).
+- **Note:** Used as the floor in every phase (also with a 40 g minimum, our own guardrail).
+- Iraki J, Fitschen P, Espinar S, Helms E. 2019. Nutrition recommendations for bodybuilders in the off-season: a narrative review. Sports 7(7):154. <https://doi.org/10.3390/sports7070154>
+
+### `energy.fat.kcalPerKg` (grade B)
+
+Changing a kilogram of body fat takes about 39.5 MJ (about 9 400 kcal).
+
+- **Studied in:** Model (Forbes body-composition relationship) checked against data from lean and obese adults.
+- Hall KD. 2008. What is the required energy deficit per unit weight loss? Int J Obes 32(3):573–576. <https://doi.org/10.1038/sj.ijo.0803720>
+
+### `energy.lean.kcalPerKg` (grade B)
+
+Changing a kilogram of lean tissue takes about 7.6 MJ (about 1 800 kcal).
+
+- **Studied in:** As above.
+- **Note:** So the energy in a kilo lost or gained depends on how much of it is lean, which depends on body fat (Forbes): the 7 700 kcal/kg rule overestimates the deficit needed per kg for people with under about 25 kg of body fat.
+- Hall KD. 2008. What is the required energy deficit per unit weight loss? Int J Obes 32(3):573–576. <https://doi.org/10.1038/sj.ijo.0803720>
+
+### `energy.rule.kcalPerKg` (grade D)
+
+The old rule of thumb: 7 700 kcal per kg (3 500 kcal per pound), the same both ways.
+
+- **Studied in:** —
+- **Note:** Convention. Hall 2008 shows it fits only people with more than about 30 kg of body fat. Used today in targets and the optional V1/joint models.
+- Hall KD. 2008. What is the required energy deficit per unit weight loss? Int J Obes 32(3):573–576. <https://doi.org/10.1038/sj.ijo.0803720>
+
+### `energy.fitted.kcalPerKg` (grade D)
+
+5 500 kcal per kg of trend-weight change: fitted so the expenditure estimate matches MacroFactor on this user's data.
+
+- **Studied in:** One person: this user's 2023–2026 data.
+- **Note:** Fitted to MacroFactor, not evidence. The baseline the direction-dependent (Forbes/Hall) energy density must beat in the backtest.
+- Gym backtest on the user's own data against MacroFactor's exported estimates (Tests/backtest). `tools/backtest.sh`
+
+### `water.glycogen.gPerG` (grade B)
+
+Each gram of muscle glycogen is stored with at least 3 g of water.
+
+- **Studied in:** 9 trained cyclists recovering from prolonged exercise in the heat.
+- **Note:** The 1:3 ratio is long-cited; this study measured at least 3 and up to 17 with extra fluid (the excess likely stored apart from glycogen). 
+- Fernández-Elías VE, Ortega JF, Nelson RK, Mora-Rodriguez R. 2015. Relationship between muscle water and glycogen recovery after prolonged exercise in the heat in humans. Eur J Appl Physiol 115:1919–1926. <https://doi.org/10.1007/s00421-015-3175-z>
+
+### `water.creatine.litres` (grade C)
+
+Creatine loading causes short-term fluid retention of about 0.5–1 litre, roughly matching the early weight gain.
+
+- **Studied in:** Position stand summarising supplementation studies.
+- **Note:** Correction to the brief: the position stand gives 0.5–1.0 L of fluid, not 1–2 kg, and doesn't quantify the weight gain in kg.
+- Kreider RB et al. 2017. International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation in exercise, sport, and medicine. J Int Soc Sports Nutr 14:18. <https://doi.org/10.1186/s12970-017-0173-z>
+
+### `dietBreak.benefit` (grade B)
+
+Diet breaks: in obese men, two-week breaks improved weight and fat loss (MATADOR); in resistance-trained adults, one-week breaks gave similar fat loss and lean-mass retention to dieting straight through, with less hunger (ICECAP).
+
+- **Studied in:** MATADOR: 51 obese men, 30 weeks. ICECAP: 61 resistance-trained adults, 12 weeks.
+- **Note:** Mixed: no fat-loss advantage shown in trained people. The app offers breaks for adherence and hunger, never as a fat-loss tool, and never on a timer alone.
+- Byrne NM et al. 2018. Intermittent energy restriction improves weight loss efficiency in obese men: the MATADOR study. Int J Obes 42(2):129–138. <https://pmc.ncbi.nlm.nih.gov/articles/PMC5803575/>
+- Peos JJ, Helms ER, Fournier PA, Ong J, Hall C, Krieger J, Sainsbury A. 2021. Continuous versus intermittent dieting for fat loss and fat-free mass retention in resistance-trained adults: the ICECAP trial. Med Sci Sports Exerc 53(8):1685–1698. <https://doi.org/10.1249/MSS.0000000000002636>
+
+### `refeed.benefit` (grade B)
+
+Two carbohydrate refeed days a week during a diet: the authors reported less fat-free-mass loss; a reanalysis found only dry fat-free mass differed. Fat loss was the same.
+
+- **Studied in:** 27 resistance-trained adults, 7 weeks.
+- **Note:** Small, short, and contested: refeeds are offered as an option, not recommended as a rule.
+- Campbell BI et al. 2020. Intermittent energy restriction attenuates the loss of fat free mass in resistance trained individuals: a randomized controlled trial. J Funct Morphol Kinesiol 5(1):19. <https://doi.org/10.3390/jfmk5010019>
+- Peos J, Brown AW, Vorland CJ, Allison DB, Sainsbury A. 2020. Contrary to the conclusions stated in the paper, only dry fat-free mass was different between groups upon reanalysis (comment). J Funct Morphol Kinesiol 5(4):85. <https://doi.org/10.3390/jfmk5040085>
+
+### `sleep.deficit` (grade B)
+
+Sleeping 5.5 instead of 8.5 hours during a two-week diet shifted weight loss from fat towards lean mass.
+
+- **Studied in:** 10 overweight adults, 14-day crossover.
+- **Note:** Very small and short; used only to raise a flag when logged sleep is short on a cut.
+- Nedeltcheva AV et al. 2010. Insufficient sleep undermines dietary efforts to reduce adiposity. Ann Intern Med 153(7):435–441. <https://doi.org/10.7326/0003-4819-153-7-201010050-00006>
+
+### `floor.ea.kcalPerKgFFM` (grade C)
+
+Energy availability (intake minus exercise energy, per kg of fat-free mass): about 45 is adequate, 30–45 is a reduced range used for fat loss, and 30 or below is a debated risk indicator for low energy availability.
+
+- **Studied in:** Athletes (most data in women; the threshold for men is less clear and possibly lower).
+- **Note:** The 2023 statement treats 30 as a risk indicator, not a universal cut-off. The app can't measure exercise energy, so it applies the floor to total intake (30 × FFM), which is a lower bound.
+- Mountjoy M et al. 2023. 2023 International Olympic Committee's (IOC) consensus statement on Relative Energy Deficiency in Sport (REDs). Br J Sports Med 57(17):1073–1097. <https://doi.org/10.1136/bjsports-2023-106994>
+
+### `floor.fallback` (grade D)
+
+Without a body-fat estimate, the calorie floor is the Mifflin–St Jeor resting estimate, and never below 1 500 kcal.
+
+- **Studied in:** Mifflin: 498 healthy adults aged 19–78 (indirect calorimetry).
+- **Note:** The user's choice. The app asks for a tape measurement while the floor is in fallback mode.
+- Mifflin MD et al. 1990. A new predictive equation for resting energy expenditure in healthy individuals. Am J Clin Nutr 51(2):241–247. <https://doi.org/10.1093/ajcn/51.2.241>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `bmr.mifflin` (grade B)
+
+Resting energy from weight, height, age and sex (Mifflin–St Jeor).
+
+- **Studied in:** 498 healthy adults, normal weight and obese.
+- **Note:** Harris–Benedict ran about 5% high in the same data.
+- Mifflin MD et al. 1990. A new predictive equation for resting energy expenditure in healthy individuals. Am J Clin Nutr 51(2):241–247. <https://doi.org/10.1093/ajcn/51.2.241>
+
+### `recomp.whenSuitable` (grade C)
+
+Losing fat and gaining muscle at the same time is documented in trained people too, most readily in newer lifters, people with more body fat, or those returning from a break.
+
+- **Studied in:** Narrative review of trained and untrained populations.
+- **Note:** Only the abstract was verifiable; the 'most readily in…' part reflects the brief and secondary summaries, so treat it as grade C at best.
+- Barakat C et al. 2020. Body recomposition: can trained individuals build muscle and lose fat at the same time? Strength Cond J 42(5):7–21. <https://doi.org/10.1519/SSC.0000000000000584>
+
+### `checkin.deadband.kcal` (grade D)
+
+No change if the new calories are within 50 kcal of the current ones.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `checkin.cap.up.kcal` (grade D)
+
+At most 150 kcal more per check-in.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `checkin.cap.down.kcal` (grade D)
+
+At most 150 kcal less per check-in (75 on a bulk).
+
+- **Studied in:** —
+- **Note:** On a bulk the downward cap is 75: slower to cut calories while gaining.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `trend.alpha` (grade D)
+
+The trend weight takes in about a tenth of each new day (about a 10-day memory).
+
+- **Studied in:** —
+- **Note:** Matches MacroFactor's published trend to within 0,01 kg on this user's data.
+- Gym backtest on the user's own data against MacroFactor's exported estimates (Tests/backtest). `tools/backtest.sh`
+
+### `partialDay.rule` (grade D)
+
+A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation.
+
+- **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`

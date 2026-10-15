@@ -1,0 +1,183 @@
+import Foundation
+
+// The Evidence Registry: every parameter the coaching engine uses, with its default, allowed range,
+// source and how strong the evidence is. EVIDENCE.md is generated from this file (Tests/evidence), so
+// the two never disagree.
+//
+// Grades: A meta-analysis or several RCTs · B a single RCT or strong observational/model study ·
+// C expert consensus, position stand or narrative review · D practitioner convention, a fit to data,
+// or the user's own choice.
+// Every citation below was checked by web search on 15 Oct 2026 (`verified`); where only part of a
+// claim could be confirmed, `note` says which part.
+
+struct EvidenceSource: Equatable {
+    var citation: String          // authors, year, title, journal
+    var link: String              // DOI or URL
+}
+
+struct EvidenceEntry: Identifiable, Equatable {
+    enum Grade: String { case A, B, C, D }
+    var id: String
+    var description: String      // plain English (the AI coach may quote only this)
+    var value: Double             // default
+    var range: ClosedRange<Double>
+    var unit: String
+    var grade: Grade
+    var sources: [EvidenceSource]
+    var population: String        // who it was studied in
+    var note: String = ""         // disagreements, caveats, why this default
+    var verified = true           // the citation was found and says what we claim
+}
+
+enum Evidence {
+    static func value(_ id: String) -> Double { entry(id)?.value ?? .nan }
+    static func entry(_ id: String) -> EvidenceEntry? { all.first { $0.id == id } }
+
+    private static let morton = EvidenceSource(citation: "Morton RW et al. 2018. A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. Br J Sports Med 52(6):376–384",
+                                               link: "https://doi.org/10.1136/bjsports-2017-097608")
+    private static let helms = EvidenceSource(citation: "Helms ER, Aragon AA, Fitschen PJ. 2014. Evidence-based recommendations for natural bodybuilding contest preparation: nutrition and supplementation. J Int Soc Sports Nutr 11:20",
+                                              link: "https://doi.org/10.1186/1550-2783-11-20")
+    private static let schoenfeld = EvidenceSource(citation: "Schoenfeld BJ, Aragon AA. 2018. How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. J Int Soc Sports Nutr 15:10",
+                                                   link: "https://doi.org/10.1186/s12970-018-0215-1")
+    private static let garthe = EvidenceSource(citation: "Garthe I et al. 2011. Effect of two different weight-loss rates on body composition and strength and power-related performance in elite athletes. Int J Sport Nutr Exerc Metab 21(2):97–104",
+                                               link: "https://doi.org/10.1123/ijsnem.21.2.97")
+    private static let iraki = EvidenceSource(citation: "Iraki J, Fitschen P, Espinar S, Helms E. 2019. Nutrition recommendations for bodybuilders in the off-season: a narrative review. Sports 7(7):154",
+                                              link: "https://doi.org/10.3390/sports7070154")
+    private static let hall = EvidenceSource(citation: "Hall KD. 2008. What is the required energy deficit per unit weight loss? Int J Obes 32(3):573–576",
+                                             link: "https://doi.org/10.1038/sj.ijo.0803720")
+    private static let glycogen = EvidenceSource(citation: "Fernández-Elías VE, Ortega JF, Nelson RK, Mora-Rodriguez R. 2015. Relationship between muscle water and glycogen recovery after prolonged exercise in the heat in humans. Eur J Appl Physiol 115:1919–1926",
+                                                 link: "https://doi.org/10.1007/s00421-015-3175-z")
+    private static let kreider = EvidenceSource(citation: "Kreider RB et al. 2017. International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation in exercise, sport, and medicine. J Int Soc Sports Nutr 14:18",
+                                                link: "https://doi.org/10.1186/s12970-017-0173-z")
+    private static let byrne = EvidenceSource(citation: "Byrne NM et al. 2018. Intermittent energy restriction improves weight loss efficiency in obese men: the MATADOR study. Int J Obes 42(2):129–138",
+                                              link: "https://pmc.ncbi.nlm.nih.gov/articles/PMC5803575/")
+    private static let peos = EvidenceSource(citation: "Peos JJ, Helms ER, Fournier PA, Ong J, Hall C, Krieger J, Sainsbury A. 2021. Continuous versus intermittent dieting for fat loss and fat-free mass retention in resistance-trained adults: the ICECAP trial. Med Sci Sports Exerc 53(8):1685–1698",
+                                             link: "https://doi.org/10.1249/MSS.0000000000002636")
+    private static let campbell = EvidenceSource(citation: "Campbell BI et al. 2020. Intermittent energy restriction attenuates the loss of fat free mass in resistance trained individuals: a randomized controlled trial. J Funct Morphol Kinesiol 5(1):19",
+                                                 link: "https://doi.org/10.3390/jfmk5010019")
+    private static let campbellReanalysis = EvidenceSource(citation: "Peos J, Brown AW, Vorland CJ, Allison DB, Sainsbury A. 2020. Contrary to the conclusions stated in the paper, only dry fat-free mass was different between groups upon reanalysis (comment). J Funct Morphol Kinesiol 5(4):85",
+                                                           link: "https://doi.org/10.3390/jfmk5040085")
+    private static let nedeltcheva = EvidenceSource(citation: "Nedeltcheva AV et al. 2010. Insufficient sleep undermines dietary efforts to reduce adiposity. Ann Intern Med 153(7):435–441",
+                                                    link: "https://doi.org/10.7326/0003-4819-153-7-201010050-00006")
+    private static let reds = EvidenceSource(citation: "Mountjoy M et al. 2023. 2023 International Olympic Committee's (IOC) consensus statement on Relative Energy Deficiency in Sport (REDs). Br J Sports Med 57(17):1073–1097",
+                                             link: "https://doi.org/10.1136/bjsports-2023-106994")
+    private static let mifflin = EvidenceSource(citation: "Mifflin MD et al. 1990. A new predictive equation for resting energy expenditure in healthy individuals. Am J Clin Nutr 51(2):241–247",
+                                                link: "https://doi.org/10.1093/ajcn/51.2.241")
+    private static let barakat = EvidenceSource(citation: "Barakat C et al. 2020. Body recomposition: can trained individuals build muscle and lose fat at the same time? Strength Cond J 42(5):7–21",
+                                                link: "https://doi.org/10.1519/SSC.0000000000000584")
+    private static let backtest = EvidenceSource(citation: "Gym backtest on the user's own data against MacroFactor's exported estimates (Tests/backtest)", link: "tools/backtest.sh")
+    private static let mine = EvidenceSource(citation: "The user's own choice (15 Oct 2026)", link: "COACHING_AUDIT.md")
+
+    static let all: [EvidenceEntry] = [
+        // MARK: Protein
+        .init(id: "protein.daily.gPerKg", description: "Protein beyond about 1.6 g per kg of body weight a day adds little to muscle gained from lifting; the confidence interval reaches about 2.2.",
+              value: 1.6, range: 1.6...2.2, unit: "g/kg/day", grade: .A, sources: [morton],
+              population: "Healthy adults doing resistance training, mostly not in a deficit (49 studies, 1 863 people).",
+              note: "1.62 g/kg/day is the breakpoint estimate; benefit was larger in trained lifters and smaller with age."),
+        .init(id: "protein.cut.gPerKgLean", description: "During contest dieting, 2.3–3.1 g of protein per kg of lean body mass a day.",
+              value: 2.6, range: 2.3...3.1, unit: "g/kg lean mass/day", grade: .C, sources: [helms],
+              population: "Lean, resistance-trained natural bodybuilders in contest preparation.",
+              note: "A narrative review. Default is mid-range; the higher end suits leaner, longer cuts."),
+        .init(id: "protein.perMeal.gPerKg", description: "About 0.4 g of protein per kg per meal across at least four meals reaches at least 1.6 g/kg/day; up to 0.55 g/kg per meal for 2.2 g/kg/day.",
+              value: 0.4, range: 0.4...0.55, unit: "g/kg/meal", grade: .C, sources: [schoenfeld],
+              population: "Young resistance-trained adults (review of acute protein-synthesis studies).",
+              note: "A soft guide, not a rule: meal frequency matters little if the daily total is met."),
+        .init(id: "protein.clamp.gPerKgBody", description: "Safety clamp: protein from lean mass stays between 1.5 and 2.6 g per kg of body weight, so a wrong body-fat entry can't swing it.",
+              value: 2.6, range: 1.5...2.6, unit: "g/kg body weight", grade: .D, sources: [mine],
+              population: "—", note: "Our guardrail, not a research finding."),
+
+        // MARK: Rate of change
+        .init(id: "rate.cut.pctPerWeek", description: "Lose about 0.5–1% of body weight a week to keep as much muscle as possible.",
+              value: 0.5, range: 0.25...1.0, unit: "% body weight/week", grade: .C, sources: [helms, garthe, mine],
+              population: "Helms: natural bodybuilders. Garthe: 24 elite athletes, 0.7% vs 1.4% a week.",
+              note: "Garthe found the slower rate (0.7%) kept more lean mass and strength during the diet, but no difference after 12 months. Default 0.5% is the user's choice (an alternative considered: 0.7% tapering to 0.5% as body fat falls)."),
+        .init(id: "rate.bulk.pctPerWeek", description: "Gain about 0.25–0.5% of body weight a week as a novice or intermediate lifter; slower when advanced.",
+              value: 0.25, range: 0.1...0.5, unit: "% body weight/week", grade: .C, sources: [iraki, mine],
+              population: "Bodybuilders in the off-season (narrative review).",
+              note: "Weak evidence; a 10–20% surplus is suggested. Default 0.25% is the user's choice."),
+        .init(id: "rate.bulk.byTrainingAge", description: "A slower gain the more experienced you are: beginner about 0.25%, intermediate 0.15%, advanced 0.1% a week.",
+              value: 0.15, range: 0.1...0.25, unit: "% body weight/week", grade: .D, sources: [iraki, mine],
+              population: "—", note: "Practitioner convention; the review only says advanced lifters should gain more slowly. Recorded as an alternative, not active."),
+
+        // MARK: Fat and carbs
+        .init(id: "fat.cut.pctCalories", description: "During a cut, 15–30% of calories from fat.",
+              value: 25, range: 15...30, unit: "% of calories", grade: .C, sources: [helms],
+              population: "Natural bodybuilders in contest preparation.", note: "Default mid-range."),
+        .init(id: "fat.min.gPerKg", description: "Never below about 0.5 g of fat per kg of body weight a day.",
+              value: 0.5, range: 0.5...1.5, unit: "g/kg/day", grade: .C, sources: [iraki],
+              population: "Bodybuilders in the off-season (narrative review suggests 0.5–1.5 g/kg).",
+              note: "Used as the floor in every phase (also with a 40 g minimum, our own guardrail)."),
+
+        // MARK: Energy density of weight change
+        .init(id: "energy.fat.kcalPerKg", description: "Changing a kilogram of body fat takes about 39.5 MJ (about 9 400 kcal).",
+              value: 9440, range: 9000...9500, unit: "kcal/kg", grade: .B, sources: [hall],
+              population: "Model (Forbes body-composition relationship) checked against data from lean and obese adults."),
+        .init(id: "energy.lean.kcalPerKg", description: "Changing a kilogram of lean tissue takes about 7.6 MJ (about 1 800 kcal).",
+              value: 1816, range: 1700...1900, unit: "kcal/kg", grade: .B, sources: [hall],
+              population: "As above.", note: "So the energy in a kilo lost or gained depends on how much of it is lean, which depends on body fat (Forbes): the 7 700 kcal/kg rule overestimates the deficit needed per kg for people with under about 25 kg of body fat."),
+        .init(id: "energy.rule.kcalPerKg", description: "The old rule of thumb: 7 700 kcal per kg (3 500 kcal per pound), the same both ways.",
+              value: 7700, range: 7700...7700, unit: "kcal/kg", grade: .D, sources: [hall],
+              population: "—", note: "Convention. Hall 2008 shows it fits only people with more than about 30 kg of body fat. Used today in targets and the optional V1/joint models."),
+        .init(id: "energy.fitted.kcalPerKg", description: "5 500 kcal per kg of trend-weight change: fitted so the expenditure estimate matches MacroFactor on this user's data.",
+              value: 5500, range: 5500...5500, unit: "kcal/kg", grade: .D, sources: [backtest],
+              population: "One person: this user's 2023–2026 data.",
+              note: "Fitted to MacroFactor, not evidence. The baseline the direction-dependent (Forbes/Hall) energy density must beat in the backtest."),
+
+        // MARK: Water
+        .init(id: "water.glycogen.gPerG", description: "Each gram of muscle glycogen is stored with at least 3 g of water.",
+              value: 3, range: 3...4, unit: "g water/g glycogen", grade: .B, sources: [glycogen],
+              population: "9 trained cyclists recovering from prolonged exercise in the heat.",
+              note: "The 1:3 ratio is long-cited; this study measured at least 3 and up to 17 with extra fluid (the excess likely stored apart from glycogen). "),
+        .init(id: "water.creatine.litres", description: "Creatine loading causes short-term fluid retention of about 0.5–1 litre, roughly matching the early weight gain.",
+              value: 0.75, range: 0.5...1.0, unit: "L", grade: .C, sources: [kreider],
+              population: "Position stand summarising supplementation studies.",
+              note: "Correction to the brief: the position stand gives 0.5–1.0 L of fluid, not 1–2 kg, and doesn't quantify the weight gain in kg."),
+
+        // MARK: Diet breaks and refeeds (weak, mixed)
+        .init(id: "dietBreak.benefit", description: "Diet breaks: in obese men, two-week breaks improved weight and fat loss (MATADOR); in resistance-trained adults, one-week breaks gave similar fat loss and lean-mass retention to dieting straight through, with less hunger (ICECAP).",
+              value: 0, range: 0...0, unit: "—", grade: .B, sources: [byrne, peos],
+              population: "MATADOR: 51 obese men, 30 weeks. ICECAP: 61 resistance-trained adults, 12 weeks.",
+              note: "Mixed: no fat-loss advantage shown in trained people. The app offers breaks for adherence and hunger, never as a fat-loss tool, and never on a timer alone."),
+        .init(id: "refeed.benefit", description: "Two carbohydrate refeed days a week during a diet: the authors reported less fat-free-mass loss; a reanalysis found only dry fat-free mass differed. Fat loss was the same.",
+              value: 0, range: 0...0, unit: "—", grade: .B, sources: [campbell, campbellReanalysis],
+              population: "27 resistance-trained adults, 7 weeks.",
+              note: "Small, short, and contested: refeeds are offered as an option, not recommended as a rule."),
+
+        // MARK: Sleep
+        .init(id: "sleep.deficit", description: "Sleeping 5.5 instead of 8.5 hours during a two-week diet shifted weight loss from fat towards lean mass.",
+              value: 0, range: 0...0, unit: "—", grade: .B, sources: [nedeltcheva],
+              population: "10 overweight adults, 14-day crossover.",
+              note: "Very small and short; used only to raise a flag when logged sleep is short on a cut."),
+
+        // MARK: Floors
+        .init(id: "floor.ea.kcalPerKgFFM", description: "Energy availability (intake minus exercise energy, per kg of fat-free mass): about 45 is adequate, 30–45 is a reduced range used for fat loss, and 30 or below is a debated risk indicator for low energy availability.",
+              value: 30, range: 30...45, unit: "kcal/kg FFM/day", grade: .C, sources: [reds],
+              population: "Athletes (most data in women; the threshold for men is less clear and possibly lower).",
+              note: "The 2023 statement treats 30 as a risk indicator, not a universal cut-off. The app can't measure exercise energy, so it applies the floor to total intake (30 × FFM), which is a lower bound."),
+        .init(id: "floor.fallback", description: "Without a body-fat estimate, the calorie floor is the Mifflin–St Jeor resting estimate, and never below 1 500 kcal.",
+              value: 1500, range: 1200...2000, unit: "kcal/day", grade: .D, sources: [mifflin, mine],
+              population: "Mifflin: 498 healthy adults aged 19–78 (indirect calorimetry).",
+              note: "The user's choice. The app asks for a tape measurement while the floor is in fallback mode."),
+        .init(id: "bmr.mifflin", description: "Resting energy from weight, height, age and sex (Mifflin–St Jeor).",
+              value: 0, range: 0...0, unit: "kcal/day", grade: .B, sources: [mifflin],
+              population: "498 healthy adults, normal weight and obese.", note: "Harris–Benedict ran about 5% high in the same data."),
+
+        // MARK: Recomposition
+        .init(id: "recomp.whenSuitable", description: "Losing fat and gaining muscle at the same time is documented in trained people too, most readily in newer lifters, people with more body fat, or those returning from a break.",
+              value: 0, range: 0...0, unit: "—", grade: .C, sources: [barakat],
+              population: "Narrative review of trained and untrained populations.",
+              note: "Only the abstract was verifiable; the 'most readily in…' part reflects the brief and secondary summaries, so treat it as grade C at best."),
+
+        // MARK: Check-in rules and model settings (our own choices)
+        .init(id: "checkin.deadband.kcal", description: "No change if the new calories are within 50 kcal of the current ones.",
+              value: 50, range: 25...100, unit: "kcal", grade: .D, sources: [mine], population: "—"),
+        .init(id: "checkin.cap.up.kcal", description: "At most 150 kcal more per check-in.", value: 150, range: 100...200, unit: "kcal", grade: .D, sources: [mine], population: "—"),
+        .init(id: "checkin.cap.down.kcal", description: "At most 150 kcal less per check-in (75 on a bulk).", value: 150, range: 75...200, unit: "kcal", grade: .D, sources: [mine], population: "—",
+              note: "On a bulk the downward cap is 75: slower to cut calories while gaining."),
+        .init(id: "trend.alpha", description: "The trend weight takes in about a tenth of each new day (about a 10-day memory).",
+              value: 0.1, range: 0.05...0.2, unit: "per day", grade: .D, sources: [backtest], population: "—",
+              note: "Matches MacroFactor's published trend to within 0,01 kg on this user's data."),
+        .init(id: "partialDay.rule", description: "A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation.",
+              value: 0.5, range: 0.3...0.7, unit: "share of usual entries", grade: .D, sources: [mine], population: "—"),
+    ]
+}
