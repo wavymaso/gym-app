@@ -27,7 +27,7 @@ extension ModelContext {
     private func dailyIntakeUncached() -> [String: Double] {
         let today = dayKey()
         // Marked "partially logged", or looking half-logged and not yet answered: treated as not logged.
-        let partial = partialDays.union(suspectedPartialDays)
+        let partial = partialDays.union(suspectedPartialDays).union(unconfirmedLargeDays)
         var out: [String: Double] = [:]
         for e in (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day < today }))) ?? [] where !partial.contains(e.day) {
             out[e.day, default: 0] += e.nutrients.kcal
@@ -345,7 +345,7 @@ extension ModelContext {
         let sunday = addDays(monday, 6)
         let before = min(day, dayKey())
         guard monday < before else { return t }
-        let partial = partialDays
+        let partial = partialDays.union(unconfirmedLargeDays)
         let eaten = Dictionary(grouping: (try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= monday && $0.day < before }))) ?? [],
                                by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
         var carry = 0.0
@@ -353,8 +353,9 @@ extension ModelContext {
             guard let k = eaten[d], !partial.contains(d), let base = targets(on: d) else { continue }   // unlogged days don't count
             carry += (p?.adjust(base.targets, on: d) ?? base.targets).kcal - k
         }
+        // Opt-in and small: at most 10% a day, and never more than 150 kcal a day taken away after a big day.
         let left = Double(daysBetween(day, sunday) + 1)
-        let shift = max(-0.2 * t.kcal, min(0.2 * t.kcal, carry / left))
+        let shift = max(-min(0.1 * t.kcal, 150), min(0.1 * t.kcal, carry / left))
         t.kcal += shift
         t.carbs = max(0, t.carbs + shift * 0.6 / 4)
         t.fat = max(0, t.fat + shift * 0.4 / 9)

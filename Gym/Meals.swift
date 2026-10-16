@@ -37,6 +37,7 @@ struct SavedItem: Codable, Hashable {
     var partial: Bool
     var waterEvent: Bool = false            // salty meal, creatine start, travel, a big carb day: scale jump is water
     var complete: Bool = false              // you confirmed a day that looked half-logged was complete
+    var confirmedLarge: String = ""         // entries you confirmed after they looked too big (syncIDs, comma-separated)
 
     init(day: String, text: String = "", partial: Bool = false) { self.day = day; self.text = text; self.partial = partial }
 }
@@ -80,6 +81,34 @@ extension ModelContext {
             LoggedDay(day: d, entries: es.count, kcal: es.reduce(0) { $0 + $1.nutrients.kcal }, target: dayTargets(on: d)?.kcal)
         }
         return PartialDayRule.suspects(recent, usual: PartialDayRule.usualEntries(history)).sorted()
+    }
+
+    /// Entries or meals on a day that look too big to be right (LargeEntryRule), not yet confirmed.
+    /// Imported day totals aren't checked.
+    func largeFlags(on day: String) -> [LargeEntryRule.Flag] {
+        let es = entries(on: day).filter { $0.foodKey != "import" }
+        guard !es.isEmpty else { return [] }
+        let cal = Calendar.current
+        let confirmed = Set((note(on: day)?.confirmedLarge ?? "").split(separator: ",").map(String.init))
+        return LargeEntryRule.flags(es.map { e in
+            .init(id: e.syncID, minute: cal.component(.hour, from: e.time) * 60 + cal.component(.minute, from: e.time), kcal: e.nutrients.kcal, name: e.name)
+        }, target: targets(on: day)?.targets.kcal, confirmed: confirmed)      // base target: dayTargets would recurse through the weekly budget
+    }
+
+    /// Days in the last 4 weeks with an unconfirmed large entry: left out of expenditure until you answer.
+    var unconfirmedLargeDays: Set<String> {
+        let today = dayKey(), from = addDays(today, -28)
+        let days = Set(((try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.day >= from && $0.day <= today }))) ?? []).map(\.day))
+        return Set(days.filter { !largeFlags(on: $0).isEmpty })
+    }
+
+    /// "Yes, that's right": these entries count from now on.
+    func confirmLarge(_ ids: [String], on day: String) {
+        let n = note(on: day) ?? { let x = DayNote(day: day); insert(x); return x }()
+        var set = Set(n.confirmedLarge.split(separator: ",").map(String.init))
+        set.formUnion(ids)
+        n.confirmedLarge = set.sorted().joined(separator: ",")
+        commit()
     }
 
     /// Your answer for a day that looked half-logged.

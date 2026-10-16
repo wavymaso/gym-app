@@ -16,11 +16,16 @@ struct PlanDayView: View {
     @State private var week = false
     @State private var settings = false
     @State private var version = 0
+    @State private var inferred: [Int: TrainingSlot] = [:]
+    @State private var source: ModelContext.PlanSource = .history
+    @State private var staples = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
             if let r = result {
                 trainingBar(r.settings)
+                LargeEntriesCard(day: day, energy: energy)
+                if source == .recent { staplesCard }
                 if ctx.carbProposal { carbProposalCard }
                 if let note = r.plan.note { ProblemCard(title: "Today's calories are mostly used", message: note, icon: "info.circle") }
                 ForEach(r.plan.slots, id: \.index) { s in slotCard(s, r) }
@@ -35,7 +40,14 @@ struct PlanDayView: View {
                 EmptyState(icon: "calendar.badge.clock", title: "No plan yet", message: "Set up your goal in Strategy first: the planner builds meals to hit those targets.")
             }
         }
-        .task(id: "\(day)|\(dataVersion)|\(version)") { result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan) } }
+        .task(id: "\(day)|\(dataVersion)|\(version)") {
+            inferred = ctx.inferredSchedule(); source = ctx.planSource
+            result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan) }
+        }
+        .sheet(isPresented: $staples) {
+            NavigationStack { StaplesView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { staples = false } } } }
+                .appStyle().onDisappear { version += 1 }
+        }
         .sheet(isPresented: $why) { if let r = result { NavigationStack { PlanWhyView(plan: r.plan) }.appStyle() } }
         .sheet(isPresented: $week) { NavigationStack { WeekPlanView(start: day) }.appStyle() }
         .sheet(isPresented: $settings) { NavigationStack { PlannerSettingsView() }.appStyle().onDisappear { version += 1 } }
@@ -55,11 +67,25 @@ struct PlanDayView: View {
         }
     }
 
+    private var staplesCard: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Label("Pick your staples", systemImage: "basket").font(.cardTitle)
+            Text("Your log doesn't have enough food-by-food history yet, so this plan uses your recent foods. Pick 15–25 foods you eat regularly for plans that look like your real meals.")
+                .font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Button("Choose staples") { staples = true }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).font(.secondaryText.weight(.semibold))
+        }
+        .padding(Space.l).modifier(CardSurface())
+    }
+
     private func trainingBar(_ s: PlannerSettings) -> some View {
-        let t = s.training(on: day)
+        let t = s.training(on: day, inferred: inferred)
+        let why = s.overrides[day] != nil ? "today only" : s.scheduleSet ? "your schedule" : t != nil ? "from your workouts" : inferred.isEmpty ? "no workout history yet" : nil
         return HStack {
-            Label(t.map { "Training \(planClock($0.start)) · \($0.minutes) min" } ?? "Rest day", systemImage: t == nil ? "bed.double" : "dumbbell")
-                .font(.secondaryText.weight(.semibold))
+            VStack(alignment: .leading, spacing: 1) {
+                Label(t.map { "Training \(planClock($0.start)) · \($0.minutes) min" } ?? "Rest day", systemImage: t == nil ? "bed.double" : "dumbbell")
+                    .font(.secondaryText.weight(.semibold))
+                if let why { Text(why).font(.fine).foregroundStyle(.secondary) }
+            }
             Spacer()
             Menu {
                 Button("Rest day today") { override(TrainingSlot(start: -1, minutes: 0)) }
@@ -152,8 +178,9 @@ struct PlanDayView: View {
 
     private func totals(_ r: (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)) -> some View {
         let t = ctx.dayTargets(on: day)
+        let provisional = r.plan.slots.contains(where: \.provisional)
         return HStack {
-            Text("Plan: \(number(energy.fromKcal(r.plan.totals.kcal))) \(energy.rawValue) · \(Int(r.plan.totals.protein)) g protein")
+            Text("\(provisional ? "Plan (not counting the meal to confirm)" : "Plan"): \(number(energy.fromKcal(r.plan.totals.kcal))) \(energy.rawValue) · \(Int(r.plan.totals.protein)) g protein")
             Spacer()
             if let t { Text("target \(number(energy.fromKcal(t.kcal))) · \(Int(t.protein)) g").foregroundStyle(.secondary) }
         }
@@ -309,7 +336,14 @@ struct WeekPlanView: View {
         .navigationTitle("Week plan")
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         .task {
-            days = (0..<7).compactMap { i in let d = addDays(start, i); return ctx.dayPlan(d).map { (d, $0.plan, $0.foods) } }
+            var uses: [String: Int] = [:], out: [(day: String, plan: DayPlan, foods: [String: PlanFood])] = []
+            for i in 0..<7 {
+                let d = addDays(start, i)
+                guard let r = ctx.dayPlan(d, uses: uses) else { continue }
+                for s in r.plan.slots where !s.eaten { for it in s.items { uses[it.key, default: 0] += 1 } }
+                out.append((d, r.plan, r.foods))
+            }
+            days = out
         }
     }
 
@@ -338,6 +372,14 @@ struct PlannerSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var s = PlannerSettings()
     @State private var loaded = false
+    @State private var inferred: [Int: TrainingSlot] = [:]
+
+    /// The week shown: yours once you've edited it, else the one from your workouts.
+    private var week: [Int: TrainingSlot] { s.week(inferred) }
+    private func edit(_ change: (inout [Int: TrainingSlot]) -> Void) {
+        if !s.scheduleSet { s.schedule = inferred; s.scheduleSet = true }
+        change(&s.schedule)
+    }
 
     var body: some View {
         Form {
@@ -351,19 +393,24 @@ struct PlannerSettingsView: View {
                     HStack {
                         Text(weekdayName(wd))
                         Spacer()
-                        Picker("", selection: Binding(get: { s.schedule[wd]?.start ?? -1 }, set: { v in
-                            s.schedule[wd] = v < 0 ? nil : TrainingSlot(start: v, minutes: s.schedule[wd]?.minutes ?? 75) })) {
+                        Picker("", selection: Binding(get: { week[wd]?.start ?? -1 }, set: { v in
+                            edit { $0[wd] = v < 0 ? nil : TrainingSlot(start: v, minutes: $0[wd]?.minutes ?? $0.values.first?.minutes ?? 75) } })) {
                             Text("Rest").tag(-1)
                             ForEach(Array(stride(from: 6 * 60, through: 22 * 60, by: 30)), id: \.self) { m in Text(planClock(m)).tag(m) }
                         }
                         .pickerStyle(.menu).labelsHidden()
                     }
                 }
-                Stepper("Sessions last \(s.schedule.values.first?.minutes ?? 75) min", value: Binding(get: { s.schedule.values.first?.minutes ?? 75 }, set: { v in
-                    for k in s.schedule.keys { s.schedule[k]?.minutes = v } }), in: 30...180, step: 15)
+                Stepper("Sessions last \(week.values.first?.minutes ?? 75) min", value: Binding(get: { week.values.first?.minutes ?? 75 }, set: { v in
+                    edit { for k in $0.keys { $0[k]?.minutes = v } } }), in: 30...180, step: 15)
+                if s.scheduleSet && !inferred.isEmpty {
+                    Button("Use the week from my workouts") { s.scheduleSet = false; s.schedule = [:] }
+                }
                 Toggle("Train fasted in the morning", isOn: $s.fastedMorning)
             } header: { Text("Training") } footer: {
-                Text("A meal goes about 2 hours before training and another after it. Fasted morning training is fine if you prefer it; the evidence finds no cost for typical sessions.")
+                Text((s.scheduleSet ? "Your own week. " : inferred.isEmpty ? "No workouts logged in the last 6 weeks, so every day is a rest day until you set your week or log workouts. "
+                      : "Inferred from your workouts in the last 6 weeks (a day counts if you trained on it in at least half the weeks). Change any day to set your own. ")
+                     + "A meal goes about 2 hours before training and another after it. Fasted morning training is fine if you prefer it.")
             }
             Section {
                 Toggle("Protein before bed", isOn: $s.preSleepProtein)
@@ -373,17 +420,24 @@ struct PlannerSettingsView: View {
                 }
             } header: { Text("Preferences") } footer: { Text("Pre-sleep protein has some evidence but it's weak once total protein is the same; off by default.") }
             Section {
+                NavigationLink("Staples (\(s.staples.count))") { StaplesView().onDisappear { if let p = ctx.profile { s.staples = p.planner.staples } } }
                 NavigationLink("Foods to leave out (\(s.exclusions.count))") { ExclusionsView(exclusions: $s.exclusions) }
-            }
+            } footer: { Text("Staples are used until your log has about two weeks of food-by-food history.") }
         }
         .themedForm()
         .navigationTitle("Meal planner")
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { save(); dismiss() } } }
-        .onAppear { if !loaded, let p = ctx.profile { s = p.planner; loaded = true } }
+        .onAppear { if !loaded, let p = ctx.profile { s = p.planner; inferred = ctx.inferredSchedule(); loaded = true } }
         .onDisappear(perform: save)
     }
 
-    private func save() { guard let p = ctx.profile, p.planner != s else { return }; p.planner = s; ctx.commit() }
+    private func save() {
+        guard let p = ctx.profile else { return }
+        // Staples and Health workouts are edited elsewhere: keep the latest of those.
+        s.staples = p.planner.staples; s.healthSessions = p.planner.healthSessions
+        guard p.planner != s else { return }
+        p.planner = s; ctx.commit()
+    }
 
     private func timeRow(_ label: String, _ v: Binding<Int>) -> some View {
         DatePicker(label, selection: Binding(get: { Calendar.current.date(bySettingHour: v.wrappedValue / 60 % 24, minute: v.wrappedValue % 60, second: 0, of: Date()) ?? Date() },

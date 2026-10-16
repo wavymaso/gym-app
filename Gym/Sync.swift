@@ -417,7 +417,7 @@ extension ProgressPhoto: Syncable {
 extension DayNote: Syncable {
     static var syncType: String { "dayNote" }
     var naturalID: String { "note:\(day)" }                    // one per day
-    func encode() -> [String: Any] { ["day": day, "text": text, "partial": partial, "waterEvent": waterEvent, "complete": complete] }
-    func decode(_ d: [String: Any]) { day = d.str("day"); text = d.str("text"); partial = d.bool("partial"); waterEvent = d.bool("waterEvent"); complete = d.bool("complete") }
+    func encode() -> [String: Any] { ["day": day, "text": text, "partial": partial, "waterEvent": waterEvent, "complete": complete, "confirmedLarge": confirmedLarge] }
+    func decode(_ d: [String: Any]) { day = d.str("day"); text = d.str("text"); partial = d.bool("partial"); waterEvent = d.bool("waterEvent"); complete = d.bool("complete"); confirmedLarge = d.str("confirmedLarge") }
     static func blank() -> Self { Self(day: "") }
 }

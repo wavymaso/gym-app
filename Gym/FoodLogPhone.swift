@@ -23,6 +23,7 @@ struct PhoneFoodLog: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
+                    if style != .plan { LargeEntriesCard(day: day, energy: energy).padding(.horizontal, 12).padding(.top, 10) }
                     DayEntries(day: day, energy: energy, style: style, showEmptyHours: showEmptyHours, selected: $selection.ids) { sheet = $0 }
                         .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 24)
                 } header: {

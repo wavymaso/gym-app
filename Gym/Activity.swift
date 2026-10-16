@@ -104,7 +104,7 @@ func litres(_ ml: Double) -> String { ml >= 1000 ? "\(number(ml / 1000, digits: 
 /// Steps and active energy from Apple Health, for the last few days.
 enum HealthActivity {
     static let store = HealthWeights.store
-    static let types: Set<HKObjectType> = [HKQuantityType(.stepCount), HKQuantityType(.activeEnergyBurned), HKCategoryType(.sleepAnalysis)]
+    static let types: Set<HKObjectType> = [HKQuantityType(.stepCount), HKQuantityType(.activeEnergyBurned), HKCategoryType(.sleepAnalysis), HKObjectType.workoutType()]
 
     static func requestAccess() async -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
@@ -118,6 +118,14 @@ enum HealthActivity {
             UserDefaults.standard.set(true, forKey: "healthSleepAsked")
             _ = await requestAccess()
         }
+        if !UserDefaults.standard.bool(forKey: "healthWorkoutsAsked") {   // workouts were added later: ask once
+            UserDefaults.standard.set(true, forKey: "healthWorkoutsAsked")
+            _ = await requestAccess()
+        }
+        if UserDefaults.standard.string(forKey: "healthWorkoutsDay") != dayKey() {
+            UserDefaults.standard.set(dayKey(), forKey: "healthWorkoutsDay")
+            await refreshWorkouts(into: ctx)
+        }
         for back in 0..<3 {
             let day = addDays(dayKey(), -back)
             let start = date(fromKey: day), end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
@@ -130,6 +138,23 @@ enum HealthActivity {
                 a.sleepHours = sleep; ctx.commit()
             }
         }
+    }
+
+    /// Gym sessions from Apple Health in the last 6 weeks (first of each day), for the planner's usual
+    /// training week. Walks and runs don't count.
+    @MainActor private static func refreshWorkouts(into ctx: ModelContext) async {
+        let from = Calendar.current.date(byAdding: .day, value: -43, to: Date())!
+        let desc = HKSampleQueryDescriptor(predicates: [.workout(HKQuery.predicateForSamples(withStart: from, end: Date()))], sortDescriptors: [SortDescriptor(\.startDate)])
+        let gym: Set<HKWorkoutActivityType> = [.traditionalStrengthTraining, .functionalStrengthTraining, .crossTraining, .highIntensityIntervalTraining, .coreTraining, .mixedCardio]
+        let cal = Calendar.current
+        var out: [String: TrainingSlot] = [:]
+        for w in (try? await desc.result(for: store)) ?? [] where gym.contains(w.workoutActivityType) && w.duration >= 15 * 60 {
+            let d = dayKey(w.startDate)
+            guard out[d] == nil else { continue }
+            out[d] = TrainingSlot(start: cal.component(.hour, from: w.startDate) * 60 + cal.component(.minute, from: w.startDate), minutes: Int(w.duration / 60))
+        }
+        guard let p = ctx.profile, p.planner.healthSessions != out else { return }
+        var s = p.planner; s.healthSessions = out; p.planner = s; ctx.commit()
     }
 
     /// Hours asleep from 6 pm the evening before to noon (any stage of sleep, overlaps merged).

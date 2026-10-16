@@ -42,7 +42,7 @@ check("recent behaviour weighs more (7 recent days vs 23 older)", gi < 99 && oi 
 func food(_ k: String, _ kc: Double, _ p: Double, _ fa: Double, _ c: Double, _ fi: Double, usual g: Double, slots: [Int: Double], step: Double = 10, max mx: Double = 500) -> PlanFood {
     PlanFood(key: k, name: k, per100: (kc, p, fa, c, fi), step: step, usualGrams: g, maxGrams: mx, usualSlots: slots, frequency: slots.values.reduce(0, +))
 }
-let pantry: [PlanFood] = [
+let rawPantry: [PlanFood] = [
     food("oats", 380, 13, 7, 60, 10, usual: 80, slots: [0: 20]), food("greek yogurt", 60, 10, 0.4, 4, 0, usual: 250, slots: [0: 18, 3: 4]),
     food("whey", 380, 78, 6, 8, 0, usual: 30, slots: [0: 6, 2: 10], step: 15, max: 60), food("banana", 89, 1.1, 0.3, 23, 2.6, usual: 120, slots: [2: 12, 0: 5], step: 120, max: 360),
     food("chicken breast", 120, 23, 2.6, 0, 0, usual: 200, slots: [1: 20, 3: 8]), food("rice", 130, 2.7, 0.3, 28, 0.4, usual: 250, slots: [1: 18, 3: 6]),
@@ -52,6 +52,14 @@ let pantry: [PlanFood] = [
     food("cottage cheese", 98, 11, 4.3, 3.4, 0, usual: 200, slots: [3: 3]), food("pasta", 158, 5.8, 0.9, 31, 1.8, usual: 250, slots: [1: 6]),
     food("beef mince 5%", 137, 21, 5, 0, 0, usual: 150, slots: [1: 5, 3: 6]), food("almonds", 579, 21, 50, 22, 12, usual: 25, slots: [2: 5], step: 5, max: 50),
 ]
+// Realism: roles and meals from names and macros, as in the app.
+let pantry: [PlanFood] = rawPantry.map { f in
+    var f = f
+    f.role = FoodRole.guess(name: f.name, kcal: f.per100.kcal, protein: f.per100.protein, fat: f.per100.fat, carbs: f.per100.carbs)
+    f.bands = MealBand.guess(name: f.name)
+    if f.role == .condiment { f.maxGrams = 40 }
+    return f
+}
 func slotsFor(training: (Int, Int)?, meals: Int = 4, preSleep: Bool = false) -> [PlanSlot] {
     Planner.slots(wake: 7 * 60, sleep: 23 * 60, meals: meals, training: training, preSleep: preSleep)
 }
@@ -70,6 +78,11 @@ let fastedMorning = Planner.slots(wake: 6 * 60, sleep: 23 * 60, meals: 4, traini
 check("fasted training: no pre-workout meal", !fastedMorning.contains { $0.kind == .preWorkout })
 let ramadan = Planner.slots(wake: 5 * 60, sleep: 24 * 60, meals: 3, training: nil, eatingWindow: (19 * 60 + 30, 23 * 60 + 30))
 check("Ramadan: every meal between iftar and suhoor", ramadan.allSatisfy { $0.minute >= 19 * 60 + 30 && $0.minute <= 23 * 60 + 30 }, ramadan.map(\.minute))
+for (st, len) in [(18 * 60, 75), (7 * 60 + 30, 60), (11 * 60, 90), (14 * 60, 60), (20 * 60, 60)] {
+    let sl = slotsFor(training: (st, len))
+    check("no meal during a \(st / 60):\(String(format: "%02d", st % 60)) session", !sl.contains { $0.minute > st - 30 && $0.minute < st + len }, sl.map(\.minute))
+    check("a post-workout meal within ~2 h after \(st / 60):00", sl.contains { $0.kind == .postWorkout && $0.minute >= st + len && $0.minute <= st + len + 120 }, sl.map { ($0.kind.rawValue, $0.minute) })
+}
 check("slots are in time order", evening.map(\.minute) == evening.map(\.minute).sorted())
 
 // Scenarios.
@@ -121,7 +134,8 @@ check("exclusions never planned", !noFish.slots.flatMap(\.items).contains { $0.k
 let junk = [food("bread", 250, 9, 3, 47, 6, usual: 60, slots: [0: 6]), food("banana", 89, 1.1, 0.3, 23, 2.6, usual: 120, slots: [1: 5], step: 120, max: 360)]
 let bad = Planner.plan(cutDay, slots: slotsFor(training: nil), foods: junk)
 check("infeasible: reported", !bad.feasible && bad.reasons.contains { $0.rule == "can't fully fit" })
-check("relaxation order", bad.relaxed == ["variety", "usual meal slots", "timing preferences", "calorie tolerance ±10%"], bad.relaxed)
+check("relaxation follows the order", ["variety", "usual meal slots", "timing preferences", "calorie tolerance ±10%"].starts(with: bad.relaxed), bad.relaxed)
+check("relaxing that doesn't help isn't kept (no plan worse for nothing)", bad.relaxed.isEmpty, bad.relaxed)
 check("deterministic", Planner.plan(cutDay, slots: evening, foods: pantry) == eve)
 // Performance: a day < 200 ms, a week < 2 s (here on the Mac; the phone is on the device checklist).
 let t1 = Date()
@@ -130,4 +144,93 @@ let weekMs = Date().timeIntervalSince(t1) * 1000
 print(String(format: "  timing: one day %.0f ms, a week %.0f ms", dayMs, weekMs))
 check("a day in under 200 ms", dayMs < 200, dayMs)
 check("a week in under 2 s", weekMs < 2000, weekMs)
+
+// MARK: Realism
+check("roles: oil and jam are condiments, chicken and bread mains, banana a side",
+      pantry.first { $0.key == "olive oil" }!.role == .condiment && FoodRole.guess(name: "Mermelada de Fresa Diet", kcal: 57, protein: 0, fat: 0, carbs: 14) == .condiment
+      && pantry.first { $0.key == "chicken breast" }!.role == .main && pantry.first { $0.key == "bread" }!.role == .main && pantry.first { $0.key == "banana" }!.role == .side)
+let allPlans = [rest, eve, Planner.plan(cutDay, slots: morning, foods: pantry), Planner.plan(bulk, slots: slotsFor(training: (17 * 60, 90), meals: 5), foods: pantry), re]
+let byK = Dictionary(pantry.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+var noMain = 0, loneCondiment = 0, wrongMeal = 0, tooOften = 0
+for p in allPlans {
+    var count: [String: Int] = [:]
+    for s in p.slots {
+        for k in Set(s.items.map(\.key)) { count[k, default: 0] += 1 }
+        guard !s.eaten else { continue }
+        let roles = s.items.compactMap { byK[$0.key]?.role }
+        if !roles.contains(.main) { noMain += 1; if roles.contains(.condiment) { loneCondiment += 1 } }
+        for it in s.items { if let f = byK[it.key], !f.bands.isEmpty, !f.bands.contains(s.band) { wrongMeal += 1 } }
+    }
+    tooOften += count.filter { $0.value > (byK[$0.key]?.maxPerDay ?? 9) }.count
+}
+check("every planned meal has a main food", noMain == 0, noMain)
+check("condiments only alongside a main", loneCondiment == 0, loneCondiment)
+check("foods only at their meals (no oats at dinner, no rice at breakfast)", wrongMeal == 0, wrongMeal)
+check("no food in more meals than allowed a day", tooOften == 0, tooOften)
+check("realistic plans still feasible", allPlans.dropLast().allSatisfy(\.feasible), allPlans.map(\.relaxed))
+check("bands: Spanish meal times", MealBand.of(minute: 8 * 60) == .breakfast && MealBand.of(minute: 14 * 60) == .lunch && MealBand.of(minute: 18 * 60) == .afternoon
+      && MealBand.of(minute: 21 * 60 + 30) == .dinner && MealBand.of(minute: 25 * 60) == .dinner)
+
+// MARK: Training week from workouts
+func sessions(_ weekdays: [Int: Int], weeks: Int, today: String, minutes: Int = 70, skip: Set<String> = []) -> [ScheduleInference.Session] {
+    var out: [ScheduleInference.Session] = []
+    for back in 1...(weeks * 7) {
+        let d = addDaysKey(today, -back)
+        if let start = weekdays[weekdayOfKey(d)], !skip.contains(d) { out.append(.init(day: d, start: start + (back % 3) * 10 - 10, minutes: minutes)) }
+    }
+    return out
+}
+let today = "2026-10-17"
+let mwf = ScheduleInference.infer(sessions([2: 18 * 60, 4: 18 * 60, 6: 17 * 60 + 30], weeks: 6, today: today), today: today)
+check("infers Mon/Wed/Fri", Set(mwf.keys) == [2, 4, 6], mwf.keys.sorted())
+check("usual start to 15 min", mwf[2]?.start == 18 * 60 && mwf[6]?.start == 17 * 60 + 30, mwf.mapValues(\.start))
+check("usual length", mwf[2]?.minutes == 70)
+var noisy = sessions([2: 18 * 60, 4: 18 * 60], weeks: 6, today: today)
+noisy.append(.init(day: addDaysKey(today, -9), start: 11 * 60, minutes: 60))      // one odd Thursday
+check("a one-off day isn't a habit", Set(ScheduleInference.infer(noisy, today: today).keys) == [2, 4])
+check("missed weeks: still a habit if ≥ half", ScheduleInference.infer(sessions([3: 7 * 60], weeks: 6, today: today, skip: [addDaysKey(today, -4), addDaysKey(today, -11)]), today: today)[3] != nil)
+check("no workouts → rest days", ScheduleInference.infer([], today: today).isEmpty)
+check("older than 6 weeks ignored", ScheduleInference.infer(sessions([2: 18 * 60], weeks: 12, today: today).filter { $0.day < addDaysKey(today, -42) }, today: today).isEmpty)
+check("two weeks of history is enough", Set(ScheduleInference.infer(sessions([2: 18 * 60, 5: 9 * 60], weeks: 2, today: today), today: today).keys) == [2, 5])
+
+// MARK: Large entries
+typealias LE = LargeEntryRule.Entry
+// Your 16 Oct lunch (14:00): 2,290 kcal in 7 entries, none over 1,500 alone; target 2,123.
+let lunch16 = [LE(id: "q", minute: 840, kcal: 244, name: "Quick add"), LE(id: "pasta", minute: 840, kcal: 694, name: "Pipe Rigate"),
+               LE(id: "chicken", minute: 840, kcal: 460, name: "Premium Roasted Chicken"), LE(id: "tomato", minute: 840, kcal: 345, name: "Tomate Frito"),
+               LE(id: "spinach", minute: 840, kcal: 17, name: "Brotes de espinaca"), LE(id: "bread", minute: 840, kcal: 122, name: "Sourdough Bread"),
+               LE(id: "tortellini", minute: 840, kcal: 408, name: "Tortellini Carne")]
+let breakfast16 = [LE(id: "b1", minute: 480, kcal: 237, name: "Tortitas"), LE(id: "b2", minute: 480, kcal: 43, name: "Mermelada"),
+                   LE(id: "b3", minute: 480, kcal: 92, name: "Banana"), LE(id: "b4", minute: 535, kcal: 191, name: "Peanut butter")]
+let f16 = LargeEntryRule.flags(lunch16 + breakfast16, target: 2123, confirmed: [])
+check("16 Oct: the lunch is flagged as one meal (2 290 kcal)", f16.count == 1 && !f16[0].single && Int(f16[0].kcal) == 2290, f16)
+check("16 Oct: biggest entry listed first", f16.first?.names.first == "Pipe Rigate")
+check("confirmed → no flag", LargeEntryRule.flags(lunch16, target: 2123, confirmed: Set(lunch16.map(\.id))).isEmpty)
+check("a new entry added to a confirmed meal asks again", !LargeEntryRule.flags(lunch16 + [LE(id: "new", minute: 850, kcal: 300, name: "x")], target: 2123,
+                                                                                 confirmed: Set(lunch16.map(\.id))).isEmpty)
+let one = LargeEntryRule.flags([LE(id: "big", minute: 600, kcal: 1600, name: "Pizza"), LE(id: "s", minute: 610, kcal: 100, name: "Coke")], target: 3500, confirmed: [])
+check("a single 1 600 kcal entry is flagged by itself (not again as a meal)", one.count == 1 && one[0].single && one[0].ids == ["big"], one)
+check("60% of target counts too (1 300 of 2 000)", LargeEntryRule.flags([LE(id: "a", minute: 600, kcal: 1300, name: "x")], target: 2000, confirmed: []).count == 1)
+check("normal meals aren't flagged", LargeEntryRule.flags(breakfast16, target: 2123, confirmed: []).isEmpty)
+check("meals split by a 45-minute gap", LargeEntryRule.flags([LE(id: "a", minute: 600, kcal: 800, name: "x"), LE(id: "b", minute: 700, kcal: 800, name: "y")], target: 3000, confirmed: []).isEmpty)
+// A provisional (unconfirmed) meal: eaten and fixed, but its calories don't count yet.
+var prov = slotsFor(training: nil)
+prov[1].eaten = true; prov[1].provisional = true; prov[1].items = [PlanItem(key: "pasta", grams: 900)]
+let pp = Planner.plan(cutDay, slots: prov, foods: pantry)
+check("unconfirmed meal not counted: rest of day planned normally", pp.note == nil && pp.slots[1].items == prov[1].items && pp.feasible, (pp.note ?? "", pp.relaxed))
+
+// MARK: Staples (cold start)
+let catalog: [String: (name: String, per100: (Double, Double, Double, Double, Double), unitGrams: Double?)] = Dictionary(uniqueKeysWithValues: rawPantry.map {
+    ($0.key, (name: $0.name, per100: ($0.per100.kcal, $0.per100.protein, $0.per100.fat, $0.per100.carbs, $0.per100.fibre), unitGrams: $0.key == "eggs" ? 60.0 : nil)) })
+let staples = [Staple(key: "oats", grams: 80, band: .breakfast), Staple(key: "greek yogurt", grams: 250, band: .breakfast), Staple(key: "whey", grams: 30, band: .afternoon),
+               Staple(key: "banana", grams: 120, band: .afternoon), Staple(key: "bread", grams: 60, band: .afternoon), Staple(key: "chicken breast", grams: 200, band: .lunch),
+               Staple(key: "rice", grams: 250, band: .lunch), Staple(key: "olive oil", grams: 10, band: .lunch), Staple(key: "broccoli", grams: 150, band: .dinner),
+               Staple(key: "salmon", grams: 150, band: .dinner), Staple(key: "potato", grams: 300, band: .dinner), Staple(key: "beef mince 5%", grams: 150, band: .dinner),
+               Staple(key: "eggs", grams: 120, band: .breakfast), Staple(key: "cottage cheese", grams: 200, band: .dinner), Staple(key: "pasta", grams: 250, band: .lunch)]
+let sf = Planner.foods(fromStaples: staples, catalog: catalog)
+check("staples become candidates at their meal", sf.count == 15 && sf.first { $0.key == "oats" }!.bands == [.breakfast])
+let sp = Planner.plan(cutDay, slots: slotsFor(training: (18 * 60, 75)), foods: sf)
+checkPlan("plan from 15 staples", sp, cutDay)
+check("staples plan: every food at the meal you chose", sp.slots.allSatisfy { s in s.items.allSatisfy { it in sf.first { $0.key == it.key }!.bands.contains(s.band) } },
+      sp.slots.map { ($0.band.rawValue, $0.items.map(\.key)) })
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

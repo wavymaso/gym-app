@@ -48,6 +48,7 @@ struct DashboardView: View {
                 header
                 SigningBanner()
                 PartialDaysCard()
+                LargeEntriesCard(energy: profile?.energy ?? .kcal)
                 if let t = target(on: dayKey()), let p = profile {
                     if ctx.dueCheckIn != nil { checkInBanner }
                     let todayN = loggedDays.filter { $0.day == dayKey() }.reduce(Nutrients.zero) { $0 + $1.nutrients }

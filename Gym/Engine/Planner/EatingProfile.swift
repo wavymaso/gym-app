@@ -147,3 +147,6 @@ func addDaysKey(_ k: String, _ n: Int) -> String {
     let c = utcCal.dateComponents([.year, .month, .day], from: utcCal.date(byAdding: .day, value: n, to: dateOfKey(k))!)
     return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
 }
+
+/// Gregorian weekday of a day key (1 = Sunday … 7 = Saturday).
+func weekdayOfKey(_ k: String) -> Int { utcCal.component(.weekday, from: dateOfKey(k)) }
