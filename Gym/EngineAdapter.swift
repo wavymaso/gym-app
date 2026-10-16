@@ -77,7 +77,8 @@ extension ModelContext {
         let trend = EngineTrend.run(ds)
         let kg = trend.last?.trend ?? 75
         let prior = expenditureStart?.kcal ?? EngineTargets.mifflin(person, weight: kg) * 1.55
-        return EngineSnapshot(days: ds, trend: trend, expenditure: EngineEnergy.run(ds, trend: trend, prior: prior, body: body), body: body, person: person)
+        var es = EnergySettings(); es.stepAdjustment = profile?.stepInformed ?? false
+        return EngineSnapshot(days: ds, trend: trend, expenditure: EngineEnergy.run(ds, trend: trend, prior: prior, body: body, es), body: body, person: person)
     }
 
     /// What the engine would decide at a check-in today.
@@ -86,7 +87,7 @@ extension ModelContext {
         let today = dayKey()
         let week = s.days.suffix(8).dropLast()                    // the last 7 finished days
         let logged = week.compactMap(\.intake)
-        let phase: Phase = g.goalValue == .lose ? .cut : g.goalValue == .gain ? .bulk : .maintain
+        let phase: Phase = g.goalValue == .lose ? .cut : g.goalValue == .gain ? .bulk : (profile?.recomp == true ? .recomp : .maintain)
         let weeks = daysBetween(g.startDay, today) / 7
         // Training signals (main lifts, e1RM from 3–10 reps).
         let sets = ((try? fetch(FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.done }))) ?? [])

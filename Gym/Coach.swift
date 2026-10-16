@@ -24,7 +24,7 @@ extension ModelContext {
         let tr = snap?.trend.last, ex = snap?.expenditure.last
         let rec = ((try? fetch(FetchDescriptor<DecisionRecord>(sortBy: [SortDescriptor(\.day, order: .reverse)]))) ?? []).first?.record
         let engineRec = rec ?? (moment == .checkIn ? engineCheckIn() : nil)
-        let phase = g.goalValue == .lose ? "cut" : g.goalValue == .gain ? "bulk" : "maintain"
+        let phase = g.goalValue == .lose ? "cut" : g.goalValue == .gain ? "bulk" : (p.recomp ? "recomp" : "maintain")
         let days7 = snap?.days.suffix(8).dropLast() ?? []
         // Very low intake: logged days in the last two weeks under 60% of the floor.
         let floor = snap.map { EngineTargets.floor($0.person, weight: tr?.trend ?? 75, body: $0.body).kcal } ?? 1500

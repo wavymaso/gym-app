@@ -74,7 +74,7 @@ enum EngineTargets {
 
         // Protein: higher on a cut (per kg lean mass, clamped to body weight), otherwise 1.6–2.2 g/kg.
         var protein: Double
-        if phase == .cut {
+        if phase == .cut || phase == .recomp {               // recomp: the higher, cut-level protein
             protein = Evidence.value("protein.cut.gPerKgLean") * lean
             let lo = 1.5 * weight, hi = Evidence.value("protein.clamp.gPerKgBody") * weight
             if protein < lo || protein > hi { reasons.append(.init(rule: "protein clamp", detail: "kept within 1.5–2.6 g/kg body weight", evidence: ["protein.clamp.gPerKgBody"])) }

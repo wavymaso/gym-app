@@ -194,6 +194,9 @@ enum Evidence {
               value: 4, range: 3...6, unit: "days of 7", grade: .D, sources: [mine], population: "—"),
         .init(id: "signal.e1rm.rule", description: "Estimated 1-rep max is worked out only from sets of 3–10 reps (adjusted for reps in reserve). Two weeks in a row of it falling on main lifts while cutting faster than planned raises a flag.",
               value: 2, range: 2...4, unit: "weeks", grade: .D, sources: [mine], population: "—"),
+        .init(id: "steps.kcalPerStepPerKg", description: "Each extra step costs about 0.0005 kcal per kg of body weight (about 0.04 kcal a step at 80 kg).",
+              value: 0.0005, range: 0.0004...0.0007, unit: "kcal/step/kg", grade: .D, sources: [mine], population: "—",
+              note: "Practitioner convention, not verified against a study; the adjustment is short-term only (capped at ±300 kcal) and off by default."),
         .init(id: "partialDay.rule", description: "A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation.",
               value: 0.5, range: 0.3...0.7, unit: "share of usual entries", grade: .D, sources: [mine], population: "—"),
     ]

@@ -77,6 +77,19 @@ do {
     check("recomp/maintenance: flat", abs(trend(flat)[55].ratePerWeek) < 0.2, trend(flat)[55].ratePerWeek)
 }
 
+// 6b. Step adjustment: 5 000 more steps this week at ~89 kg → about +220 kcal, and only when switched on.
+do {
+    var sim = Simulator(); sim.rng = Rng(s: 21); var days: [SimDay] = []
+    for i in 0..<70 { var d = sim.step(i, intake: 2900); d.day.steps = i >= 63 ? 13000 : 8000; days.append(d) }
+    let t = EngineTrend.run(days.map(\.day))
+    var on = EnergySettings(); on.stepAdjustment = true
+    let a = EngineEnergy.run(days.map(\.day), trend: t, prior: 2900, body: BodyComposition(bodyFatPercent: 20), on)
+    let b = EngineEnergy.run(days.map(\.day), trend: t, prior: 2900, body: BodyComposition(bodyFatPercent: 20))
+    let expected = 5000 * 0.0005 * t[69].trend
+    check("steps: adjustment ≈ 5 000 × 0.0005 × kg", abs(a[69].stepAdjustment - expected) < 25, (a[69].stepAdjustment, expected))
+    check("steps: off by default", b[69].stepAdjustment == 0 && abs(a[69].kcal - b[69].kcal - a[69].stepAdjustment) < 0.01)
+}
+
 // 7. Forbes density: leaner → a bigger lean share → fewer kcal per kg.
 check("density lean < density higher fat", EngineEnergy.density(fatMass: 10) < EngineEnergy.density(fatMass: 30))
 check("density at 30 kg fat near 7 700", abs(EngineEnergy.density(fatMass: 30) - 7470) < 150, EngineEnergy.density(fatMass: 30))

@@ -41,6 +41,7 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `checkin.minDays` | No coaching changes until there are two weeks of data; until then targets come from the formula. | 14 days | 7–21 | D |
 | `checkin.minLogged` | A check-in needs at least 4 of the last 7 days logged and 3 weigh-ins, and no water event in the last 3 days; otherwise it makes no change and says why. | 4 days of 7 | 3–6 | D |
 | `signal.e1rm.rule` | Estimated 1-rep max is worked out only from sets of 3–10 reps (adjusted for reps in reserve). Two weeks in a row of it falling on main lifts while cutting faster than planned raises a flag. | 2 weeks | 2–4 | D |
+| `steps.kcalPerStepPerKg` | Each extra step costs about 0.0005 kcal per kg of body weight (about 0.04 kcal a step at 80 kg). | 0.0005 kcal/step/kg | 0.0004–0.0007 | D |
 | `partialDay.rule` | A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation. | 0.5 share of usual entries | 0.3–0.7 | D |
 
 ## Details
@@ -308,6 +309,14 @@ A check-in needs at least 4 of the last 7 days logged and 3 weigh-ins, and no wa
 Estimated 1-rep max is worked out only from sets of 3–10 reps (adjusted for reps in reserve). Two weeks in a row of it falling on main lifts while cutting faster than planned raises a flag.
 
 - **Studied in:** —
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `steps.kcalPerStepPerKg` (grade D)
+
+Each extra step costs about 0.0005 kcal per kg of body weight (about 0.04 kcal a step at 80 kg).
+
+- **Studied in:** —
+- **Note:** Practitioner convention, not verified against a study; the adjustment is short-term only (capped at ±300 kcal) and off by default.
 - The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
 
 ### `partialDay.rule` (grade D)

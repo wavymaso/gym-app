@@ -160,3 +160,27 @@ struct EvidenceListView: View {
         .navigationTitle("Evidence")
     }
 }
+
+
+/// Maintenance as a recomp: the engine's honest advice, then your choice.
+struct RecompPage: View {
+    @Environment(\.modelContext) private var ctx
+    @Bindable var profile: Profile
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Run maintenance as a recomp", isOn: Binding(get: { profile.recomp }, set: { profile.recomp = $0; ctx.commit() }))
+            } footer: {
+                Text("Calories stay at maintenance; protein moves to the higher, cut-level amount; the trend should hold steady while strength and measurements improve.")
+            }
+            if let person = ctx.enginePerson {
+                Section("Is it a good idea for you?") {
+                    Text(EngineTargets.recompAdvice(person, body: ctx.engineBody).detail)
+                    if let e = Evidence.entry("recomp.whenSuitable") { EvidenceRow(entry: e) }
+                }
+            }
+        }
+        .themedForm()
+        .navigationTitle("Recomposition")
+    }
+}

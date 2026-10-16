@@ -13,6 +13,7 @@ struct EnergySettings: Equatable {
     var driftPerDay = 25.0             // kcal sd/day: how fast true expenditure can wander
     var maxWeeklyChange = 200.0        // kcal per 7 days, hard limit
     var fixedDensity: Double? = nil    // kcal/kg: use one number (e.g. 5 500, the fitted baseline) instead of Forbes
+    var stepAdjustment = false         // short-term: this week's steps vs your 4-week baseline (the long run stays on energy balance)
 }
 
 struct ExpenditureEstimate: Equatable {
@@ -22,6 +23,7 @@ struct ExpenditureEstimate: Equatable {
     var held: Bool                     // not enough logged days: carried forward
     var limited: Bool                  // the weekly limit applied today
     var density: Double                // kcal/kg used today
+    var stepAdjustment: Double = 0     // kcal added for steps above (or below) your baseline, already in kcal
 }
 
 enum EngineEnergy {
@@ -67,7 +69,18 @@ enum EngineEnergy {
                 }
             }
             recent.append(e); if recent.count > 7 { recent.removeFirst() }
-            out.append(ExpenditureEstimate(day: days[i].key, kcal: e, sd: variance.squareRoot(), held: held, limited: limited, density: rho))
+            var adj = 0.0
+            if s.stepAdjustment, let w = tmap[days[i].key]?.trend {
+                func avg(_ r: ClosedRange<Int>) -> Double? {
+                    let v = r.compactMap { $0 >= 0 && $0 < days.count ? days[$0].steps : nil }
+                    return v.count >= r.count / 2 ? v.reduce(0, +) / Double(v.count) : nil
+                }
+                if let now = avg((i - 6)...i), let base = avg((i - 34)...(i - 7)) {
+                    adj = (now - base) * Evidence.value("steps.kcalPerStepPerKg") * w
+                    adj = max(-300, min(300, adj))
+                }
+            }
+            out.append(ExpenditureEstimate(day: days[i].key, kcal: e + adj, sd: variance.squareRoot(), held: held, limited: limited, density: rho, stepAdjustment: adj))
         }
         return out
     }

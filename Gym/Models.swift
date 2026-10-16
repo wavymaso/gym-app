@@ -39,6 +39,7 @@ import SwiftData
     var phaseEnd: String = ""                // when the current phase ends: "" | "day:2026-12-01" | "kg:100.0"
     var phaseQueue: String = ""              // the phases after this one (JSON [PhaseStep])
     var shadowMode: Bool = false             // check-ins calculate but don't change targets
+    var recomp: Bool = false                 // maintenance goal run as a recomposition (higher protein)
     var shadowLog: String = ""               // what the coach would have done (JSON [ShadowEntry])
     var dayPlan: String = ""                 // collaborative/manual: your own targets per weekday (JSON [weekday: Targets])
     var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)

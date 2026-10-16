@@ -408,6 +408,11 @@ struct StrategyView: View {
         let phaseText = [p.phaseEndText(p.weight), p.phases.first.map { "then " + $0.describe(p.weight) }].compactMap { $0 }.joined(separator: " · ")
         category("Goal & targets", "What you're aiming for") {
             rowButton("target", palette.good, "Goal", g.goalValue.label + " · " + goalDetail(g, p)) { editing = true }
+            if g.goalValue == .maintain {
+                rowLink("arrow.triangle.2.circlepath", palette.carbs, "Recomposition", p.recomp ? "On: maintenance calories, higher protein" : "Off") {
+                    RecompPage(profile: p)
+                }
+            }
             rowButton("flag.checkered", palette.calories, "Goal weight & rate", p.goalWeightKg.map { p.weight.format($0) } ?? "Not set") { editingGoalFlow = true }
             rowButton("fork.knife", palette.fat, "Diet & protein", "\(g.dietValue.label) · \(number(g.proteinValue.gramsPerKg, digits: 1)) g/kg protein") { editing = true }
             rowLink("figure.strengthtraining.traditional", palette.protein, "Training", (TrainingType(rawValue: p.trainingType) ?? .resistance).label + " · sets protein",

@@ -27,6 +27,11 @@ struct TodayRings: View {
             }
             .padding(.vertical, isPhone ? 0 : 8)
             .frame(maxWidth: .infinity)
+            if target.protein > 0, eaten.protein < target.protein * 0.9 {
+                // A soft guide (registry protein.perMeal: ~0.4 g/kg over at least four meals).
+                Text("About \(Int((target.protein / 4).rounded())) g of protein a meal, over four meals, gets you there.")
+                    .font(.fine).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+            }
         }
     }
 
