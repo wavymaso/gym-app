@@ -80,6 +80,7 @@ struct PhoneFoodLog: View {
                     Picker("View", selection: $style) {
                         Label("Timeline", systemImage: "clock").tag(FoodLogView.LogStyle.timeline)
                         Label("Meals", systemImage: "fork.knife").tag(FoodLogView.LogStyle.meals)
+                        Label("Plan", systemImage: "calendar.badge.clock").tag(FoodLogView.LogStyle.plan)
                     }
                     if style == .timeline { Toggle("Show empty hours", isOn: $showEmptyHours) }
                     if day != dayKey() { Divider(); Button("Go to today", systemImage: "arrow.uturn.backward") { day = dayKey() } }
@@ -276,7 +277,7 @@ struct DayEntries: View {
 
     var body: some View {
         Group {
-            if style == .timeline { timeline } else { meals }
+            if style == .timeline { timeline } else if style == .plan { PlanDayView(day: day, energy: energy) } else { meals }
         }
         .sensoryFeedback(.success, trigger: entries.count) { old, new in new > old }
     }

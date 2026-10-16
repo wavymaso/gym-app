@@ -34,6 +34,9 @@ bad("markdown", .init(headline: "## Today", body: "**Protein** first."), kind: "
 let ok = CoachMessage(headline: "Protein first", body: "113 g of protein to go, 1 360 kcal left. Trend 110,7 kg, losing 0.52 kg a week against a goal of 0.55. If that should change, the check-in will handle it.",
                       evidence: ["protein.daily.gPerKg"])
 check("accepts grounded numbers", CoachValidator.check(ok, s).isEmpty, CoachValidator.check(ok, s))
+var withMeal = s; withMeal.nextMeal = .init(time: "17:30", kind: "pre-workout meal", foods: ["Rice", "Chicken breast"], kcal: 640, protein: 52)
+check("plan numbers allowed", CoachValidator.check(.init(headline: "Pre-workout at 17:30", body: "Rice and chicken breast, 640 kcal and 52 g protein."), withMeal).isEmpty)
+bad("a plan number that isn't in the plan", .init(headline: "Pre-workout", body: "Have 300 g of rice at 17:30."), withMeal, kind: "invented number")
 check("number parsing", CoachValidator.numbers(in: "1 557 kcal, 2,260 and 110,8 kg, −0.55, 35%") == [1557, 2260, 110.8, 0.55, 35])
 
 // 3. Live model (optional).

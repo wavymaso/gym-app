@@ -33,6 +33,10 @@ struct CheckInView: View {
                             Label("Only \(s.trackedDays) days logged this week, so the estimate barely moved. Logging most days makes check-ins accurate.",
                                   systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
                         }
+                        if let a = ctx.planAdherence() {
+                            Label("Meal plan: \(a.followed) of \(a.planned) planned days eaten as planned (context only: it never changes targets by itself).",
+                                  systemImage: "calendar.badge.checkmark").font(.callout).foregroundStyle(.secondary).arrive(2)
+                        }
                         ShadowEngineCard(liveKcal: s.proposed?.kcal ?? s.current.kcal).arrive(3)
                         if let p = s.proposed {
                             Text("Targets for the week ahead").font(.title2.bold()).padding(.top, 8).arrive(3)

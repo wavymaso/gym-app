@@ -40,6 +40,9 @@ struct CoachSnapshot: Codable, Equatable {
     var waterEvent: String? = nil                  // recent: refeed, travel… the engine has accounted for it
     var frequentProteinFoods: [String] = []        // names from your own logs
     var safety: Safety = Safety()
+    var nextMeal: PlannedMeal? = nil                // from the meal planner: the next meal not yet eaten
+
+    struct PlannedMeal: Codable, Equatable { var time: String; var kind: String; var foods: [String]; var kcal: Int; var protein: Int }
     var evidence: [EvidenceRef] = []
 
     struct Safety: Codable, Equatable {
@@ -58,6 +61,7 @@ struct CoachSnapshot: Codable, Equatable {
         n += [Double(checkIn.daysUntil)] + [checkIn.lastFrom, checkIn.lastTo].compactMap { $0.map(Double.init) }
         if let f = checkIn.lastFrom, let to = checkIn.lastTo { n.append(Double(abs(to - f))) }
         if let w = lastWorkout { n += [Double(w.sets), Double(w.prs)] + (w.volumeChangePct.map { [Double(abs($0))] } ?? []) }
+        if let m = nextMeal { n += [Double(m.kcal), Double(m.protein)] + CoachValidator.numbers(in: m.time) + m.foods.flatMap { CoachValidator.numbers(in: $0) } }
         // Numbers quoted inside the engine's own reasons and flags.
         for s in [checkIn.lastReason ?? ""] + flags + evidence.map(\.text) { n += CoachValidator.numbers(in: s) }
         return n

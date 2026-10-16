@@ -28,7 +28,7 @@ struct Macros: Equatable {
     static func - (a: Macros, b: Macros) -> Macros { Macros(kcal: a.kcal - b.kcal, protein: a.protein - b.protein, fat: a.fat - b.fat, carbs: a.carbs - b.carbs, fibre: a.fibre - b.fibre) }
 }
 
-struct PlanItem: Equatable { var key: String; var grams: Double }
+struct PlanItem: Equatable, Codable { var key: String; var grams: Double }
 
 struct PlanSlot: Equatable {
     enum Kind: String, Codable { case meal, preWorkout, postWorkout, preSleep }
@@ -53,6 +53,7 @@ struct PlanOptions: Equatable {
     var preSleepProtein = false
     var exclusions: Set<String> = []
     var variety = 0.5                     // 0 = repeat freely, 1 = avoid repeats
+    var trainingCarbBoost = false         // accepted proposal: even more of the day's carbs around training
 }
 
 struct DayPlan: Equatable {
@@ -113,7 +114,7 @@ enum Planner {
         var note: String?
         var t = targets
         if !open.isEmpty, remaining.kcal < Double(open.count) * 250 {
-            note = "Today's calories are mostly used. The rest of the plan aims for protein and light meals, not making up for it by eating very little; tomorrow starts fresh."
+            note = "The rest of the plan aims for protein and light meals, not making up for it by eating very little; tomorrow starts fresh."
             let floorPerMeal = 250.0
             t.kcal = fixedTotal.kcal + max(remaining.kcal, Double(open.count) * floorPerMeal)
             t.fat = fixedTotal.fat; t.carbs = max(fixedTotal.carbs, targets.carbs)
@@ -133,6 +134,7 @@ enum Planner {
         ]
         var w = Weights(tolerance: options.kcalTolerance, variety: options.variety)
         if note != nil { w.minMealKcal = 250 }
+        if options.trainingCarbBoost { w.trainingCarbs = 2.5 }
         var relaxed: [String] = []
         var best: (slots: [PlanSlot], score: Double, hard: [String])?
         for (si, stage) in stages.enumerated() {

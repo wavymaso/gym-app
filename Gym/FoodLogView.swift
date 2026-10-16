@@ -14,7 +14,7 @@ struct FoodLogView: View {
         return nil
     }()
 
-    enum LogStyle: String, CaseIterable { case meals, timeline }
+    enum LogStyle: String, CaseIterable { case meals, timeline, plan }
 
     enum LogSheet: Identifiable {
         case add(Date?), quickAdd(Date?), copy
@@ -222,6 +222,7 @@ struct DayLog: View {
             Picker("View", selection: $style.animation(.snappy)) {
                 Text("Meals").tag(FoodLogView.LogStyle.meals)
                 Text("Timeline").tag(FoodLogView.LogStyle.timeline)
+                Text("Plan").tag(FoodLogView.LogStyle.plan)
             }
             .pickerStyle(.segmented).labelsHidden()
             if style == .timeline {
@@ -235,7 +236,9 @@ struct DayLog: View {
                 Button("Save") { if let (_, items) = savingMeal { ctx.saveMeal(mealName.isEmpty ? "Meal" : mealName, from: items) }; savingMeal = nil }
                 Button("Cancel", role: .cancel) { savingMeal = nil }
             } message: { Text("Log these foods again in one tap, from Add food → Meals.") }
-        if style == .timeline {
+        if style == .plan {
+            PlanDayView(day: day, energy: energy)
+        } else if style == .timeline {
             if entries.isEmpty {
                 ContentUnavailableView("Nothing logged", systemImage: "fork.knife",
                                        description: Text("Add a food (⌘N), a quick add, or copy another day."))

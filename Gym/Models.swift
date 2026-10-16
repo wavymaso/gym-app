@@ -42,6 +42,7 @@ import SwiftData
     var recomp: Bool = false                 // maintenance goal run as a recomposition (higher protein)
     var shadowLog: String = ""               // what the coach would have done (JSON [ShadowEntry])
     var dayPlan: String = ""                 // collaborative/manual: your own targets per weekday (JSON [weekday: Targets])
+    var plannerJSON: String = ""             // meal planner settings (PlannerSettings)
     var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)
     var dietBreakEnd: String = ""
 

@@ -59,7 +59,19 @@ extension ModelContext {
             lastWorkout: workout, flags: flags,
             waterEvent: snap?.days.suffix(3).first(where: { !$0.events.isEmpty })?.events.first.map { $0 == .tagged ? "salty day or travel" : $0.rawValue },
             frequentProteinFoods: Array(foods), safety: .init(veryLowIntakeDays: low, distressInNotes: distress),
+            nextMeal: nextPlannedMeal(),
             evidence: used.sorted().compactMap { Evidence.entry($0) }.map { .init(id: $0.id, text: $0.description, grade: $0.grade.rawValue) })
+    }
+
+    /// The meal planner's next meal today that isn't eaten yet.
+    func nextPlannedMeal() -> CoachSnapshot.PlannedMeal? {
+        guard let r = dayPlan(dayKey()) else { return nil }
+        let now = Calendar.current.component(.hour, from: Date()) * 60 + Calendar.current.component(.minute, from: Date())
+        guard let s = r.plan.slots.first(where: { !$0.eaten && $0.minute >= now - 30 }) else { return nil }
+        let m = s.items.reduce(Macros()) { $0 + (r.foods[$1.key]?.macros($1.grams) ?? Macros()) }
+        let kind = ["meal": "meal", "preWorkout": "pre-workout meal", "postWorkout": "post-workout meal", "preSleep": "pre-bed meal"][s.kind.rawValue] ?? "meal"
+        return .init(time: String(format: "%02d:%02d", (s.minute / 60) % 24, s.minute % 60), kind: kind,
+                     foods: s.items.compactMap { r.foods[$0.key]?.name }, kcal: Int(m.kcal.rounded()), protein: Int(m.protein.rounded()))
     }
 
     private func daysUntilCheckIn(_ g: Program) -> Int {

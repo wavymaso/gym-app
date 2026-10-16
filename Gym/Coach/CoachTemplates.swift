@@ -24,6 +24,7 @@ enum CoachTemplates {
     static func morning(_ s: CoachSnapshot) -> CoachMessage {
         var parts: [String] = ["Today: \(s.today.kcalTarget) kcal with \(s.today.proteinTarget) g protein."]
         if !s.today.special.isEmpty { parts.append("It's a \(s.today.special.joined(separator: " and ")).") }
+        if let m = s.nextMeal, !m.foods.isEmpty { parts.append("Next on the plan, \(m.time): \(m.foods.prefix(3).joined(separator: ", ")).") }
         if s.checkIn.due { parts.append("Your weekly check-in is ready.") }
         else if let f = s.flags.first { parts.append(f) }
         else if s.expenditure.settling { parts.append("The expenditure estimate is still settling; steady weigh-ins will tighten it.") }
@@ -86,6 +87,7 @@ enum CoachPrompt {
         - Moments: morning = today's targets plus one useful note; nudge = only if protein is well behind, suggest one of frequentProteinFoods;
           postWorkout = how it went vs last time; checkIn = explain the engine's decision (lastAction, lastReason) in plain words, including uncertainty; if lastAction is "proposed", say it's a proposal to review, accept or edit in the check-in;
           event = the scale jump is expected water and the engine has accounted for it.
+        - If nextMeal is present you may mention it (time, foods, its kcal and protein), never other quantities.
 
         Reply with JSON only: {"headline":"","body":"","action":{"kind":"openCheckIn|openProposal|logFood|startWorkout|weighIn|none","label":""},"evidence":[]}
 
