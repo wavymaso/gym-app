@@ -222,15 +222,51 @@ check("unconfirmed meal not counted: rest of day planned normally", pp.note == n
 // MARK: Staples (cold start)
 let catalog: [String: (name: String, per100: (Double, Double, Double, Double, Double), unitGrams: Double?)] = Dictionary(uniqueKeysWithValues: rawPantry.map {
     ($0.key, (name: $0.name, per100: ($0.per100.kcal, $0.per100.protein, $0.per100.fat, $0.per100.carbs, $0.per100.fibre), unitGrams: $0.key == "eggs" ? 60.0 : nil)) })
-let staples = [Staple(key: "oats", grams: 80, band: .breakfast), Staple(key: "greek yogurt", grams: 250, band: .breakfast), Staple(key: "whey", grams: 30, band: .afternoon),
+let staples = [Staple(key: "oats", grams: 80, band: .breakfast), Staple(key: "greek yogurt", grams: 250, band: .breakfast), Staple(key: "whey", grams: 45, band: .afternoon),
                Staple(key: "banana", grams: 120, band: .afternoon), Staple(key: "bread", grams: 60, band: .afternoon), Staple(key: "chicken breast", grams: 200, band: .lunch),
-               Staple(key: "rice", grams: 250, band: .lunch), Staple(key: "olive oil", grams: 10, band: .lunch), Staple(key: "broccoli", grams: 150, band: .dinner),
+               Staple(key: "rice", grams: 250, band: .lunch), Staple(key: "olive oil", grams: 10, band: .lunch), Staple(key: "broccoli", grams: 250, band: .dinner),
                Staple(key: "salmon", grams: 150, band: .dinner), Staple(key: "potato", grams: 300, band: .dinner), Staple(key: "beef mince 5%", grams: 150, band: .dinner),
                Staple(key: "eggs", grams: 120, band: .breakfast), Staple(key: "cottage cheese", grams: 200, band: .dinner), Staple(key: "pasta", grams: 250, band: .lunch)]
 let sf = Planner.foods(fromStaples: staples, catalog: catalog)
 check("staples become candidates at their meal", sf.count == 15 && sf.first { $0.key == "oats" }!.bands == [.breakfast])
 let sp = Planner.plan(cutDay, slots: slotsFor(training: (18 * 60, 75)), foods: sf)
-checkPlan("plan from 15 staples", sp, cutDay)
+checkPlan("plan from 15 staples", sp, cutDay); if !sp.feasible { print("  misses", sp.misses, sp.relaxedHard, sp.shortMeals, sp.slots.map { ($0.band.rawValue, $0.items.map { "\($0.key) \(Int($0.grams))" }) }) }
 check("staples plan: every food at the meal you chose", sp.slots.allSatisfy { s in s.items.allSatisfy { it in sf.first { $0.key == it.key }!.bands.contains(s.band) } },
       sp.slots.map { ($0.band.rawValue, $0.items.map(\.key)) })
+
+// MARK: Calories aim at the target; protein minimum per meal; hard limits reported
+for (name, p, t) in [("rest", rest, cutDay), ("evening", eve, cutDay), ("staples", sp, cutDay)] where p.feasible {
+    check("\(name): calories within ±1.5% (or 40 kcal), not just ±5%", abs(p.totals.kcal - t.kcal) <= max(t.kcal * 0.015, 40) + 0.5, Int(p.totals.kcal - t.kcal))
+    check("\(name): no hard limit widened when it fits", p.relaxedHard.isEmpty, p.relaxedHard)
+}
+func protein(_ s: PlanSlot, _ foods: [PlanFood]) -> Double { s.items.reduce(0) { a, i in a + (foods.first { $0.key == i.key }?.macros(i.grams).protein ?? 0) } }
+for (name, p, foods, t) in [("rest", rest, pantry, cutDay), ("evening", eve, pantry, cutDay), ("staples", sp, sf, cutDay)] where p.feasible {
+    let low = p.slots.filter { !$0.eaten && protein($0, foods) < t.minProtein($0.kind) - 0.5 }
+    check("\(name): every meal reaches its protein minimum (\(Int(t.mealProtein)) g, \(Int(t.trainingMealProtein)) g around training)", low.isEmpty, low.map { ($0.kind.rawValue, Int(protein($0, foods))) })
+}
+check("minimums from the registry: 0.3 and 0.4 g/kg", cutDay.mealProtein == 33 && cutDay.trainingMealProtein == 44, (cutDay.mealProtein, cutDay.trainingMealProtein))
+// Breakfast foods without protein: the meal is reported, not quietly planned low.
+var noProteinBreakfast = pantry.map { f -> PlanFood in var f = f; if ["eggs", "greek yogurt", "whey", "cottage cheese"].contains(f.key) { f.bands = [.dinner] }; return f }
+noProteinBreakfast = noProteinBreakfast.filter { $0.key != "oats" || true }
+let nb = Planner.plan(cutDay, slots: slotsFor(training: nil), foods: noProteinBreakfast.map { f in var f = f; if f.key == "oats" || f.key == "bread" || f.key == "banana" { f.bands = [.breakfast] }; if f.bands.isEmpty || f.bands == [.breakfast, .afternoon] { f.bands = f.key == "oats" || f.key == "bread" || f.key == "banana" ? [.breakfast] : [.lunch, .dinner] }; return f })
+check("a meal that can't reach its minimum is reported", !nb.feasible && nb.misses.contains("protein per meal") && nb.shortMeals.contains { nb.slots[$0.index].band == .breakfast }
+      && nb.reasons.contains { $0.rule == "protein per meal" }, (nb.misses, nb.shortMeals))
+// A day that needs the wider calorie band says so.
+let coarse = [food("big meal", 250, 30, 8, 18, 3, usual: 400, slots: [0: 5, 1: 5, 2: 5, 3: 5], step: 400, max: 400),
+              food("oil", 884, 0, 100, 0, 0, usual: 10, slots: [0: 1, 1: 1, 2: 1, 3: 1], step: 5, max: 15)].map { $0.with(role: FoodRole.guess(name: $0.name, kcal: $0.per100.kcal, protein: $0.per100.protein, fat: $0.per100.fat, carbs: $0.per100.carbs)) }
+let wide = Planner.plan(PlanTargets(kcal: 4500, protein: 400, fat: 150, carbs: 280, fibreFloor: 0, fatFloor: 40, weightKg: 100), slots: slotsFor(training: nil), foods: coarse)
+check("widened calorie band is listed as a hard relaxation", !wide.relaxedHard.isEmpty && wide.reasons.contains { $0.rule == "calorie band widened" }, (wide.relaxedHard, Int(wide.totals.kcal)))
+check("a widened band never hides a miss: misses listed", wide.feasible || !wide.misses.isEmpty)
+
+// MARK: Roles and condiment limits
+let jam = food("Mermelada de Fresa Diet", 57, 0.5, 0, 14, 1, usual: 75, slots: [0: 5]).with(role: .condiment)
+check("jam: condiment, ≤ 30 g a meal, once a day", jam.role == .condiment && jam.maxGrams <= 30 && jam.maxPerDay == 1, (jam.maxGrams, jam.maxPerDay))
+for (n, kcal, fat, role) in [("Miel de flores", 304.0, 0.0, FoodRole.condiment), ("Crema de cacahuete", 600, 50, .condiment), ("Tomate Frito", 69, 3, .condiment),
+                             ("Ligeresa", 177, 18, .condiment), ("Aceite de oliva", 884, 100, .condiment), ("Ketchup cero", 38, 0, .condiment), ("Nutella", 539, 31, .condiment),
+                             ("Palomitas de mantequilla", 438, 20, .treat), ("Dates", 288, 0.4, .side), ("Premium Roasted Chicken", 115, 2, .main)] {
+    let g = FoodRole.guess(name: n, kcal: kcal, protein: n.contains("Chicken") ? 24 : 1, fat: fat, carbs: 20)
+    check("role: \(n) → \(role)", g == role, g)
+}
+check("honey ≤ 20 g, oil ≤ 15 g and twice a day, tomato sauce ≤ 100 g", CondimentKind.cap("Miel", fat: 0) == 20 && CondimentKind.cap("Aceite de oliva", fat: 100) == 15
+      && CondimentKind.perDay("Aceite de oliva", fat: 100) == 2 && CondimentKind.cap("Tomate Frito", fat: 3) == 100)
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

@@ -91,6 +91,7 @@ struct Root: View {
                 Backup.daily(ctx)
                 Task { await Reminders.reschedule(ctx) }
                 WidgetData.write(ctx)
+                ctx.refreshTrainingWeek()
             }
             #if os(iOS)
             if p == .active {

@@ -43,6 +43,7 @@ struct FoodDetailView: View {
     @State private var keypad = false
     @State private var loaded = false
     @State private var copied = false
+    @State private var cooking = false
 
     var body: some View {
         let n = food.nutrients(amount, unit: unit)
@@ -69,6 +70,30 @@ struct FoodDetailView: View {
 
     // MARK: Top: calories and macros
 
+    /// Raw or cooked: what the values are per, the ratio, and what you're logging converted.
+    private var cookingLine: some View {
+        Button { cooking = true } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame")
+                    if let st = food.state {
+                        Text("Values per \(st == .raw ? "raw / dry" : "cooked") weight\(food.ratio.map { " · cooked = \(number($0.value, digits: 2))× raw (\($0.measured ? "your batch" : "typical"))" } ?? "")")
+                    } else {
+                        Text("Raw or cooked? Set it to log either weight")
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption2)
+                }
+                if unit == Cooking.cookedUnit || unit == Cooking.rawUnit {
+                    Text("\(number(amount)) \(unit) = \(number(food.grams(amount, unit: unit))) g \(food.state == .raw ? "raw / dry" : "cooked")").foregroundStyle(palette.accent)
+                }
+            }
+            .font(.caption).foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $cooking) { NavigationStack { CookingSheet(food: food) }.appStyle().presentationDetents([.medium, .large]) }
+    }
+
     private func header(_ n: Nutrients, _ energy: EnergyUnit) -> some View {
         let kcal = max(n.kcal, 0.001)
         let share: [Macro: Double] = [.protein: n.protein * 4 / kcal, .fat: n.fat * 9 / kcal, .carbs: n.carbs * 4 / kcal]
@@ -88,6 +113,7 @@ struct FoodDetailView: View {
                 Spacer()
                 if let time { DatePicker("Time", selection: time, displayedComponents: .hourAndMinute).labelsHidden() }
             }
+            if !food.isLiquid { cookingLine }
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(number(energy.fromKcal(n.kcal))).font(.number(46)).liveNumber(n.kcal)

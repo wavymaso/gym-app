@@ -117,6 +117,18 @@ struct DistributionCard: View {
         Card(title: "Calorie distribution", systemImage: "calendar") {
             Text("Eat more on training days and less on the others; your week's calories stay the same.")
                 .font(.callout).foregroundStyle(.secondary)
+            Toggle(isOn: Binding(get: { profile.planner.highDaysFollowTraining }, set: { v in
+                var s = profile.planner; s.highDaysFollowTraining = v; profile.planner = s
+                if v && profile.highDayExtra == 0 { profile.highDayExtra = 250 }
+                ctx.commit() })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Training days follow my training week").font(.subheadline.weight(.semibold))
+                    Text(profile.planner.trainingWeekdays == nil
+                         ? (profile.planner.highDaysFollowTraining ? "No training week yet (log workouts or set it in Food log → Plan), so the days below are used." : "Using the days below.")
+                         : "From your training week (\(profile.planner.scheduleSet ? "set by you" : "your workouts")). Change it in Food log → Plan.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             HStack(spacing: 6) {
                 ForEach(order, id: \.self) { wd in
                     let high = profile.highDaySet.contains(wd), fast = profile.fastDaySet.contains(wd)
@@ -178,7 +190,9 @@ struct DistributionCard: View {
     }
 
     private func set(_ wd: Int, high: Bool, fast: Bool) {
+        // Changing a day by hand stops following the training week (starting from what it showed).
         var h = profile.highDaySet, f = profile.fastDaySet
+        if profile.planner.trainingWeekdays != nil { var s = profile.planner; s.highDaysFollowTraining = false; profile.planner = s }
         h.remove(wd); f.remove(wd)
         if high { h.insert(wd) }
         if fast { f.insert(wd) }

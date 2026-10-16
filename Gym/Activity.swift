@@ -155,6 +155,7 @@ enum HealthActivity {
         }
         guard let p = ctx.profile, p.planner.healthSessions != out else { return }
         var s = p.planner; s.healthSessions = out; p.planner = s; ctx.commit()
+        ctx.refreshTrainingWeek()
     }
 
     /// Hours asleep from 6 pm the evening before to noon (any stage of sleep, overlaps merged).

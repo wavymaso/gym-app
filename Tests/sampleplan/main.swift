@@ -22,10 +22,24 @@ MainActor.assumeIsolated {
     let source: String = switch ctx.planSource { case .history: "your eating history"; case .staples: "your staples"; case .recent: "your recent foods (no staples picked, little food-by-food history)" }
     print("SAMPLE 7-DAY PLAN · foods from \(source) · training: \(weekNote)")
     print("Settings: \(s.meals) meals, wake \(s.wake / 60):\(String(format: "%02d", s.wake % 60)), bed \(s.sleep / 60):\(String(format: "%02d", s.sleep % 60)), pre-workout snack, pre-sleep protein off\n")
-    if CommandLine.arguments.contains("--foods") {
-        for f in ctx.planFoods() { print(String(format: "  %-45@ %-9@ %@  usual %4.0f [%3.0f–%3.0f] step %3.0f  %4.0f kcal %4.1f P /100g  freq %.0f", f.name as NSString, f.role.rawValue as NSString,
-                                              f.bands.sorted().map(\.rawValue).joined(separator: ",") as NSString, f.usualGrams, f.minGrams, f.maxGrams, f.step, f.per100.kcal, f.per100.protein, f.frequency)) }
+    // The role audit: every food the planner can use, what it was taken for, and its limits.
+    print("FOOD ROLES (correct any in Food log → Plan → Change → Planner settings → Food roles)")
+    let corrected = p.planner.roles
+    for role in [FoodRole.main, .side, .condiment, .treat] {
+        let list = ctx.planFoods().filter { $0.role == role }.sorted { $0.name < $1.name }
+        guard !list.isEmpty else { continue }
+        print("  \(["main": "MAINS", "side": "SIDES", "condiment": "CONDIMENTS", "treat": "TREATS"][role.rawValue]!)")
+        for f in list {
+            let meals = f.bands.isEmpty ? "any meal" : f.bands.sorted().map(\.label).joined(separator: "/")
+            print(String(format: "    %-46@ %3.0f–%3.0f g a meal, up to %d× a day, %@ · %3.0f kcal %4.1f g protein per 100 g%@", f.name as NSString,
+                         f.minGrams, f.maxGrams, f.maxPerDay, meals as NSString, f.per100.kcal, f.per100.protein, (corrected[f.key] != nil ? " (your choice)" : "") as NSString))
+        }
     }
+    print("")
+    if p.refeedWeekday > 0, p.refeedExtraKcal > 0 {
+        print("Note: you have a weekly refeed on \(["", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][p.refeedWeekday]) (+\(Int(p.refeedExtraKcal)) kcal, taken back evenly from the other 6 days).")
+    }
+    print("Training days get +\(Int(p.highDayExtra)) kcal (your distribution), following \(p.planner.trainingWeekdays == nil ? "your picked days" : "the training week").\n")
     let start = addDays(dayKey(), 1)
     var uses: [String: Int] = [:]
     for i in 0..<7 {
@@ -38,14 +52,22 @@ MainActor.assumeIsolated {
         for sl in r.plan.slots {
             let m = sl.items.reduce(Macros()) { $0 + (r.foods[$1.key]?.macros($1.grams) ?? Macros()) }
             let kind = ["meal": "", "preWorkout": " (before training)", "postWorkout": " (after training)", "preSleep": " (before bed)"][sl.kind.rawValue] ?? ""
-            print(String(format: "  %02d:%02d %@%@ · %d kcal, %d g protein", sl.minute / 60 % 24, sl.minute % 60, sl.band.label, kind, Int(m.kcal), Int(m.protein)))
+            let short = r.plan.shortMeals.contains { $0.index == r.plan.slots.firstIndex(of: sl) } ? "  ⚠ below the \(Int(PlanTargets(kcal: 0, protein: 0, fat: 0, carbs: 0, weightKg: trendSeries(ctx.weightValues, through: d).last?.trend ?? 80).minProtein(sl.kind))) g minimum" : ""
+            print(String(format: "  %02d:%02d %@%@ · %d kcal, %d g protein%@", sl.minute / 60 % 24, sl.minute % 60, sl.band.label, kind, Int(m.kcal), Int(m.protein), short as NSString))
             for it in sl.items { print("     \(r.foods[it.key]?.name ?? it.key), \(Int(it.grams)) g") }
         }
         let tot = r.plan.totals
-        print(String(format: "  Day: %d kcal (target %d) · P %d (%d) · F %d (%d) · C %d (%d) · fibre %d g", Int(tot.kcal), Int(t.kcal), Int(tot.protein), Int(t.protein),
-                     Int(tot.fat), Int(t.fat), Int(tot.carbs), Int(t.carbs), Int(tot.fibre)))
-        if !r.plan.relaxed.isEmpty { print("  Relaxed: \(r.plan.relaxed.joined(separator: ", "))") }
-        if !r.plan.feasible { print("  ⚠ Doesn't fully fit: \(r.plan.reasons.first { $0.rule == "can't fully fit" }?.detail ?? "")") }
+        let kg = trendSeries(ctx.weightValues, through: d).last?.trend ?? 80
+        let fatFloor = min(t.fat, max(40, Evidence.value("fat.min.gPerKg") * kg))
+        let fibreFloor = p.customGoals["fiber"] ?? Evidence.value("fibre.per1000kcal") * t.kcal / 1000 * 0.7
+        let dk = tot.kcal - t.kcal
+        print(String(format: "  Day: %d kcal (target %d, %@%d, %+.1f%%) · protein %d (min %d) · fat %d (target %d, floor %d) · carbs %d (target %d) · fibre %d (floor %d)",
+                     Int(tot.kcal.rounded()), Int(t.kcal.rounded()), (dk >= 0 ? "+" : "") as NSString, Int(dk.rounded()), dk / t.kcal * 100, Int(tot.protein.rounded()), Int(t.protein.rounded()), Int(tot.fat.rounded()), Int(t.fat.rounded()), Int(fatFloor.rounded()),
+                     Int(tot.carbs.rounded()), Int(t.carbs.rounded()), Int(tot.fibre.rounded()), Int(fibreFloor.rounded())))
+        if !r.plan.relaxed.isEmpty { print("  Preferences relaxed: \(r.plan.relaxed.joined(separator: ", "))") }
+        if !r.plan.relaxedHard.isEmpty { print("  HARD LIMIT WIDENED: \(r.plan.relaxedHard.joined(separator: " → "))") }
+        if !r.plan.misses.isEmpty { print("  ⚠ HARD CONSTRAINTS NOT MET: \(r.plan.misses.joined(separator: ", "))") }
+        for m in r.plan.shortMeals { print("    · \(Planner.mealName(r.plan.slots[m.index])): \(Int(m.protein)) g protein of the \(Int(m.needed)) g minimum (no protein food for that meal)") }
         print("")
     }
 }

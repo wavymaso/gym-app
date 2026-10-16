@@ -4,40 +4,6 @@ import SwiftUI
 // The meal planner in the app: your settings (synced), your foods as candidates, today's plan with
 // what you've eaten fixed, and the week ahead.
 
-struct PlannerSettings: Codable, Equatable {
-    var meals = 4
-    var wake = 7 * 60
-    var sleep = 23 * 60
-    var schedule: [Int: TrainingSlot] = [:]          // weekday → session (yours, once you edit it)
-    var scheduleSet = false                          // false: the week inferred from your workouts
-    var healthSessions: [String: TrainingSlot] = [:] // workouts from Apple Health (day → first session), last 6 weeks
-    var staples: [Staple] = []                       // cold start: foods you eat regularly
-    var overrides: [String: TrainingSlot] = [:]      // day → session (start < 0 = rest)
-    var fastedMorning = false
-    var preSleepProtein = false
-    var exclusions: [String] = []                    // food keys
-    var variety = 0.5
-    var locks: [Int: [PlanItem]] = [:]               // slot → the meal you always want there
-    var iftar = 19 * 60 + 30, suhoor = 28 * 60 + 30  // Ramadan window (suhoor after midnight)
-    var trainingCarbBoost = false                    // accepted from the engine's proposal
-    var dismissedCarbProposal = ""                   // day you said no (asked again after 2 weeks)
-
-    /// Today's override, else your week (set by you, or inferred from your workouts).
-    func training(on day: String, inferred: [Int: TrainingSlot]) -> TrainingSlot? {
-        if let o = overrides[day] { return o.start < 0 ? nil : o }
-        return week(inferred)[Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: day))]
-    }
-    func week(_ inferred: [Int: TrainingSlot]) -> [Int: TrainingSlot] { scheduleSet ? schedule : inferred }
-}
-
-
-extension Profile {
-    var planner: PlannerSettings {
-        get { (try? JSONDecoder().decode(PlannerSettings.self, from: Data(plannerJSON.utf8))) ?? PlannerSettings() }
-        set { plannerJSON = String(decoding: (try? JSONEncoder().encode(newValue)) ?? Data(), as: UTF8.self) }
-    }
-}
-
 extension ModelContext {
     /// Where the planner's foods come from right now.
     enum PlanSource { case history, staples, recent }
@@ -49,6 +15,12 @@ extension ModelContext {
     /// Your foods as planner candidates: from the eating profile when there's enough logging, else your
     /// staples, else your recent and favourite foods (at the meal you last had them).
     func planFoods() -> [PlanFood] {
+        let roles = profile?.planner.roles ?? [:]
+        return planFoodsGuessed().map { f in roles[f.key].map { f.with(role: $0) } ?? f }
+    }
+
+    /// Before your role corrections.
+    func planFoodsGuessed() -> [PlanFood] {
         let foods = ((try? fetch(FetchDescriptor<Food>())) ?? [])
         func unit(_ f: Food) -> Double? { f.servings.first.flatMap { $0.name.hasPrefix("1 ") && $0.grams <= 150 && $0.grams > 0 ? $0.grams : nil } }
         let catalog = Dictionary(foods.map { f in (f.key, (name: f.name, per100: (f.per100.kcal, f.per100.protein, f.per100.fat, f.per100.carbs, f.per100.fiber ?? 0), unitGrams: unit(f))) },
@@ -63,11 +35,18 @@ extension ModelContext {
             var bands = MealBand.guess(name: f.name)
             if let d = f.lastUsed { bands.insert(MealBand.of(minute: Calendar.current.component(.hour, from: d) * 60 + Calendar.current.component(.minute, from: d))) }
             let step = unit(f) ?? (kcal100 > 500 ? 5 : 10)
-            let b = Portion.bounds(usual: max(g, step), kcal100: kcal100, role: role, step: step)
             return PlanFood(key: f.key, name: f.name, per100: (kcal100, f.per100.protein, f.per100.fat, f.per100.carbs, f.per100.fiber ?? 0),
-                            step: step, usualGrams: b.usual, maxGrams: b.max, minGrams: b.min,
-                            usualSlots: [:], frequency: Double(f.useCount) + (f.isFavorite ? 3 : 0), bands: bands, role: role, maxPerDay: role == .treat ? 1 : 2)
+                            step: step, usualGrams: max(g, step), usualSlots: [:], frequency: Double(f.useCount) + (f.isFavorite ? 3 : 0), bands: bands)
+                .with(role: role, usual: max(g, step))
         }
+    }
+
+    /// Keep the stored inferred week current (targets read it). Call after workouts change.
+    func refreshTrainingWeek() {
+        guard let p = profile else { return }
+        let w = inferredSchedule()
+        guard p.planner.inferredWeek != w else { return }
+        var s = p.planner; s.inferredWeek = w; p.planner = s; commit()
     }
 
     /// Your usual training week from the last 6 weeks: workouts logged here plus Apple Health.

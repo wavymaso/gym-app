@@ -23,6 +23,8 @@ import SwiftData
     var lastAmount: Double?                   // the amount you used last time, offered again
     var lastUnit: String?
     var recipeServings: Double?               // recipes: how many servings it makes
+    var weightState: String = ""              // what the values are per: "raw" (or dry) | "cooked" | "" (not set: guessed from the name)
+    var cookedRatio: Double = 0               // cooked ÷ raw weight, from a batch you weighed (0: typical value)
     var createdAt: Date
 
     init(key: String, name: String, brand: String? = nil, barcode: String? = nil, source: String, per100: Nutrients,
@@ -34,12 +36,34 @@ import SwiftData
 
     var baseUnit: String { isLiquid ? "ml" : "g" }
 
-    /// Units you can log this food in: its servings, then g (or ml) and oz.
-    var units: [String] { servings.map(\.name) + [baseUnit, "oz"] }
+    /// Units you can log this food in: its servings, then g (or ml), the other weight (cooked or raw)
+    /// when it's known, and oz.
+    var units: [String] { servings.map(\.name) + [baseUnit] + (otherWeightUnit.map { [$0] } ?? []) + ["oz"] }
+
+    /// Raw or cooked: yours, else guessed from the name.
+    var state: WeightState? {
+        if let s = WeightState(rawValue: weightState) { return s }
+        if source == "recipe" { return .raw }                 // a recipe's values are per gram of its raw ingredients
+        return isLiquid ? nil : Cooking.guessState(name)
+    }
+    /// Cooked ÷ raw: your batch, else the typical value for this kind of food.
+    var ratio: (value: Double, measured: Bool, what: String)? {
+        if cookedRatio > 0 { return (cookedRatio, true, "your batch") }
+        if source == "recipe" { return nil }                  // only a weighed batch tells
+        return Cooking.guessRatio(name).map { ($0.ratio, false, $0.what) }
+    }
+    /// "g cooked" for raw/dry values, "g raw" for cooked ones.
+    var otherWeightUnit: String? {
+        guard let s = state, let r = ratio, abs(r.value - 1) > 0.01 else { return nil }
+        return s == .raw ? Cooking.cookedUnit : Cooking.rawUnit
+    }
 
     func grams(_ amount: Double, unit: String) -> Double {
         switch unit {
         case "g", "ml": return amount
+        case Cooking.cookedUnit, Cooking.rawUnit:
+            guard let s = state, let r = ratio else { return amount }
+            return Cooking.grams(amount, weighedAs: unit == Cooking.cookedUnit ? .cooked : .raw, dataIs: s, ratio: r.value)
         case "oz": return amount * 28.349523125
         default: return amount * (servings.first { $0.name == unit }?.grams ?? 100)
         }
@@ -101,7 +125,7 @@ import SwiftData
     var amountText: String {
         if isQuickAdd { return "Quick add" }
         let a = number(amount, digits: amount == amount.rounded() ? 0 : 1)
-        if unit == "g" || unit == "ml" || unit == "oz" { return "\(a) \(unit)" }
+        if unit == "g" || unit == "ml" || unit == "oz" || unit == Cooking.cookedUnit || unit == Cooking.rawUnit { return "\(a) \(unit)" }
         return amount == 1 ? unit : "\(a) × \(unit)"
     }
 }

@@ -246,6 +246,7 @@ struct RecipeView: View {
     @Query private var profiles: [Profile]
     @State private var name = ""
     @State private var servings = "4"
+    @State private var cookedWeight = ""                 // the whole batch after cooking (g): sets the recipe's cooked ÷ raw ratio
     @State private var items: [Item] = []
     @State private var picking = false
     @State private var pending: [RecipeLine] = []           // imported ingredient lines still to match to a food
@@ -360,6 +361,12 @@ struct RecipeView: View {
                 Section {
                     TextField("Recipe name", text: $name)
                     NumberRow(label: "Makes", text: $servings, unit: "servings")
+                    NumberRow(label: "Cooked batch weighs", text: $cookedWeight, unit: "g")
+                    if let c = parseNumber(cookedWeight), c > 0, let t = totals {
+                        let raw = items.reduce(0) { $0 + $1.grams }
+                        Text("Raw \(number(raw)) g → cooked \(number(c)) g (×\(number(c / raw, digits: 2))). Log it by cooked weight: \(t.serving.name) is \(number(c / max(parseNumber(servings) ?? 1, 1))) g cooked.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     if recipe == nil { Button { importing = true } label: { Label("Import from a link, post, text or photo…", systemImage: "link") } }
                     if let aiNote { Label(aiNote, systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
                 }
@@ -446,6 +453,7 @@ struct RecipeView: View {
         guard let r = recipe, items.isEmpty else { return }
         name = r.name
         servings = text(r.recipeServings ?? 1)
+        if r.cookedRatio > 0 { cookedWeight = text((r.cookedRatio * ctx.ingredients(of: r.key).reduce(0) { $0 + $1.grams }).rounded()) }
         items = ctx.ingredients(of: r.key).map { Item(foodKey: $0.foodKey, name: $0.name, grams: $0.grams, per100: $0.per100) }
     }
 
@@ -458,6 +466,9 @@ struct RecipeView: View {
         }()
         r.name = name.trimmingCharacters(in: .whitespaces)
         r.per100 = t.per100; r.servings = [t.serving]; r.recipeServings = parseNumber(servings)
+        let rawTotal = items.reduce(0) { $0 + $1.grams }
+        r.weightState = WeightState.raw.rawValue
+        r.cookedRatio = (parseNumber(cookedWeight)).flatMap { Cooking.ratio(raw: rawTotal, cooked: $0) }.map { ($0 * 1000).rounded() / 1000 } ?? 0
         for old in ctx.ingredients(of: r.key) { ctx.delete(old) }
         for (i, item) in items.enumerated() {
             ctx.insert(RecipeIngredient(recipeKey: r.key, foodKey: item.foodKey, name: item.name, grams: item.grams,

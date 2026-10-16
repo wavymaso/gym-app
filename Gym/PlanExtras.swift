@@ -149,3 +149,61 @@ struct StaplesView: View {
         s.staples = staples; p.planner = s; ctx.commit()
     }
 }
+
+/// Every food the planner can use, with its role (main, side, condiment, treat) and limits. Tap to correct.
+struct FoodRolesView: View {
+    @Environment(\.modelContext) private var ctx
+    @State private var foods: [PlanFood] = []
+    @State private var roles: [String: FoodRole] = [:]
+
+    var body: some View {
+        List {
+            Section {
+                Text("Main: can be the centre of a meal. Side: goes with one (fruit, vegetables). Condiment: only alongside a main, one serving (spreads 30 g, sauces 60 g, oil 15 g). Treat: sweets, snacks and bars, once a day, never a meal on its own.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach([FoodRole.main, .side, .condiment, .treat], id: \.self) { role in
+                let list = foods.filter { (roles[$0.key] ?? $0.role) == role }
+                if !list.isEmpty {
+                    Section(Self.label(role)) {
+                        ForEach(list, id: \.key) { f in row(f) }
+                    }
+                }
+            }
+        }
+        .themedList()
+        .navigationTitle("Food roles")
+        .onAppear {
+            foods = ctx.planFoodsGuessed().sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            roles = ctx.profile?.planner.roles ?? [:]
+        }
+    }
+
+    static func label(_ r: FoodRole) -> String { ["main": "Mains", "side": "Sides", "condiment": "Condiments", "treat": "Treats"][r.rawValue] ?? r.rawValue }
+
+    private func row(_ f: PlanFood) -> some View {
+        let r = roles[f.key] ?? f.role
+        let shown = f.with(role: r)
+        return HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(f.name).lineLimit(1)
+                Text("\(Int(shown.minGrams))–\(Int(shown.maxGrams)) g a meal · up to \(shown.maxPerDay)× a day · \(f.bands.isEmpty ? "any meal" : f.bands.sorted().map(\.label).joined(separator: ", "))\(roles[f.key] != nil ? " · your choice" : "")")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            }
+            Spacer()
+            Menu {
+                ForEach([FoodRole.main, .side, .condiment, .treat], id: \.self) { o in
+                    Button { set(f, o) } label: { if o == r { Label(Self.label(o), systemImage: "checkmark") } else { Text(Self.label(o)) } }
+                }
+                if roles[f.key] != nil { Divider(); Button("Back to automatic (\(Self.label(f.role)))") { set(f, nil) } }
+            } label: { Text(Self.label(r).dropLast()).font(.caption.weight(.semibold)) }
+        }
+    }
+
+    private func set(_ f: PlanFood, _ r: FoodRole?) {
+        guard let p = ctx.profile else { return }
+        var s = p.planner
+        s.roles[f.key] = r == f.role ? nil : r
+        roles = s.roles; p.planner = s; ctx.commit(); Haptics.tick()
+    }
+}

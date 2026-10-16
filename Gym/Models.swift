@@ -171,7 +171,10 @@ extension ModelContext {
 // MARK: - Calorie distribution (different days, the same week)
 
 extension Profile {
-    var highDaySet: Set<Int> { Set(highDays.split(separator: ",").compactMap { Int($0) }) }
+    /// Training days for the calorie distribution: your training week (set, or inferred from workouts)
+    /// unless you turned that off, else the days you picked.
+    var highDaySet: Set<Int> { planner.trainingWeekdays ?? manualHighDays }
+    var manualHighDays: Set<Int> { Set(highDays.split(separator: ",").compactMap { Int($0) }) }
     var fastDaySet: Set<Int> { Set(fastDays.split(separator: ",").compactMap { Int($0) }) }
     var hasDistribution: Bool { (!highDaySet.isEmpty && highDayExtra > 0) || !fastDaySet.isEmpty }
 

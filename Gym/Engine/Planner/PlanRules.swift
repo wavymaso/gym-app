@@ -78,7 +78,7 @@ enum FoodRole: String, Codable {
         let n = name.lowercased()
         let condiments = ["aceite", " oil", "olive oil", "mantequilla", "butter", "crema de cacahuete", "mermelada", "jam", "salsa", "sauce", "tomate frito",
                           "ketchup", "mayonesa", "mayo", "miel", "honey", "sirope", "syrup", "dressing", "aliño", "vinagre", "mostaza", "mustard", "pesto",
-                          "hummus", "nata", "cream cheese", "ligeresa", "alioli", "guacamole"]
+                          "hummus", "nata", "cream cheese", "nutella", "nocilla", "ligeresa", "alioli", "guacamole"]
         let treats = ["chocolate", "galleta", "cookie", "biscuit", "palomitas", "popcorn", "pepero", "chips", "patatas fritas", "candy", "gominola",
                       "dulce", "barebells", "protein bar", "barrita", "bar ", "helado", "ice cream", "donut", "bollo", "brownie", "pringles", "crisps", "kitkat", "oreo"]
         if treats.contains(where: { n.contains($0) }) && !n.contains("tortitas") || n.hasSuffix(" bar") { return .treat }
@@ -94,17 +94,62 @@ enum FoodRole: String, Codable {
 
 // MARK: Staples (cold start)
 
-/// Realistic portions around your usual one: half to about one and a half times it; condiments and
-/// sauces kept to a serving (≤ 150 kcal), so last week's 500 g of sauce doesn't become the plan's portion.
+/// What kind of condiment: limits per meal and per day.
+enum CondimentKind {
+    case oil, spread, sauce
+    static func of(_ name: String, fat: Double) -> CondimentKind {
+        let n = name.lowercased()
+        if fat >= 80 || n.contains("aceite") || n.contains(" oil") || n.hasPrefix("oil") { return .oil }
+        if ["mermelada", "jam", "miel", "honey", "crema de", "peanut butter", "mantequilla", "butter", "nutella", "sirope", "syrup", "cacahuete", "hummus", "nata", "cream cheese"]
+            .contains(where: { n.contains($0) }) { return .spread }
+        return .sauce
+    }
+    /// Most per meal (g): oil 15, honey 20, spreads 30, tomato sauces 100, other sauces 60.
+    static func cap(_ name: String, fat: Double) -> Double {
+        let n = name.lowercased()
+        switch of(name, fat: fat) {
+        case .oil: return 15
+        case .spread: return n.contains("miel") || n.contains("honey") || n.contains("sirope") || n.contains("syrup") ? 20 : 30
+        case .sauce: return n.contains("tomate") || n.contains("tomato") ? 100 : 60
+        }
+    }
+    /// Meals a day it can appear in: oil twice (cooking), everything else once.
+    static func perDay(_ name: String, fat: Double) -> Int { of(name, fat: fat) == .oil ? 2 : 1 }
+}
+
+/// Realistic portions around your usual one: half to about one and a half times it; condiments kept
+/// to a serving (spreads 30 g, sauces 60 g, oil 15 g, never over 150 kcal), so last week's 500 g of
+/// sauce doesn't become the plan's portion.
 enum Portion {
-    static func bounds(usual: Double, kcal100: Double, role: FoodRole, step: Double) -> (usual: Double, min: Double, max: Double) {
+    static func bounds(usual: Double, kcal100: Double, role: FoodRole, step: Double, name: String = "", fat: Double = 0) -> (usual: Double, min: Double, max: Double) {
         var hi = usual * 1.6
-        if role == .condiment { hi = min(usual * 1.25, max(step, 15000 / max(kcal100, 1))) }
+        if role == .condiment { hi = min(usual * 1.25, CondimentKind.cap(name, fat: fat), max(step, 15000 / max(kcal100, 1))) }
         if role == .treat { hi = min(hi, usual) }
-        hi = max(step, (hi / step).rounded(.down) * step)
+        let st = role == .condiment ? min(step, 5) : step
+        hi = max(st, (hi / st).rounded(.down) * st)
         let u = min(usual, hi)
-        let lo = min(u, max(step, (u * 0.5 / step).rounded() * step))
+        let lo = min(u, max(st, (u * 0.5 / st).rounded() * st))
         return (u, lo, hi)
+    }
+    static func perDay(_ role: FoodRole, name: String, fat: Double) -> Int {
+        switch role {
+        case .treat: return 1
+        case .condiment: return CondimentKind.perDay(name, fat: fat)
+        default: return 2
+        }
+    }
+}
+
+extension PlanFood {
+    /// The same food with another role (your correction): portion limits and meals a day follow it.
+    func with(role r: FoodRole, usual: Double? = nil) -> PlanFood {
+        var f = self
+        f.role = r
+        if r == .condiment { f.step = min(f.step, 5) }
+        let b = Portion.bounds(usual: usual ?? usualGrams, kcal100: per100.kcal, role: r, step: f.step, name: name, fat: per100.fat)
+        (f.usualGrams, f.minGrams, f.maxGrams) = (b.usual, b.min, b.max)
+        f.maxPerDay = Portion.perDay(r, name: name, fat: per100.fat)
+        return f
     }
 }
 

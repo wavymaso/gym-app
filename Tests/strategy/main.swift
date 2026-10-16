@@ -145,5 +145,40 @@ c3.finishCheckIn(apply: Targets(kcal: base3 * 1.1, protein: 190, fat: 70, carbs:
 let mon = p3.weekPlan[2]!
 check(abs(mon.kcal - roundTo(2600 * 1.1, 10)) < 1 && mon.protein == 190, "check-in rescales the plan, protein kept (\(mon.kcal))")
 
+do {
+// Training days in the calorie distribution follow the training week (set, or inferred from workouts).
+let pt = Profile(sex: .male, birthDate: Date(timeIntervalSince1970: 0), heightCm: 180, activity: .moderate, weightUnit: .kg, energyUnit: .kcal)
+pt.highDays = "1,2,3,4,5,6,7"; pt.highDayExtra = 250              // every day marked: no difference (the user's setting)
+let baseT = Targets(kcal: 2200, protein: 190, fat: 60, carbs: 230)
+let kcalOn: (Int) -> Double = { wd in pt.adjust(baseT, on: (0..<7).map { addDays("2026-10-18", $0) }.first { Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: $0)) == wd }!).kcal }
+check(Set((1...7).map(kcalOn)).count == 1, "all 7 days marked: every day the same")
+var ps = pt.planner; ps.inferredWeek = [2: TrainingSlot(start: 1080, minutes: 75), 4: TrainingSlot(start: 1080, minutes: 75), 6: TrainingSlot(start: 1080, minutes: 75)]; pt.planner = ps
+check(pt.highDaySet == [2, 4, 6], "training days follow the inferred week (\(pt.highDaySet))")
+check(kcalOn(2) == kcalOn(4) && kcalOn(4) == kcalOn(6) && kcalOn(2) - kcalOn(3) == 250, "every training day gets the training-day target (\(kcalOn(2)) vs \(kcalOn(3)))")
+check(abs((1...7).map(kcalOn).reduce(0, +) - 7 * 2200) < 0.01, "week total unchanged")
+ps.schedule = [7: TrainingSlot(start: 660, minutes: 90)]; ps.scheduleSet = true; pt.planner = ps
+check(pt.highDaySet == [7], "your own week wins over the inferred one")
+ps.highDaysFollowTraining = false; pt.planner = ps
+check(pt.highDaySet == Set(1...7), "turned off: your picked days")
+
+// Raw or cooked: log either weight.
+let pasta = Food(key: "p", name: "Pipe Rigate", source: "off", per100: Nutrients(kcal: 347, protein: 12, fat: 1.5, carbs: 70))
+check(pasta.state == .raw && pasta.units.contains(Cooking.cookedUnit), "dry pasta: values raw, can log cooked")
+check(abs(pasta.grams(200, unit: Cooking.cookedUnit) - 200 / 2.35) < 0.01, "200 g cooked pasta = 85 g dry (typical ratio)")
+pasta.cookedRatio = 2.5
+check(abs(pasta.grams(250, unit: Cooking.cookedUnit) - 100) < 0.01, "your batch ratio wins (250 g cooked = 100 g dry)")
+let chicken = Food(key: "c", name: "Premium Roasted Chicken", source: "custom", per100: Nutrients(kcal: 115, protein: 24, fat: 2, carbs: 0))
+check(chicken.state == .cooked && chicken.units.contains(Cooking.rawUnit) && abs(chicken.grams(100, unit: Cooking.rawUnit) - 73) < 0.01, "roasted chicken: 100 g raw = 73 g cooked")
+let potato = Food(key: "pt", name: "Potatoes, flesh and skin, raw", source: "usda", per100: Nutrients(kcal: 77, protein: 2, fat: 0.1, carbs: 17))
+check(abs(potato.grams(925, unit: Cooking.cookedUnit) - 925 / 0.83) < 0.01, "925 g baked potato = 1 114 g raw")
+let recipe = Food(key: "recipe:x", name: "Pasta bake", source: "recipe", per100: Nutrients(kcal: 200, protein: 10, fat: 5, carbs: 30))
+check(recipe.state == .raw && recipe.otherWeightUnit == nil, "recipe: no cooked unit until you weigh a batch")
+recipe.cookedRatio = Cooking.ratio(raw: 1200, cooked: 1800)!
+check(abs(recipe.grams(300, unit: Cooking.cookedUnit) - 200) < 0.01, "batch 1 200 g raw → 1 800 g cooked: 300 g cooked = 200 g of ingredients")
+let milk = Food(key: "m", name: "Leche", source: "off", per100: Nutrients(kcal: 46, protein: 3, fat: 1.5, carbs: 5), isLiquid: true)
+check(milk.otherWeightUnit == nil, "liquids: no raw/cooked")
+
+}
+
 print(failed == 0 ? "ALL PASSED" : "\(failed) FAILED")
 exit(failed == 0 ? 0 : 1)

@@ -41,6 +41,7 @@ struct PlanDayView: View {
             }
         }
         .task(id: "\(day)|\(dataVersion)|\(version)") {
+            ctx.refreshTrainingWeek()
             inferred = ctx.inferredSchedule(); source = ctx.planSource
             result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan) }
         }
@@ -160,6 +161,10 @@ struct PlanDayView: View {
                 .opacity(s.eaten ? 1 : 0.6)
                 .contentShape(Rectangle())
                 .onTapGesture { if !s.eaten { amount = (s, it) } }
+            }
+            if let short = r.plan.shortMeals.first(where: { r.plan.slots.indices.contains($0.index) && r.plan.slots[$0.index].index == s.index }) {
+                Label("\(Int(short.protein)) g protein, below this meal's \(Int(short.needed)) g minimum: none of your foods for it has enough. Add a protein staple.",
+                      systemImage: "exclamationmark.triangle").font(.fine).foregroundStyle(palette.warn).fixedSize(horizontal: false, vertical: true)
             }
             if s.eaten {
                 Label("Eaten", systemImage: "checkmark.circle.fill").font(.fine).foregroundStyle(palette.good)
@@ -420,6 +425,7 @@ struct PlannerSettingsView: View {
                 }
             } header: { Text("Preferences") } footer: { Text("Pre-sleep protein has some evidence but it's weak once total protein is the same; off by default.") }
             Section {
+                NavigationLink("Food roles (\(s.roles.count) corrected)") { FoodRolesView().onDisappear { if let p = ctx.profile { s.roles = p.planner.roles } } }
                 NavigationLink("Staples (\(s.staples.count))") { StaplesView().onDisappear { if let p = ctx.profile { s.staples = p.planner.staples } } }
                 NavigationLink("Foods to leave out (\(s.exclusions.count))") { ExclusionsView(exclusions: $s.exclusions) }
             } footer: { Text("Staples are used until your log has about two weeks of food-by-food history.") }
@@ -434,7 +440,7 @@ struct PlannerSettingsView: View {
     private func save() {
         guard let p = ctx.profile else { return }
         // Staples and Health workouts are edited elsewhere: keep the latest of those.
-        s.staples = p.planner.staples; s.healthSessions = p.planner.healthSessions
+        s.staples = p.planner.staples; s.healthSessions = p.planner.healthSessions; s.roles = p.planner.roles; s.inferredWeek = p.planner.inferredWeek
         guard p.planner != s else { return }
         p.planner = s; ctx.commit()
     }

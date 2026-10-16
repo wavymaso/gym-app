@@ -11,6 +11,7 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `protein.daily.gPerKg` | Protein beyond about 1.6 g per kg of body weight a day adds little to muscle gained from lifting; the confidence interval reaches about 2.2. | 1.6 g/kg/day | 1.6–2.2 | A |
 | `protein.cut.gPerKgLean` | During contest dieting, 2.3–3.1 g of protein per kg of lean body mass a day. | 2.6 g/kg lean mass/day | 2.3–3.1 | C |
 | `protein.perMeal.gPerKg` | About 0.4 g of protein per kg per meal across at least four meals reaches at least 1.6 g/kg/day; up to 0.55 g/kg per meal for 2.2 g/kg/day. | 0.4 g/kg/meal | 0.4–0.55 | C |
+| `protein.perMeal.min.gPerKg` | The planner's minimum protein for every meal: 0.3 g per kg of body weight (0.4 g/kg, the entry above, for the meals before and after training). | 0.3 g/kg/meal | 0.24–0.4 | D |
 | `protein.clamp.gPerKgBody` | Safety clamp: protein from lean mass stays between 1.5 and 2.6 g per kg of body weight, so a wrong body-fat entry can't swing it. | 2.6 g/kg body weight | 1.5–2.6 | D |
 | `rate.cut.pctPerWeek` | Lose about 0.5–1% of body weight a week to keep as much muscle as possible. | 0.5 % body weight/week | 0.25–1 | C |
 | `rate.bulk.pctPerWeek` | Gain about 0.25–0.5% of body weight a week as a novice or intermediate lifter; slower when advanced. | 0.25 % body weight/week | 0.1–0.5 | C |
@@ -78,6 +79,14 @@ About 0.4 g of protein per kg per meal across at least four meals reaches at lea
 - **Studied in:** Young resistance-trained adults (review of acute protein-synthesis studies).
 - **Note:** A soft guide, not a rule: meal frequency matters little if the daily total is met.
 - Schoenfeld BJ, Aragon AA. 2018. How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. J Int Soc Sports Nutr 15:10. <https://doi.org/10.1186/s12970-018-0215-1>
+
+### `protein.perMeal.min.gPerKg` (grade D)
+
+The planner's minimum protein for every meal: 0.3 g per kg of body weight (0.4 g/kg, the entry above, for the meals before and after training).
+
+- **Studied in:** —
+- **Note:** Your choice. Acute studies put the dose that maximises muscle protein synthesis at about 0.24 g/kg in young men and higher in older adults; 0.3 adds a margin. Not verified as its own finding, so graded D.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
 
 ### `protein.clamp.gPerKgBody` (grade D)
 

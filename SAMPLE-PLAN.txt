@@ -1,155 +1,170 @@
 SAMPLE 7-DAY PLAN · foods from your recent foods (no staples picked, little food-by-food history) · training: EXAMPLE week (you have no logged workouts yet), 75 min sessions
 Settings: 4 meals, wake 7:00, bed 23:00, pre-workout snack, pre-sleep protein off
 
+FOOD ROLES (correct any in Food log → Plan → Change → Planner settings → Food roles)
+  MAINS
+    Pipe Rigate 100–400 g a meal, up to 2× a day, Lunch/Dinner · 347 kcal 12.0 g protein per 100 g
+    Premium Roasted Chicken 200–600 g a meal, up to 2× a day, Lunch/Dinner · 115 kcal 24.0 g protein per 100 g
+    Sourdough Bread  53– 53 g a meal, up to 2× a day, Lunch · 230 kcal 10.7 g protein per 100 g
+    Spicy Kimchi Protein Noodles  62– 62 g a meal, up to 2× a day, Lunch/Dinner · 344 kcal 51.6 g protein per 100 g
+    Tortellini Carne 130–400 g a meal, up to 2× a day, Lunch/Dinner · 163 kcal  5.8 g protein per 100 g
+    Tortitas de arroz integral con chocolate negro  30– 80 g a meal, up to 2× a day, Breakfast/Merienda · 456 kcal  7.0 g protein per 100 g
+  SIDES
+    Banana, raw  50–150 g a meal, up to 2× a day, Breakfast ·  97 kcal  0.7 g protein per 100 g
+    Brotes de espinaca  80–240 g a meal, up to 2× a day, Lunch ·  11 kcal  1.0 g protein per 100 g
+    Dates 100–100 g a meal, up to 2× a day, Merienda · 288 kcal  2.0 g protein per 100 g
+    Potatoes, flesh and skin, raw 460–1480 g a meal, up to 2× a day, Lunch/Dinner ·  77 kcal  2.0 g protein per 100 g
+  CONDIMENTS
+    In N Out Sauce  30– 60 g a meal, up to 1× a day, Lunch · 138 kcal  0.9 g protein per 100 g
+    Ketchup cero sin azúcares añadidos  30– 60 g a meal, up to 1× a day, Lunch ·  38 kcal  3.1 g protein per 100 g
+    Ligeresa  30– 60 g a meal, up to 1× a day, Lunch · 177 kcal  0.0 g protein per 100 g
+    Mermelada de Fresa Diet  15– 30 g a meal, up to 1× a day, Breakfast/Merienda ·  57 kcal  0.5 g protein per 100 g
+    Peanut butter  15– 25 g a meal, up to 1× a day, Breakfast · 598 kcal 22.2 g protein per 100 g
+    Tomate Frito  50–100 g a meal, up to 1× a day, Lunch ·  69 kcal  1.1 g protein per 100 g
+  TREATS
+    Barebells Mint Dark Chocolate  55–110 g a meal, up to 1× a day, Dinner · 349 kcal 36.4 g protein per 100 g
+    PEPERO White + cookie blanc + biscuit  32– 32 g a meal, up to 1× a day, Breakfast/Merienda/Dinner · 500 kcal  6.2 g protein per 100 g
+    Palomitas de mantequilla  40– 80 g a meal, up to 1× a day, Dinner · 438 kcal  8.2 g protein per 100 g
+
+Note: you have a weekly refeed on Saturday (+400 kcal, taken back evenly from the other 6 days).
+Training days get +250 kcal (your distribution), following the training week.
+
 ── Sunday 18 Oct · rest day
-  08:00 Breakfast · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast · 386 kcal, 9 g protein  ⚠ below the 33 g minimum
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch · 750 kcal, 109 g protein
-     Premium Roasted Chicken, 300 g
-     Ligeresa, 40 g
-     Spicy Kimchi Protein Noodles, 62 g
-     Sourdough Bread, 53 g
-  18:00 Merienda · 448 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
+  14:00 Lunch · 543 kcal, 96 g protein
+     Premium Roasted Chicken, 400 g
+     In N Out Sauce, 60 g
+  18:00 Merienda · 525 kcal, 5 g protein  ⚠ below the 33 g minimum
+     Dates, 100 g
      Tortitas de arroz integral con chocolate negro, 52 g
-  21:30 Dinner · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
+  21:30 Dinner · 558 kcal, 103 g protein
+     Premium Roasted Chicken, 300 g
      Spicy Kimchi Protein Noodles, 62 g
-  Day: 2226 kcal (target 2123) · P 206 (193) · F 55 (57) · C 224 (210) · fibre 16 g
-  Relaxed: variety, usual meal slots
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2013 kcal (target 1980, +33, +1.6%) · protein 215 (min 193) · fat 50 (target 57, floor 55) · carbs 175 (target 175) · fibre 5 (floor 19)
+  Preferences relaxed: variety, usual meal slots
+  ⚠ HARD CONSTRAINTS NOT MET: fat floor, fibre, protein per meal
+    · breakfast: 9 g protein of the 33 g minimum (no protein food for that meal)
+    · merienda: 5 g protein of the 33 g minimum (no protein food for that meal)
 
 ── Monday 19 Oct · training 18:00
-  08:00 Breakfast · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast · 386 kcal, 9 g protein  ⚠ below the 33 g minimum
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch · 750 kcal, 109 g protein
-     Premium Roasted Chicken, 300 g
-     Ligeresa, 40 g
-     Spicy Kimchi Protein Noodles, 62 g
+  14:00 Lunch · 660 kcal, 104 g protein
+     Premium Roasted Chicken, 400 g
+     Tomate Frito, 75 g
      Sourdough Bread, 53 g
-  16:30 Merienda (before training) · 448 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
-     Tortitas de arroz integral con chocolate negro, 52 g
-  21:00 Dinner (after training) · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
+     Brotes de espinaca, 240 g
+  16:30 Merienda (before training) · 587 kcal, 6 g protein  ⚠ below the 44 g minimum
+     Dates, 100 g
+     Mermelada de Fresa Diet, 30 g
+     Tortitas de arroz integral con chocolate negro, 62 g
+  21:00 Dinner (after training) · 597 kcal, 72 g protein
+     Barebells Mint Dark Chocolate, 110 g
      Spicy Kimchi Protein Noodles, 62 g
-  Day: 2226 kcal (target 2123) · P 206 (193) · F 55 (57) · C 224 (210) · fibre 16 g
-  Relaxed: variety, usual meal slots
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2232 kcal (target 2230, +1, +0.1%) · protein 193 (min 193) · fat 58 (target 57, floor 55) · carbs 243 (target 237) · fibre 15 (floor 22)
+  ⚠ HARD CONSTRAINTS NOT MET: fibre, protein per meal
+    · breakfast: 9 g protein of the 33 g minimum (no protein food for that meal)
+    · meal before training: 6 g protein of the 44 g minimum (no protein food for that meal)
 
 ── Tuesday 20 Oct · rest day
-  08:00 Breakfast · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast · 386 kcal, 9 g protein  ⚠ below the 33 g minimum
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch · 750 kcal, 109 g protein
-     Premium Roasted Chicken, 300 g
-     Ligeresa, 40 g
-     Spicy Kimchi Protein Noodles, 62 g
-     Sourdough Bread, 53 g
-  18:00 Merienda · 448 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
+  14:00 Lunch · 543 kcal, 96 g protein
+     Premium Roasted Chicken, 400 g
+     In N Out Sauce, 60 g
+  18:00 Merienda · 525 kcal, 5 g protein  ⚠ below the 33 g minimum
+     Dates, 100 g
      Tortitas de arroz integral con chocolate negro, 52 g
-  21:30 Dinner · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
+  21:30 Dinner · 558 kcal, 103 g protein
+     Premium Roasted Chicken, 300 g
      Spicy Kimchi Protein Noodles, 62 g
-  Day: 2226 kcal (target 2123) · P 206 (193) · F 55 (57) · C 224 (210) · fibre 16 g
-  Relaxed: variety, usual meal slots
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2013 kcal (target 1980, +33, +1.6%) · protein 215 (min 193) · fat 50 (target 57, floor 55) · carbs 175 (target 175) · fibre 5 (floor 19)
+  Preferences relaxed: variety, usual meal slots
+  ⚠ HARD CONSTRAINTS NOT MET: fat floor, fibre, protein per meal
+    · breakfast: 9 g protein of the 33 g minimum (no protein food for that meal)
+    · merienda: 5 g protein of the 33 g minimum (no protein food for that meal)
 
 ── Wednesday 21 Oct · training 18:00
-  08:00 Breakfast · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast · 386 kcal, 9 g protein  ⚠ below the 33 g minimum
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch · 750 kcal, 109 g protein
-     Premium Roasted Chicken, 300 g
-     Ligeresa, 40 g
-     Spicy Kimchi Protein Noodles, 62 g
+  14:00 Lunch · 660 kcal, 104 g protein
+     Premium Roasted Chicken, 400 g
+     Tomate Frito, 75 g
      Sourdough Bread, 53 g
-  16:30 Merienda (before training) · 448 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
-     Tortitas de arroz integral con chocolate negro, 52 g
-  21:00 Dinner (after training) · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
+     Brotes de espinaca, 240 g
+  16:30 Merienda (before training) · 587 kcal, 6 g protein  ⚠ below the 44 g minimum
+     Dates, 100 g
+     Mermelada de Fresa Diet, 30 g
+     Tortitas de arroz integral con chocolate negro, 62 g
+  21:00 Dinner (after training) · 597 kcal, 72 g protein
+     Barebells Mint Dark Chocolate, 110 g
      Spicy Kimchi Protein Noodles, 62 g
-  Day: 2226 kcal (target 2123) · P 206 (193) · F 55 (57) · C 224 (210) · fibre 16 g
-  Relaxed: variety, usual meal slots
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2232 kcal (target 2230, +1, +0.1%) · protein 193 (min 193) · fat 58 (target 57, floor 55) · carbs 243 (target 237) · fibre 15 (floor 22)
+  ⚠ HARD CONSTRAINTS NOT MET: fibre, protein per meal
+    · breakfast: 9 g protein of the 33 g minimum (no protein food for that meal)
+    · meal before training: 6 g protein of the 44 g minimum (no protein food for that meal)
 
 ── Thursday 22 Oct · rest day
-  08:00 Breakfast · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast · 386 kcal, 9 g protein  ⚠ below the 33 g minimum
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch · 750 kcal, 109 g protein
-     Premium Roasted Chicken, 300 g
-     Ligeresa, 40 g
-     Spicy Kimchi Protein Noodles, 62 g
-     Sourdough Bread, 53 g
-  18:00 Merienda · 448 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
+  14:00 Lunch · 543 kcal, 96 g protein
+     Premium Roasted Chicken, 400 g
+     In N Out Sauce, 60 g
+  18:00 Merienda · 525 kcal, 5 g protein  ⚠ below the 33 g minimum
+     Dates, 100 g
      Tortitas de arroz integral con chocolate negro, 52 g
-  21:30 Dinner · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
+  21:30 Dinner · 558 kcal, 103 g protein
+     Premium Roasted Chicken, 300 g
      Spicy Kimchi Protein Noodles, 62 g
-  Day: 2226 kcal (target 2123) · P 206 (193) · F 55 (57) · C 224 (210) · fibre 16 g
-  Relaxed: variety, usual meal slots
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2013 kcal (target 1980, +33, +1.6%) · protein 215 (min 193) · fat 50 (target 57, floor 55) · carbs 175 (target 175) · fibre 5 (floor 19)
+  Preferences relaxed: variety, usual meal slots
+  ⚠ HARD CONSTRAINTS NOT MET: fat floor, fibre, protein per meal
+    · breakfast: 9 g protein of the 33 g minimum (no protein food for that meal)
+    · merienda: 5 g protein of the 33 g minimum (no protein food for that meal)
 
 ── Friday 23 Oct · training 18:00
-  08:00 Breakfast · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast · 386 kcal, 9 g protein  ⚠ below the 33 g minimum
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch · 750 kcal, 109 g protein
-     Premium Roasted Chicken, 300 g
-     Ligeresa, 40 g
-     Spicy Kimchi Protein Noodles, 62 g
+  14:00 Lunch · 660 kcal, 104 g protein
+     Premium Roasted Chicken, 400 g
+     Tomate Frito, 75 g
      Sourdough Bread, 53 g
-  16:30 Merienda (before training) · 448 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
-     Tortitas de arroz integral con chocolate negro, 52 g
-  21:00 Dinner (after training) · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
+     Brotes de espinaca, 240 g
+  16:30 Merienda (before training) · 587 kcal, 6 g protein  ⚠ below the 44 g minimum
+     Dates, 100 g
+     Mermelada de Fresa Diet, 30 g
+     Tortitas de arroz integral con chocolate negro, 62 g
+  21:00 Dinner (after training) · 597 kcal, 72 g protein
+     Barebells Mint Dark Chocolate, 110 g
      Spicy Kimchi Protein Noodles, 62 g
-  Day: 2226 kcal (target 2123) · P 206 (193) · F 55 (57) · C 224 (210) · fibre 16 g
-  Relaxed: variety, usual meal slots
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2232 kcal (target 2230, +1, +0.1%) · protein 193 (min 193) · fat 58 (target 57, floor 56) · carbs 243 (target 237) · fibre 15 (floor 22)
+  ⚠ HARD CONSTRAINTS NOT MET: fibre, protein per meal
+    · breakfast: 9 g protein of the 33 g minimum (no protein food for that meal)
+    · meal before training: 6 g protein of the 44 g minimum (no protein food for that meal)
 
 ── Saturday 24 Oct · training 11:00
-  08:00 Breakfast (before training) · 583 kcal, 10 g protein
-     Mermelada de Fresa Diet, 90 g
+  08:00 Breakfast (before training) · 403 kcal, 9 g protein  ⚠ below the 44 g minimum
+     Mermelada de Fresa Diet, 30 g
      Tortitas de arroz integral con chocolate negro, 52 g
      Peanut butter, 25 g
-     Banana, raw, 150 g
-  14:00 Lunch (after training) · 1095 kcal, 103 g protein
-     Premium Roasted Chicken, 200 g
-     Tortellini Carne, 400 g
+  14:00 Lunch (after training) · 1449 kcal, 131 g protein
+     Premium Roasted Chicken, 400 g
+     Sourdough Bread, 53 g
+     Pipe Rigate, 250 g
+  18:00 Merienda · 237 kcal, 3 g protein  ⚠ below the 33 g minimum
+     Tortitas de arroz integral con chocolate negro, 52 g
+  21:30 Dinner · 597 kcal, 72 g protein
+     Barebells Mint Dark Chocolate, 110 g
      Spicy Kimchi Protein Noodles, 62 g
-  18:00 Merienda · 494 kcal, 6 g protein
-     PEPERO White + cookie blanc + biscuit, 32 g
-     Mermelada de Fresa Diet, 90 g
-     Tortitas de arroz integral con chocolate negro, 62 g
-  21:30 Dinner · 443 kcal, 79 g protein
-     Premium Roasted Chicken, 200 g
-     Spicy Kimchi Protein Noodles, 62 g
-  Day: 2616 kcal (target 2590) · P 200 (193) · F 67 (57) · C 304 (327) · fibre 20 g
-  ⚠ Doesn't fully fit: With your usual foods the plan misses: fibre. Adding a few more foods to your log will help.
+  Day: 2687 kcal (target 2697, -10, -0.4%) · protein 217 (min 193) · fat 57 (target 57, floor 56) · carbs 332 (target 354) · fibre 22 (floor 26)
+  ⚠ HARD CONSTRAINTS NOT MET: fibre, protein per meal
+    · meal before training: 9 g protein of the 44 g minimum (no protein food for that meal)
+    · merienda: 3 g protein of the 33 g minimum (no protein food for that meal)
 
