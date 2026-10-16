@@ -1,0 +1,67 @@
+FOOD TAXONOMY · 22 foods · least certain first
+ 80%  Palomitas de mantequilla
+      → Popcorn · Treat · NOVA 4 (estimated (typical popcorn))
+        name → Popcorn · group: unknown
+ 80%  Ramonade
+      → Energy drink · Drink · NOVA 4 (estimated (typical energy drink))
+        name → Energy drink · group: unknown
+ 85%  Aioli roster garlic and chili dipping sauce
+      → Garlic sauce (aioli) · Condiment · NOVA 4 (estimated (typical garlic sauce (aioli)))
+        name → Garlic sauce (aioli); category → Condiment; macros → Fat source · group: Dressings and sauces
+ 85%  Brotes de espinaca
+      → Spinach · Vegetable · NOVA 1 (estimated (typical spinach))
+        name → Spinach; category → Vegetable · group: Vegetables
+ 85%  Dates
+      → Dates · Fruit · NOVA 1 (estimated (typical dates))
+        name → Dates; macros → Treat · group: unknown
+ 85%  In N Out Sauce
+      → Sauce · Condiment · NOVA 4 (estimated from the recipe's ingredients)
+        name → Sauce; macros → Fat source
+ 85%  Ligeresa
+      → Mayonnaise · Condiment · NOVA 4 (estimated (typical mayonnaise))
+        name → Mayonnaise; macros → Fat source · group: unknown
+ 85%  Mermelada de Fresa Diet
+      → Jam · Condiment · NOVA 3 (estimated (typical jam))
+        name → Jam; category → Treat; macros → Carb side · group: Sweets
+ 85%  Premium Roasted Chicken
+      → Chicken · Protein main · NOVA 3 (estimated (typical chicken)) · values per cooked weight
+        name → Chicken; macros → Protein main
+ 85%  Spicy Kimchi Protein Noodles
+      → Protein noodles · Protein main · NOVA 4 (estimated (typical protein noodles))
+        name → Protein noodles; macros → Protein main · group: unknown
+ 85%  Tomate Frito
+      → Tomato sauce · Condiment · NOVA 3 (estimated (typical tomato sauce))
+        name → Tomato sauce; macros → Treat
+ 95%  Banana, raw
+      → Banana · Fruit · NOVA 1 (USDA generic food)
+        name → Banana; macros → Fruit · group: Bananas
+ 95%  Ketchup cero sin azúcares añadidos
+      → Ketchup · Condiment · NOVA 4 (Open Food Facts)
+        name → Ketchup; category → Condiment; macros → Fruit · group: Dressings and sauces
+ 95%  PEPERO White + cookie blanc + biscuit
+      → Biscuits / cookies · Treat · NOVA 4 (Open Food Facts)
+        name → Biscuits / cookies; category → Treat · group: Biscuits and cakes
+ 95%  Peanut butter
+      → Peanut butter · Condiment · NOVA 1 (USDA generic food)
+        name → Peanut butter; macros → Fat source · group: Nuts and seeds
+ 95%  Potatoes, flesh and skin, raw
+      → Potatoes · Carb side · NOVA 1 (USDA generic food) · values per raw/dry weight
+        name → Potatoes; category → Vegetable; macros → Carb side · group: Vegetables and Vegetable Products
+ 95%  Potatoes, raw, skin
+      → Potatoes · Carb side · NOVA 1 (USDA generic food) · values per raw/dry weight
+        name → Potatoes; category → Vegetable; macros → Carb side · group: Vegetables and Vegetable Products
+ 95%  Tortellini Carne
+      → Filled pasta · Carb side · NOVA 4 (Open Food Facts)
+        name → Filled pasta; macros → Carb side · group: One-dish meals
+100%  Barebells Mint Dark Chocolate
+      → Protein bar · Protein snack · NOVA 4 (estimated (typical protein bar))
+        your correction · group: unknown
+100%  Pipe Rigate
+      → Pasta · Carb side · NOVA 1 (Open Food Facts) · values per raw/dry weight
+        your correction · group: Cereals
+100%  Sourdough Bread
+      → Bread · Carb side · NOVA 3 (Open Food Facts)
+        your correction · group: Bread
+100%  Tortitas de arroz integral con chocolate negro
+      → Rice cakes with chocolate · Treat · NOVA 4 (estimated (typical rice cakes with chocolate))
+        your correction · group: Cereals

@@ -17,7 +17,7 @@ struct PlanFood: Equatable {
     var frequency: Double = 0             // overall
     var uses7: Int = 0                    // times planned in the last week (variety)
     var bands: Set<MealBand> = []         // meals it belongs in (empty: any)
-    var role: FoodRole = .main
+    var role: FoodRole = .proteinMain
     var maxPerDay = 2                     // meals a day it can appear in
 
     static func == (a: PlanFood, b: PlanFood) -> Bool { a.key == b.key }
@@ -43,6 +43,7 @@ struct PlanSlot: Equatable {
     var eaten = false                     // already logged: fixed
     var locked = false                    // you asked to keep it as is: fixed
     var provisional = false               // eaten but not confirmed (looked too big): not counted yet
+    var anyBand = false                   // Ramadan: iftar to suhoor, so breakfast foods are fine at night
     var fixed: Bool { eaten || locked }
     var band: MealBand { MealBand.of(minute: minute) }
 }
@@ -117,7 +118,7 @@ enum Planner {
         }
         if preSleep, let last = times.indices.last, kinds[last] == .meal { times[last] = max(times[last], sleep - 60); kinds[last] = .preSleep }
         let order = times.indices.sorted { times[$0] < times[$1] }
-        return order.enumerated().map { PlanSlot(index: $0.offset, minute: times[$0.element], kind: kinds[$0.element]) }
+        return order.enumerated().map { PlanSlot(index: $0.offset, minute: times[$0.element], kind: kinds[$0.element], anyBand: eatingWindow != nil) }
     }
 
     // MARK: Solve
@@ -252,7 +253,7 @@ enum Planner {
                                w: Weights, options: PlanOptions) -> (slots: [PlanSlot], score: Double, hard: [String]) {
         var cur = 0.0
         // Candidates per slot: your usual foods there first (or any of your foods once that's relaxed).
-        func fits(_ f: PlanFood, _ s: PlanSlot) -> Bool { f.bands.isEmpty || f.bands.contains(s.band) }
+        func fits(_ f: PlanFood, _ s: PlanSlot) -> Bool { s.anyBand || f.bands.isEmpty || f.bands.contains(s.band) }
         // How much you have this food at this meal: from your log by slot, or a staple's chosen meal.
         func affinity(_ f: PlanFood, _ s: PlanSlot) -> Double {
             if let u = f.usualSlots[s.index] { return u }
@@ -271,8 +272,8 @@ enum Planner {
         let cands = slots.map { $0.fixed ? [] : candidates($0) }
         for i in slots.indices where !slots[i].fixed && slots[i].items.isEmpty {
             var items = cands[i].filter { affinity($0, slots[i]) > 0 }.prefix(3).map { PlanItem(key: $0.key, grams: $0.usualGrams) }
-            // A meal starts from a main food; condiments and sides come with it.
-            if !items.contains(where: { byKey[$0.key]?.role == .main }), let m = cands[i].first(where: { $0.role == .main }) {
+            // A meal starts from a core food (protein main, carb side, dairy, protein snack); the rest come with it.
+            if !items.contains(where: { byKey[$0.key]?.role.isCore == true }), let m = cands[i].first(where: { $0.role.isCore }) {
                 items.insert(PlanItem(key: m.key, grams: m.usualGrams), at: 0)
             }
             // Protein first: each meal starts with a protein food sized for its share of the day's protein.
@@ -280,7 +281,7 @@ enum Planner {
             let have = items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).protein ?? 0) }
             if have < share {
                 let used = Dictionary(slots.prefix(i).flatMap { $0.items.map(\.key) }.map { ($0, 1) }, uniquingKeysWith: +)
-                if let pf = cands[i].filter({ f in f.per100.protein >= 15 && f.role != .condiment && (used[f.key] ?? 0) < f.maxPerDay && !items.contains(where: { $0.key == f.key }) })
+                if let pf = cands[i].filter({ f in f.role.isProteinSource && f.per100.protein >= 8 && (used[f.key] ?? 0) < f.maxPerDay && !items.contains(where: { $0.key == f.key }) })
                     .max(by: { (affinity($0, slots[i]), $0.per100.protein, $1.key) < (affinity($1, slots[i]), $1.per100.protein, $0.key) }) {
                     let g = min(pf.maxGrams, max(pf.minGrams, pf.step, ((share - have) / pf.per100.protein * 100 / pf.step).rounded() * pf.step))
                     items.insert(PlanItem(key: pf.key, grams: g), at: 0)
@@ -289,8 +290,9 @@ enum Planner {
             slots[i].items = Array(items.prefix(5))
             if slots[i].items.isEmpty, let f = cands[i].first { slots[i].items = [PlanItem(key: f.key, grams: f.usualGrams)] }
         }
-        // Realism (hard): a main in every meal, condiments only with one, foods only at their meals, and
-        // no food in more than its meals a day.
+        // Realism (hard): a core food in every meal (protein main, carb side, dairy or protein snack);
+        // condiments and fats only alongside one; a treat never alone and once a day; at most two protein
+        // mains and two carb sides a meal; foods only at their meals; no food in more meals than allowed.
         func violations(_ s: [PlanSlot]) -> Int {
             var v = 0
             var count: [String: Int] = [:]
@@ -298,10 +300,12 @@ enum Planner {
                 for k in Set(sl.items.map(\.key)) { count[k, default: 0] += 1 }
                 guard !sl.fixed else { continue }
                 let roles = sl.items.compactMap { byKey[$0.key]?.role }
-                if !sl.items.isEmpty && !roles.contains(.main) { v += 1 }
-                if roles.filter({ $0 == .condiment }).count > 2 { v += 1 }
+                if !sl.items.isEmpty && !roles.contains(where: \.isCore) { v += 1 }
+                if roles.filter(\.isAccompaniment).count > 2 { v += 1 }
                 if roles.filter({ $0 == .treat }).count > 1 { v += 1 }
-                if roles.filter({ $0 == .main }).count > 3 { v += 1 }
+                if roles.filter({ $0 == .proteinMain }).count > 2 { v += 1 }
+                if roles.filter({ $0 == .carbSide }).count > 2 { v += 1 }
+                if roles.contains(.drink) { v += 1 }
                 if sl.items.count > 5 { v += 1 }
                 // The protein minimum for this meal (hard; reported if your foods can't reach it).
                 let p = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).protein ?? 0) }

@@ -67,28 +67,10 @@ enum MealBand: String, Codable, CaseIterable, Comparable {
     }
 }
 
-enum FoodRole: String, Codable {
-    case main        // can be a meal's centre: chicken, rice, bread, oats, yogurt
-    case side        // goes with something: fruit, vegetables
-    case condiment   // only alongside a main: oil, butter, jam, sauces, nut butters
-    case treat       // sweets, snacks, protein bars: never a meal's centre, once a day
-
-    /// From the name (Spanish or English) and the macros per 100 g.
+extension FoodRole {
+    /// The role rules give a food from its name and macros (no category data): the taxonomy's rules.
     static func guess(name: String, kcal: Double, protein: Double, fat: Double, carbs: Double) -> FoodRole {
-        let n = name.lowercased()
-        let condiments = ["aceite", " oil", "olive oil", "mantequilla", "butter", "crema de cacahuete", "mermelada", "jam", "salsa", "sauce", "tomate frito",
-                          "ketchup", "mayonesa", "mayo", "miel", "honey", "sirope", "syrup", "dressing", "aliño", "vinagre", "mostaza", "mustard", "pesto",
-                          "hummus", "nata", "cream cheese", "nutella", "nocilla", "ligeresa", "alioli", "guacamole"]
-        let treats = ["chocolate", "galleta", "cookie", "biscuit", "palomitas", "popcorn", "pepero", "chips", "patatas fritas", "candy", "gominola",
-                      "dulce", "barebells", "protein bar", "barrita", "bar ", "helado", "ice cream", "donut", "bollo", "brownie", "pringles", "crisps", "kitkat", "oreo"]
-        if treats.contains(where: { n.contains($0) }) && !n.contains("tortitas") || n.hasSuffix(" bar") { return .treat }
-        if n.hasPrefix("oil") || condiments.contains(where: { n.contains($0) }) || fat >= 80 { return .condiment }
-        let fruitVeg = ["banana", "plátano", "platano", "apple", "manzana", "dates", "dátil", "datil", "pera", "pear", "orange", "naranja", "uva", "grape",
-                        "fresa", "strawberr", "berries", "arándano", "mango", "piña", "pineapple", "kiwi", "melón", "melon", "sandía", "raisin", "pasas",
-                        "espinaca", "spinach", "lechuga", "lettuce", "tomate", "tomato", "brócoli", "broccoli", "zanahoria", "carrot", "pepino", "cucumber"]
-        if fruitVeg.contains(where: { n.contains($0) }) && protein < 10 { return .side }
-        if protein >= 15 || (carbs >= 20 && kcal >= 110) || (protein >= 8 && kcal >= 55 && !n.contains("leche") && !n.contains("milk")) { return .main }
-        return .side
+        Taxonomy.classify(.init(name: name, brand: nil, source: "custom", kcal: kcal, protein: protein, fat: fat, carbs: carbs)).role
     }
 }
 
@@ -107,6 +89,8 @@ enum CondimentKind {
     /// Most per meal (g): oil 15, honey 20, spreads 30, tomato sauces 100, other sauces 60.
     static func cap(_ name: String, fat: Double) -> Double {
         let n = name.lowercased()
+        if ["almendra", "almond", "nuez", "walnut", "anacardo", "cashew", "pistacho", "avellana", "frutos secos", "nuts"].contains(where: { n.contains($0) }) && !n.contains("crema") && !n.contains("butter") { return 30 }
+        if n.contains("aguacate") || n.contains("avocado") { return 100 }
         switch of(name, fat: fat) {
         case .oil: return 15
         case .spread: return n.contains("miel") || n.contains("honey") || n.contains("sirope") || n.contains("syrup") ? 20 : 30
@@ -123,9 +107,10 @@ enum CondimentKind {
 enum Portion {
     static func bounds(usual: Double, kcal100: Double, role: FoodRole, step: Double, name: String = "", fat: Double = 0) -> (usual: Double, min: Double, max: Double) {
         var hi = usual * 1.6
-        if role == .condiment { hi = min(usual * 1.25, CondimentKind.cap(name, fat: fat), max(step, 15000 / max(kcal100, 1))) }
-        if role == .treat { hi = min(hi, usual) }
-        let st = role == .condiment ? min(step, 5) : step
+        if role.isAccompaniment { hi = min(usual * 1.25, CondimentKind.cap(name, fat: fat), max(step, 15000 / max(kcal100, 1))) }
+        // A treat stays at your portion; a protein snack too when it comes in units (a bar), but a powder can scale.
+        if role == .treat || (role == .proteinSnack && step >= usual) { hi = min(hi, usual) }
+        let st = role.isAccompaniment ? min(step, 5) : step
         hi = max(st, (hi / st).rounded(.down) * st)
         let u = min(usual, hi)
         let lo = min(u, max(st, (u * 0.5 / st).rounded() * st))
@@ -133,8 +118,9 @@ enum Portion {
     }
     static func perDay(_ role: FoodRole, name: String, fat: Double) -> Int {
         switch role {
-        case .treat: return 1
-        case .condiment: return CondimentKind.perDay(name, fat: fat)
+        case .treat, .proteinSnack: return 1
+        case .condiment, .fatSource: return CondimentKind.perDay(name, fat: fat)
+        case .drink: return 0
         default: return 2
         }
     }
@@ -145,7 +131,7 @@ extension PlanFood {
     func with(role r: FoodRole, usual: Double? = nil) -> PlanFood {
         var f = self
         f.role = r
-        if r == .condiment { f.step = min(f.step, 5) }
+        if r.isAccompaniment { f.step = min(f.step, 5) }
         let b = Portion.bounds(usual: usual ?? usualGrams, kcal100: per100.kcal, role: r, step: f.step, name: name, fat: per100.fat)
         (f.usualGrams, f.minGrams, f.maxGrams) = (b.usual, b.min, b.max)
         f.maxPerDay = Portion.perDay(r, name: name, fat: per100.fat)

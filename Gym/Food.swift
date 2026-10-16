@@ -25,6 +25,10 @@ import SwiftData
     var recipeServings: Double?               // recipes: how many servings it makes
     var weightState: String = ""              // what the values are per: "raw" (or dry) | "cooked" | "" (not set: guessed from the name)
     var cookedRatio: Double = 0               // cooked ÷ raw weight, from a batch you weighed (0: typical value)
+    var nova: Int = 0                         // NOVA group from the database (0: not known)
+    var foodGroup: String = ""                // the database's food group (Open Food Facts PNNS group, or USDA category); "-" looked up, none
+    var taxonomyOverride: String = ""         // your corrections (JSON Taxonomy.Override): canonical food, role, NOVA
+    var taxonomySuggestion: String = ""       // the local AI's suggestion (JSON Taxonomy.Suggestion): canonical food and role only
     var createdAt: Date
 
     init(key: String, name: String, brand: String? = nil, barcode: String? = nil, source: String, per100: Nutrients,
@@ -144,6 +148,8 @@ extension ModelContext {
         }
         let f = Food(key: r.key, name: r.name, brand: r.brand, barcode: r.barcode, source: r.source, per100: r.per100,
                      servings: r.servings, isLiquid: r.isLiquid)
+        if let n = r.nova { f.nova = n }
+        if let g = r.group { f.foodGroup = g }
         insert(f)
         return f
     }

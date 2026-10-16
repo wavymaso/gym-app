@@ -16,5 +16,6 @@ for f in FoodData_Central_sr_legacy_food_csv_2018-04 FoodData_Central_survey_foo
 done
 python3 tools/build-generic-db.py "$U/x" "$W/foods.sqlite"
 python3 tools/build-search-extras.py "$W/foods.sqlite"     # Spanish names for USDA, Arabic folding, typo vocabulary
+python3 tools/build-taxonomy-db.py "$W/foods.sqlite" "$W/off.csv.gz" "$U/x"   # NOVA groups and food groups for the taxonomy
 cp "$W/foods.sqlite" Gym/foods.sqlite
 echo "Gym/foods.sqlite updated: $(sqlite3 Gym/foods.sqlite 'select count(*) from food') products"

@@ -425,7 +425,7 @@ struct PlannerSettingsView: View {
                 }
             } header: { Text("Preferences") } footer: { Text("Pre-sleep protein has some evidence but it's weak once total protein is the same; off by default.") }
             Section {
-                NavigationLink("Food roles (\(s.roles.count) corrected)") { FoodRolesView().onDisappear { if let p = ctx.profile { s.roles = p.planner.roles } } }
+                NavigationLink("Food taxonomy (roles, NOVA)") { TaxonomyReviewView() }
                 NavigationLink("Staples (\(s.staples.count))") { StaplesView().onDisappear { if let p = ctx.profile { s.staples = p.planner.staples } } }
                 NavigationLink("Foods to leave out (\(s.exclusions.count))") { ExclusionsView(exclusions: $s.exclusions) }
             } footer: { Text("Staples are used until your log has about two weeks of food-by-food history.") }

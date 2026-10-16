@@ -48,16 +48,14 @@ let rawPantry: [PlanFood] = [
     food("chicken breast", 120, 23, 2.6, 0, 0, usual: 200, slots: [1: 20, 3: 8]), food("rice", 130, 2.7, 0.3, 28, 0.4, usual: 250, slots: [1: 18, 3: 6]),
     food("potato", 77, 2, 0.1, 17, 2.2, usual: 300, slots: [3: 12]), food("salmon", 208, 20, 13, 0, 0, usual: 150, slots: [3: 12]),
     food("olive oil", 884, 0, 100, 0, 0, usual: 10, slots: [1: 10, 3: 10], step: 5, max: 40), food("bread", 250, 9, 3, 47, 6, usual: 60, slots: [0: 6, 2: 8]),
-    food("eggs", 143, 12.6, 9.5, 0.7, 0, usual: 120, slots: [0: 8], step: 60, max: 240), food("broccoli", 34, 2.8, 0.4, 7, 2.6, usual: 150, slots: [3: 8, 1: 4]),
+    food("eggs", 143, 12.6, 9.5, 0.7, 0, usual: 120, slots: [0: 8], step: 60, max: 240), food("broccoli", 34, 2.8, 0.4, 7, 2.6, usual: 200, slots: [3: 8, 1: 4]),
     food("cottage cheese", 98, 11, 4.3, 3.4, 0, usual: 200, slots: [3: 3]), food("pasta", 158, 5.8, 0.9, 31, 1.8, usual: 250, slots: [1: 6]),
     food("beef mince 5%", 137, 21, 5, 0, 0, usual: 150, slots: [1: 5, 3: 6]), food("almonds", 579, 21, 50, 22, 12, usual: 25, slots: [2: 5], step: 5, max: 50),
 ]
 // Realism: roles and meals from names and macros, as in the app.
 let pantry: [PlanFood] = rawPantry.map { f in
-    var f = f
-    f.role = FoodRole.guess(name: f.name, kcal: f.per100.kcal, protein: f.per100.protein, fat: f.per100.fat, carbs: f.per100.carbs)
+    var f = f.with(role: FoodRole.guess(name: f.name, kcal: f.per100.kcal, protein: f.per100.protein, fat: f.per100.fat, carbs: f.per100.carbs))
     f.bands = MealBand.guess(name: f.name)
-    if f.role == .condiment { f.maxGrams = 40 }
     return f
 }
 func slotsFor(training: (Int, Int)?, meals: Int = 4, preSleep: Bool = false) -> [PlanSlot] {
@@ -106,7 +104,9 @@ let bulk = PlanTargets(kcal: 3600, protein: 190, fat: 100, carbs: 470, fibreFloo
 checkPlan("bulk day", Planner.plan(bulk, slots: slotsFor(training: (17 * 60, 90), meals: 5), foods: pantry), bulk)
 let fastDay = PlanTargets(kcal: 600, protein: 80, fat: 15, carbs: 30, fibreFloor: 0, fatFloor: 10, weightKg: 110)
 checkPlan("fasting day", Planner.plan(fastDay, slots: Planner.slots(wake: 7 * 60, sleep: 23 * 60, meals: 2, training: nil), foods: pantry), fastDay)
-checkPlan("Ramadan day", Planner.plan(cutDay, slots: ramadan, foods: pantry), cutDay)
+let ram = Planner.plan(cutDay, slots: ramadan, foods: pantry)
+checkPlan("Ramadan day", ram, cutDay)
+if !ram.feasible { print("  ramadan misses", ram.misses, ram.shortMeals, ram.slots.map { ($0.minute, $0.band.rawValue, $0.items.map { "\($0.key) \(Int($0.grams))" }) }) }
 let ps = Planner.plan(cutDay, slots: slotsFor(training: nil, preSleep: true), foods: pantry, options: PlanOptions(preSleepProtein: true))
 checkPlan("pre-sleep protein", ps, cutDay)
 check("pre-sleep slot is protein-rich", ps.slots.last.map { m($0).protein >= 30 } ?? false, ps.slots.last.map { m($0).protein } ?? 0)
@@ -146,9 +146,12 @@ check("a day in under 200 ms", dayMs < 200, dayMs)
 check("a week in under 2 s", weekMs < 2000, weekMs)
 
 // MARK: Realism
-check("roles: oil and jam are condiments, chicken and bread mains, banana a side",
-      pantry.first { $0.key == "olive oil" }!.role == .condiment && FoodRole.guess(name: "Mermelada de Fresa Diet", kcal: 57, protein: 0, fat: 0, carbs: 14) == .condiment
-      && pantry.first { $0.key == "chicken breast" }!.role == .main && pantry.first { $0.key == "bread" }!.role == .main && pantry.first { $0.key == "banana" }!.role == .side)
+check("roles: oil a fat source, jam a condiment, chicken a protein main, bread and rice carb sides, banana a fruit, broccoli a vegetable, yogurt dairy, whey a protein snack",
+      pantry.first { $0.key == "olive oil" }!.role == .fatSource && FoodRole.guess(name: "Mermelada de Fresa Diet", kcal: 57, protein: 0, fat: 0, carbs: 14) == .condiment
+      && pantry.first { $0.key == "chicken breast" }!.role == .proteinMain && pantry.first { $0.key == "bread" }!.role == .carbSide
+      && pantry.first { $0.key == "rice" }!.role == .carbSide && pantry.first { $0.key == "banana" }!.role == .fruit && pantry.first { $0.key == "broccoli" }!.role == .vegetable
+      && pantry.first { $0.key == "greek yogurt" }!.role == .dairy && pantry.first { $0.key == "whey" }!.role == .proteinSnack,
+      pantry.map { "\($0.key): \($0.role)" })
 let allPlans = [rest, eve, Planner.plan(cutDay, slots: morning, foods: pantry), Planner.plan(bulk, slots: slotsFor(training: (17 * 60, 90), meals: 5), foods: pantry), re]
 let byK = Dictionary(pantry.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
 var noMain = 0, loneCondiment = 0, wrongMeal = 0, tooOften = 0
@@ -158,7 +161,7 @@ for p in allPlans {
         for k in Set(s.items.map(\.key)) { count[k, default: 0] += 1 }
         guard !s.eaten else { continue }
         let roles = s.items.compactMap { byK[$0.key]?.role }
-        if !roles.contains(.main) { noMain += 1; if roles.contains(.condiment) { loneCondiment += 1 } }
+        if !roles.contains(where: \.isCore) { noMain += 1; if roles.contains(where: \.isAccompaniment) { loneCondiment += 1 } }
         for it in s.items { if let f = byK[it.key], !f.bands.isEmpty, !f.bands.contains(s.band) { wrongMeal += 1 } }
     }
     tooOften += count.filter { $0.value > (byK[$0.key]?.maxPerDay ?? 9) }.count
@@ -253,7 +256,7 @@ check("a meal that can't reach its minimum is reported", !nb.feasible && nb.miss
       && nb.reasons.contains { $0.rule == "protein per meal" }, (nb.misses, nb.shortMeals))
 // A day that needs the wider calorie band says so.
 let coarse = [food("big meal", 250, 30, 8, 18, 3, usual: 400, slots: [0: 5, 1: 5, 2: 5, 3: 5], step: 400, max: 400),
-              food("oil", 884, 0, 100, 0, 0, usual: 10, slots: [0: 1, 1: 1, 2: 1, 3: 1], step: 5, max: 15)].map { $0.with(role: FoodRole.guess(name: $0.name, kcal: $0.per100.kcal, protein: $0.per100.protein, fat: $0.per100.fat, carbs: $0.per100.carbs)) }
+              food("oil", 884, 0, 100, 0, 0, usual: 10, slots: [0: 1, 1: 1, 2: 1, 3: 1], step: 5, max: 15)].map { $0.with(role: $0.name == "oil" ? .fatSource : .proteinMain) }
 let wide = Planner.plan(PlanTargets(kcal: 4500, protein: 400, fat: 150, carbs: 280, fibreFloor: 0, fatFloor: 40, weightKg: 100), slots: slotsFor(training: nil), foods: coarse)
 check("widened calorie band is listed as a hard relaxation", !wide.relaxedHard.isEmpty && wide.reasons.contains { $0.rule == "calorie band widened" }, (wide.relaxedHard, Int(wide.totals.kcal)))
 check("a widened band never hides a miss: misses listed", wide.feasible || !wide.misses.isEmpty)
@@ -262,11 +265,38 @@ check("a widened band never hides a miss: misses listed", wide.feasible || !wide
 let jam = food("Mermelada de Fresa Diet", 57, 0.5, 0, 14, 1, usual: 75, slots: [0: 5]).with(role: .condiment)
 check("jam: condiment, ≤ 30 g a meal, once a day", jam.role == .condiment && jam.maxGrams <= 30 && jam.maxPerDay == 1, (jam.maxGrams, jam.maxPerDay))
 for (n, kcal, fat, role) in [("Miel de flores", 304.0, 0.0, FoodRole.condiment), ("Crema de cacahuete", 600, 50, .condiment), ("Tomate Frito", 69, 3, .condiment),
-                             ("Ligeresa", 177, 18, .condiment), ("Aceite de oliva", 884, 100, .condiment), ("Ketchup cero", 38, 0, .condiment), ("Nutella", 539, 31, .condiment),
-                             ("Palomitas de mantequilla", 438, 20, .treat), ("Dates", 288, 0.4, .side), ("Premium Roasted Chicken", 115, 2, .main)] {
+                             ("Ligeresa", 177, 18, .condiment), ("Ketchup cero", 38, 0, .condiment), ("Nutella", 539, 31, .condiment),
+                             ("Palomitas de mantequilla", 438, 20, .treat), ("Dates", 288, 0.4, .fruit), ("Premium Roasted Chicken", 115, 2, .proteinMain),
+                             ("Barebells Mint", 349, 13, .proteinSnack), ("Tortitas de arroz integral con chocolate negro", 456, 18, .treat), ("Sourdough Bread", 230, 1, .carbSide),
+                             ("Pipe Rigate", 347, 1.5, .carbSide)] {
     let g = FoodRole.guess(name: n, kcal: kcal, protein: n.contains("Chicken") ? 24 : 1, fat: fat, carbs: 20)
     check("role: \(n) → \(role)", g == role, g)
 }
+check("Aceite de oliva is a fat source", FoodRole.guess(name: "Aceite de oliva", kcal: 884, protein: 0, fat: 100, carbs: 0) == .fatSource)
 check("honey ≤ 20 g, oil ≤ 15 g and twice a day, tomato sauce ≤ 100 g", CondimentKind.cap("Miel", fat: 0) == 20 && CondimentKind.cap("Aceite de oliva", fat: 100) == 15
       && CondimentKind.perDay("Aceite de oliva", fat: 100) == 2 && CondimentKind.cap("Tomate Frito", fat: 3) == 100)
+
+// MARK: Taxonomy
+typealias TI = Taxonomy.Input
+let roost = Taxonomy.classify(TI(name: "Premium Roasted Chicken", brand: "Roosterz & Co", source: "custom", kcal: 115, protein: 24, fat: 1.4, carbs: 0.8))
+check("Roosterz chicken → chicken, protein main, NOVA 3 estimated", roost.canonical == "chicken" && roost.role == .proteinMain && roost.nova == 3 && roost.novaEstimated, roost)
+let arroz = Taxonomy.classify(TI(name: "Arroz redondo", brand: "Hacendado", source: "off", kcal: 350, protein: 7, fat: 1, carbs: 78, offNova: 1, offGroup: "Cereals"))
+check("Hacendado arroz redondo → white rice, carb side, NOVA 1 from Open Food Facts", arroz.canonical == "white-rice" && arroz.role == .carbSide && arroz.nova == 1 && !arroz.novaEstimated, arroz)
+check("USDA generic foods count as NOVA 1", Taxonomy.classify(TI(name: "Banana, raw", source: "usda", kcal: 97, protein: 0.7, fat: 0.3, carbs: 23)).nova == 1)
+check("recipes: NOVA from the ingredients (at least 3), estimated", Taxonomy.classify(TI(name: "Mi bowl", source: "recipe", kcal: 150, protein: 10, fat: 5, carbs: 15, ingredientNovas: [1, 1, 4])).nova == 4)
+let unknown = TI(name: "Mystery 9000", source: "off", kcal: 380, protein: 80, fat: 3, carbs: 5)
+check("macros: > 60% of calories from protein → protein main, low confidence", Taxonomy.classify(unknown).role == .proteinMain && Taxonomy.classify(unknown).confidence <= 0.5)
+let ov = Taxonomy.classify(unknown, override: .init(canonical: "tofu", role: .dairy, nova: 2), suggestion: .init(canonical: "eggs", role: .proteinMain))
+check("your correction beats rules and AI, every field", ov.role == .dairy && ov.canonical == "tofu" && ov.nova == 2 && ov.confidence == 1 && ov.roleSource == .user, ov)
+let sug = Taxonomy.classify(TI(name: "Zzz", source: "custom", kcal: 0, protein: 0, fat: 0, carbs: 0), suggestion: .init(canonical: "eggs", role: .proteinMain, confidence: 0.9))
+check("AI suggestion fills what rules can't, capped at 65% confidence", sug.role == .proteinMain && sug.roleSource == .ai && sug.confidence <= 0.65, sug)
+let ruleWins = Taxonomy.classify(TI(name: "Mermelada de fresa", source: "off", kcal: 57, protein: 0, fat: 0, carbs: 14), suggestion: .init(canonical: "eggs", role: .proteinMain))
+check("AI never overrides a name rule", ruleWins.role == .condiment && ruleWins.canonical == "jam")
+check("specific before general: rice cakes aren't rice, peanut butter isn't butter",
+      Taxonomy.match("Tortitas de arroz", brand: nil)?.id == "rice-cakes" && Taxonomy.match("Peanut butter", brand: nil)?.id == "peanut-butter")
+check("old saved roles still read (main → protein main, side → vegetable)",
+      (try? JSONDecoder().decode([FoodRole].self, from: Data(#"["main","side","condiment"]"#.utf8))) == [.proteinMain, .vegetable, .condiment])
+check("protein bars and oats: breakfast and merienda", Taxonomy.bands("protein-bar") == [.breakfast, .afternoon] && Taxonomy.bands("oats") == [.breakfast, .afternoon])
+check("every canonical food has keywords and a USDA anchor", Taxonomy.canonical.allSatisfy { !$0.words.isEmpty && !$0.usda.isEmpty })
+check("canonical ids unique", Set(Taxonomy.canonical.map(\.id)).count == Taxonomy.canonical.count)
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

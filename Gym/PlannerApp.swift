@@ -14,12 +14,20 @@ extension ModelContext {
 
     /// Your foods as planner candidates: from the eating profile when there's enough logging, else your
     /// staples, else your recent and favourite foods (at the meal you last had them).
+    /// Roles from the taxonomy (your corrections included), with the meals a canonical food belongs
+    /// in (oats and protein bars: breakfast and merienda). Drinks aren't planned.
     func planFoods() -> [PlanFood] {
-        let roles = profile?.planner.roles ?? [:]
-        return planFoodsGuessed().map { f in roles[f.key].map { f.with(role: $0) } ?? f }
+        planFoodsGuessed().compactMap { f in
+            guard let food = food(key: f.key) else { return f }
+            let t = taxonomy(of: food)
+            guard t.role != .drink else { return nil }
+            var g = t.role == f.role ? f : f.with(role: t.role)
+            g.bands.formUnion(Taxonomy.bands(t.canonical))
+            return g
+        }
     }
 
-    /// Before your role corrections.
+    /// Before the taxonomy (name and macro rules only).
     func planFoodsGuessed() -> [PlanFood] {
         let foods = ((try? fetch(FetchDescriptor<Food>())) ?? [])
         func unit(_ f: Food) -> Double? { f.servings.first.flatMap { $0.name.hasPrefix("1 ") && $0.grams <= 150 && $0.grams > 0 ? $0.grams : nil } }

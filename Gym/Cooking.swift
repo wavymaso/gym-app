@@ -4,10 +4,6 @@ import Foundation
 // cooked ÷ raw weight ratio. With both known you can log either weight and the app converts:
 // 200 g of cooked pasta from a packet's dry values is 200 / 2.35 ≈ 85 g dry.
 
-enum WeightState: String, Codable, CaseIterable {
-    case raw, cooked
-    var label: String { self == .raw ? "Raw / dry" : "Cooked" }
-}
 
 enum Cooking {
     /// Typical cooked ÷ raw weight (from USDA raw vs cooked energy per 100 g). Your own batch weights replace these.
@@ -29,6 +25,8 @@ enum Cooking {
     /// "asado"… → cooked; dry staples (pasta, rice, pulses) → raw (packet values). nil: no idea.
     static func guessState(_ name: String) -> WeightState? {
         let n = name.lowercased()
+        // Ready to eat as they are: never cooked further.
+        if ["tortitas", "rice cake", "cracker", "galleta", "snack", "con chocolate", "barrita", "cereal", "copos"].contains(where: { n.contains($0) }) { return nil }
         if ["raw", "crudo", "cruda", "dry", "seco", "seca"].contains(where: { n.contains($0) }) { return .raw }
         if ["cooked", "cocido", "cocida", "roasted", "asado", "asada", "hervido", "hervida", "boiled", "baked", "al horno", "grilled",
             "a la plancha", "frito", "frita", "fried", "steamed", "al vapor"].contains(where: { n.contains($0) }) { return .cooked }

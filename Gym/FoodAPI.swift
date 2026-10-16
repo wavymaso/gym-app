@@ -52,6 +52,8 @@ struct FoodResult: Identifiable, Hashable {
     var servings: [Serving]
     var isLiquid: Bool
     var popularity: Int = 0
+    var nova: Int? = nil            // NOVA group (Open Food Facts)
+    var group: String? = nil        // food group (Open Food Facts PNNS group 2)
     var id: String { key }
 }
 
@@ -91,7 +93,7 @@ enum FoodAPI {
     static func product(barcode: String) async throws -> FoodResult? {
         let code = barcode.filter(\.isNumber)
         guard !code.isEmpty else { return nil }
-        let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(code).json?fields=code,product_name,product_name_es,product_name_en,brands,nutriments,serving_size,serving_quantity,quantity")!
+        let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(code).json?fields=code,product_name,product_name_es,product_name_en,brands,nutriments,serving_size,serving_quantity,quantity,nova_group,pnns_groups_2")!
         let json = try await getJSON(url, allow404: true)
         guard (json["status"] as? Int) == 1, var p = json["product"] as? [String: Any] else { return nil }
         p["code"] = p["code"] ?? code
@@ -128,9 +130,10 @@ enum FoodAPI {
         }
         let quantity = (p["quantity"] as? String ?? "").lowercased()
         let liquid = quantity.range(of: #"\d\s*(ml|cl|l)\b"#, options: .regularExpression) != nil
+        let nova = (p["nova_group"] as? Int) ?? (p["nova_group"] as? Double).map { Int($0) } ?? (p["nova_group"] as? String).flatMap { Int($0) }
         return FoodResult(key: "off:\(code)", name: name, brand: brand?.isEmpty == true ? nil : brand, barcode: code, source: "off",
                           per100: per100, servings: servings, isLiquid: liquid,
-                          popularity: (p["unique_scans_n"] as? Int) ?? 0)
+                          popularity: (p["unique_scans_n"] as? Int) ?? 0, nova: nova, group: p["pnns_groups_2"] as? String)
     }
 
     /// Products matching all the words first, then more of them, then the most scanned.

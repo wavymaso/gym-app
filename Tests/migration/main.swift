@@ -23,8 +23,19 @@ MainActor.assumeIsolated {
     } catch { print("ERROR", error); fails += 1 }
     do {
         let c = try ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(url: url))
+        let ctx = c.mainContext
         let back = try c.mainContext.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.name == "migration test" })).first
         check("micros saved and read back", back?.nutrients.micros?["iron"] == 2.5 && back?.nutrients.micros?["vitD"] == 4, back?.nutrients.micros ?? [:])
+        // Taxonomy and raw/cooked fields: existing foods open with defaults, and corrections save and read back.
+        let foods = try ctx.fetch(FetchDescriptor<Food>())
+        check("foods open with taxonomy defaults", !foods.isEmpty && foods.allSatisfy { $0.cookedRatio >= 0 && $0.nova >= 0 }, foods.count)
+        if let f = foods.first {
+            f.taxonomyOverride = #"{"role":"carbSide","nova":2}"#; f.weightState = "raw"; f.cookedRatio = 2.4
+            try ctx.save()
+            let k = f.key
+            let back2 = try ctx.fetch(FetchDescriptor<Food>(predicate: #Predicate { $0.key == k })).first
+            check("taxonomy correction and batch ratio saved", back2?.taxonomyOverride.contains("carbSide") == true && back2?.cookedRatio == 2.4 && back2?.weightState == "raw")
+        }
     } catch { print("ERROR", error); fails += 1 }
 } 
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED"); exit(fails == 0 ? 0 : 1)

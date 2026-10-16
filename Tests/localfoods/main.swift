@@ -36,4 +36,9 @@ chk(db.generic("lentejas").first.map { $0.food.name.lowercased().contains("lenti
 chk(LocalFoods.words("قهوة عربيّة") == ["قهوه", "عربيه"], "Arabic folded (\(LocalFoods.words("قهوة عربيّة")))")
 chk(editDistance("pechga", "pechuga") == 1 && editDistance("griejo", "griego") == 1 && editDistance("ab", "ba") == 1, "edit distance")
 chk(Nutrients(kcal: 100, protein: 20, fat: 9, carbs: 10).looksWrong && !Nutrients(kcal: 165, protein: 31, fat: 3.6, carbs: 0).looksWrong, "Atwater check")
+// Taxonomy: every canonical food's USDA anchor exists; NOVA and food groups are in the database.
+let missing = Taxonomy.canonical.filter { c in db.generic(c.usda, limit: 40).first { $0.food.name == c.usda } == nil }
+chk(missing.isEmpty, "every canonical food has its USDA anchor (missing: \(missing.map(\.id)))")
+chk(db.taxonomy(code: "8410118044575")?.nova == 4 && db.taxonomy(code: "8410118044575")?.group == "Dressings and sauces", "Open Food Facts NOVA and food group (ketchup)")
+chk(db.genericCategory(fdc: 170026) == "Vegetables and Vegetable Products", "USDA category (potatoes)")
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED"); exit(fails == 0 ? 0 : 1)

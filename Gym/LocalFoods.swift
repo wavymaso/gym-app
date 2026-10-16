@@ -8,7 +8,7 @@ import SQLite3
 // online search, so foods and sync behave the same either way.
 
 final class LocalFoods {
-    static let shared = LocalFoods()
+    static let shared = LocalFoods(path: Bundle.main.path(forResource: "foods", ofType: "sqlite") ?? ProcessInfo.processInfo.environment["GYM_FOODS_DB"])   // env: command-line tools
 
     /// Which shelves to search.
     enum Scope: String, CaseIterable, Identifiable {
@@ -267,6 +267,26 @@ final class LocalFoods {
                                   popularity: Int(sqlite3_column_int(st, 16))))
         }
         return out
+    }
+
+    // MARK: Taxonomy inputs (tools/build-taxonomy-db.py)
+
+    private lazy var hasTaxonomy: Bool = scalar("SELECT count(*) FROM pragma_table_info('food') WHERE name='nova'") == "1"
+    private lazy var hasGenericCategory: Bool = scalar("SELECT count(*) FROM pragma_table_info('generic') WHERE name='category'") == "1"
+
+    /// NOVA group and food group for a product, when the offline database has them.
+    func taxonomy(code: String) -> (nova: Int?, group: String?)? {
+        let c = code.filter(\.isNumber)
+        guard hasTaxonomy, !c.isEmpty, scalar("SELECT 1 FROM food WHERE code='\(c)'") != nil else { return nil }
+        let n = scalar("SELECT nova FROM food WHERE code='\(c)'").flatMap { Int($0) }
+        let g = scalar("SELECT pnns2 FROM food WHERE code='\(c)'")
+        return (n, g)
+    }
+
+    /// The USDA category of a generic food.
+    func genericCategory(fdc: Int) -> String? {
+        guard hasGenericCategory else { return nil }
+        return scalar("SELECT category FROM generic WHERE fdc=\(fdc)")
     }
 
     private func scalar(_ sql: String) -> String? {
