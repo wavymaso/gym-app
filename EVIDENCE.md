@@ -2,7 +2,7 @@
 
 Generated from `Gym/EvidenceRegistry.swift` (don't edit by hand: `Tests/evidence/run.sh write`).
 
-Every citation was checked by web search on 15 Oct 2026. Grades: **A** meta-analysis or several RCTs · **B** a single RCT or strong observational/model study · **C** expert consensus, position stand or narrative review · **D** practitioner convention, a fit to data, or the user's choice.
+Every citation was checked by web search on 15–16 Oct 2026; entries marked *unverified* couldn't be confirmed and are graded D. Grades: **A** meta-analysis or several RCTs · **B** a single RCT or strong observational/model study · **C** expert consensus, position stand or narrative review · **D** practitioner convention, a fit to data, or the user's choice.
 
 Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep), it says so here and in the app.
 
@@ -42,6 +42,15 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `checkin.minLogged` | A check-in needs at least 4 of the last 7 days logged and 3 weigh-ins, and no water event in the last 3 days; otherwise it makes no change and says why. | 4 days of 7 | 3–6 | D |
 | `signal.e1rm.rule` | Estimated 1-rep max is worked out only from sets of 3–10 reps (adjusted for reps in reserve). Two weeks in a row of it falling on main lifts while cutting faster than planned raises a flag. | 2 weeks | 2–4 | D |
 | `steps.kcalPerStepPerKg` | Each extra step costs about 0.0005 kcal per kg of body weight (about 0.04 kcal a step at 80 kg). | 0.0005 kcal/step/kg | 0.0004–0.0007 | D |
+| `timing.totalFirst` | Total daily protein matters more than its timing: once total intake was accounted for, timing made no clear difference to muscle or strength. | — | — | A |
+| `timing.protein.everyHours` | Spread protein in doses of about 20–40 g (0.25–0.40 g/kg) every 3–4 hours. | 3.5 hours | 3–4 | C |
+| `timing.preSleep.casein` | About 30–40 g of casein protein before sleep raises overnight muscle protein synthesis; over 12 weeks it went with larger gains, though that group also ate more protein overall. | 35 g | 30–40 | B |
+| `timing.preWorkout.carbs` | A meal or snack with carbohydrate (and protein) in the hours before training supports performance. | 2 hours before | 1–4 | C |
+| `timing.preWorkout.lowFatFibre` | Keep the last meal before training lower in fat and fibre for comfort. | — | — | D |
+| `timing.postWorkout.protein` | Protein from right after training up to about 2 hours later strongly stimulates muscle growth; the 'anabolic window' is wider than once thought, especially if you ate before training. | 2 hours after | 0–4 | C |
+| `carbs.training.gPerKg` | For resistance training, 3–7 g of carbohydrate per kg a day is the usual recommendation; a review argues lower intakes may not hurt lifting performance. | 3 g/kg/day | 3–7 | C |
+| `timing.fastedTraining` | Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions. | — | — | C |
+| `fibre.per1000kcal` | About 14 g of fibre per 1 000 kcal eaten. | 14 g/1000 kcal | 10–16 | D |
 | `partialDay.rule` | A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation. | 0.5 share of usual entries | 0.3–0.7 | D |
 
 ## Details
@@ -318,6 +327,80 @@ Each extra step costs about 0.0005 kcal per kg of body weight (about 0.04 kcal a
 - **Studied in:** —
 - **Note:** Practitioner convention, not verified against a study; the adjustment is short-term only (capped at ±300 kcal) and off by default.
 - The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `timing.totalFirst` (grade A)
+
+Total daily protein matters more than its timing: once total intake was accounted for, timing made no clear difference to muscle or strength.
+
+- **Studied in:** Resistance-training trials (20–23 studies, about 500 people).
+- **Note:** A later letter argued few trials truly tested timing; the conclusion that totals come first is the safe reading. The planner never misses a daily total to satisfy a timing rule.
+- Schoenfeld BJ, Aragon AA, Krieger JW. 2013. The effect of protein timing on muscle strength and hypertrophy: a meta-analysis. J Int Soc Sports Nutr 10:53. <https://doi.org/10.1186/1550-2783-10-53>
+
+### `timing.protein.everyHours` (grade C)
+
+Spread protein in doses of about 20–40 g (0.25–0.40 g/kg) every 3–4 hours.
+
+- **Studied in:** Position stand; mostly acute muscle-protein-synthesis studies in young adults.
+- Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+- Schoenfeld BJ, Aragon AA. 2018. How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. J Int Soc Sports Nutr 15:10. <https://doi.org/10.1186/s12970-018-0215-1>
+
+### `timing.preSleep.casein` (grade B)
+
+About 30–40 g of casein protein before sleep raises overnight muscle protein synthesis; over 12 weeks it went with larger gains, though that group also ate more protein overall.
+
+- **Studied in:** Res: 16 young men, one night after training. Snijders: young men, 12 weeks of training.
+- **Note:** Optional and off by default: the long-term benefit isn't separated from eating more protein in total.
+- Res PT et al. 2012. Protein ingestion before sleep improves postexercise overnight recovery. Med Sci Sports Exerc 44(8):1560–1569. <https://pubmed.ncbi.nlm.nih.gov/22330017/>
+- Snijders T et al. 2015. Protein ingestion before sleep increases muscle mass and strength gains during prolonged resistance-type exercise training in healthy young men. J Nutr 145(6):1178–1184. <https://doi.org/10.3945/jn.114.208371>
+- Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+
+### `timing.preWorkout.carbs` (grade C)
+
+A meal or snack with carbohydrate (and protein) in the hours before training supports performance.
+
+- **Studied in:** Position stand.
+- **Note:** The stand says "several hours before" without an exact window: the 1–4 hour range is our planning default.
+- Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+
+### `timing.preWorkout.lowFatFibre` (grade D, unverified)
+
+Keep the last meal before training lower in fat and fibre for comfort.
+
+- **Studied in:** —
+- **Note:** Practitioner convention for stomach comfort; not found in the position stand. A small preference in the planner, never a rule.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `timing.postWorkout.protein` (grade C)
+
+Protein from right after training up to about 2 hours later strongly stimulates muscle growth; the 'anabolic window' is wider than once thought, especially if you ate before training.
+
+- **Studied in:** Position stand and narrative review.
+- Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+- Aragon AA, Schoenfeld BJ. 2013. Nutrient timing revisited: is there a post-exercise anabolic window? J Int Soc Sports Nutr 10:5. <https://doi.org/10.1186/1550-2783-10-5>
+
+### `carbs.training.gPerKg` (grade C)
+
+For resistance training, 3–7 g of carbohydrate per kg a day is the usual recommendation; a review argues lower intakes may not hurt lifting performance.
+
+- **Studied in:** Review; the recommendation is largely borrowed from endurance research.
+- **Note:** Context, not a target: on a cut the engine's calorie target decides; the planner only puts more of the day's carbs around training.
+- Escobar KA, VanDusseldorp TA, Kerksick CM. 2016. Carbohydrate intake and resistance-based exercise: are current recommendations reflective of actual need? Br J Nutr 116(12):2053–2065. <https://pubmed.ncbi.nlm.nih.gov/27993175/>
+
+### `timing.fastedTraining` (grade C)
+
+Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions.
+
+- **Studied in:** Meta-analysis of 46 studies, mostly aerobic exercise.
+- **Note:** Resistance sessions weren't analysed in the part we could verify; a secondary summary puts the threshold at about an hour. Your choice in the planner.
+- Aird TP, Davies RW, Carson BP. 2018. Effects of fasted vs fed-state exercise on performance and post-exercise metabolism: a systematic review and meta-analysis. Scand J Med Sci Sports 28(5):1476–1493. <https://doi.org/10.1111/sms.13054>
+
+### `fibre.per1000kcal` (grade D, unverified)
+
+About 14 g of fibre per 1 000 kcal eaten.
+
+- **Studied in:** General adult population guidance.
+- **Note:** Only confirmed through secondary sources, so graded D until the primary document is checked.
+- Dietary Guidelines for Americans (14 g fibre per 1 000 kcal), as reported by secondary sources; the primary document was not checked. <https://www.dietaryguidelines.gov>
 
 ### `partialDay.rule` (grade D)
 

@@ -31,6 +31,7 @@ struct SettingsView: View {
                     group("Nutrition & coaching", [
                         row("target", "Strategy & coaching", "Goal, program, check-ins, phases") { StrategyView() },
                         row("leaf", "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() },
+                        row("fork.knife.circle", "My eating profile", "What you usually eat, when, and where days miss") { EatingProfileView() },
                         row("bolt.fill", "Expenditure", "Algorithm, starting estimate, modifiers") { ExpenditureSettingsView() },
                         row("chart.line.uptrend.xyaxis", "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() },
                         row("fork.knife", "Food search", usdaKey.isEmpty ? "USDA demo key" : "Your USDA key") { foodSearchPage },

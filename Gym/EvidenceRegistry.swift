@@ -65,6 +65,21 @@ enum Evidence {
                                                 link: "https://doi.org/10.1093/ajcn/51.2.241")
     private static let barakat = EvidenceSource(citation: "Barakat C et al. 2020. Body recomposition: can trained individuals build muscle and lose fat at the same time? Strength Cond J 42(5):7–21",
                                                 link: "https://doi.org/10.1519/SSC.0000000000000584")
+    private static let schoenfeld2013 = EvidenceSource(citation: "Schoenfeld BJ, Aragon AA, Krieger JW. 2013. The effect of protein timing on muscle strength and hypertrophy: a meta-analysis. J Int Soc Sports Nutr 10:53",
+                                                       link: "https://doi.org/10.1186/1550-2783-10-53")
+    private static let kerksick = EvidenceSource(citation: "Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33",
+                                                 link: "https://doi.org/10.1186/s12970-017-0189-4")
+    private static let res = EvidenceSource(citation: "Res PT et al. 2012. Protein ingestion before sleep improves postexercise overnight recovery. Med Sci Sports Exerc 44(8):1560–1569",
+                                            link: "https://pubmed.ncbi.nlm.nih.gov/22330017/")
+    private static let snijders = EvidenceSource(citation: "Snijders T et al. 2015. Protein ingestion before sleep increases muscle mass and strength gains during prolonged resistance-type exercise training in healthy young men. J Nutr 145(6):1178–1184",
+                                                 link: "https://doi.org/10.3945/jn.114.208371")
+    private static let aragon2013 = EvidenceSource(citation: "Aragon AA, Schoenfeld BJ. 2013. Nutrient timing revisited: is there a post-exercise anabolic window? J Int Soc Sports Nutr 10:5",
+                                                   link: "https://doi.org/10.1186/1550-2783-10-5")
+    private static let escobar = EvidenceSource(citation: "Escobar KA, VanDusseldorp TA, Kerksick CM. 2016. Carbohydrate intake and resistance-based exercise: are current recommendations reflective of actual need? Br J Nutr 116(12):2053–2065",
+                                                link: "https://pubmed.ncbi.nlm.nih.gov/27993175/")
+    private static let aird = EvidenceSource(citation: "Aird TP, Davies RW, Carson BP. 2018. Effects of fasted vs fed-state exercise on performance and post-exercise metabolism: a systematic review and meta-analysis. Scand J Med Sci Sports 28(5):1476–1493",
+                                             link: "https://doi.org/10.1111/sms.13054")
+    private static let dga = EvidenceSource(citation: "Dietary Guidelines for Americans (14 g fibre per 1 000 kcal), as reported by secondary sources; the primary document was not checked", link: "https://www.dietaryguidelines.gov")
     private static let backtest = EvidenceSource(citation: "Gym backtest on the user's own data against MacroFactor's exported estimates (Tests/backtest)", link: "tools/backtest.sh")
     private static let mine = EvidenceSource(citation: "The user's own choice (15 Oct 2026)", link: "COACHING_AUDIT.md")
 
@@ -197,6 +212,38 @@ enum Evidence {
         .init(id: "steps.kcalPerStepPerKg", description: "Each extra step costs about 0.0005 kcal per kg of body weight (about 0.04 kcal a step at 80 kg).",
               value: 0.0005, range: 0.0004...0.0007, unit: "kcal/step/kg", grade: .D, sources: [mine], population: "—",
               note: "Practitioner convention, not verified against a study; the adjustment is short-term only (capped at ±300 kcal) and off by default."),
+        // MARK: Timing and distribution (meal planner). Strong: daily totals and protein spread. Weak: exact timing.
+        .init(id: "timing.totalFirst", description: "Total daily protein matters more than its timing: once total intake was accounted for, timing made no clear difference to muscle or strength.",
+              value: 0, range: 0...0, unit: "—", grade: .A, sources: [schoenfeld2013],
+              population: "Resistance-training trials (20–23 studies, about 500 people).",
+              note: "A later letter argued few trials truly tested timing; the conclusion that totals come first is the safe reading. The planner never misses a daily total to satisfy a timing rule."),
+        .init(id: "timing.protein.everyHours", description: "Spread protein in doses of about 20–40 g (0.25–0.40 g/kg) every 3–4 hours.",
+              value: 3.5, range: 3...4, unit: "hours", grade: .C, sources: [kerksick, schoenfeld],
+              population: "Position stand; mostly acute muscle-protein-synthesis studies in young adults."),
+        .init(id: "timing.preSleep.casein", description: "About 30–40 g of casein protein before sleep raises overnight muscle protein synthesis; over 12 weeks it went with larger gains, though that group also ate more protein overall.",
+              value: 35, range: 30...40, unit: "g", grade: .B, sources: [res, snijders, kerksick],
+              population: "Res: 16 young men, one night after training. Snijders: young men, 12 weeks of training.",
+              note: "Optional and off by default: the long-term benefit isn't separated from eating more protein in total."),
+        .init(id: "timing.preWorkout.carbs", description: "A meal or snack with carbohydrate (and protein) in the hours before training supports performance.",
+              value: 2, range: 1...4, unit: "hours before", grade: .C, sources: [kerksick],
+              population: "Position stand.", note: "The stand says \"several hours before\" without an exact window: the 1–4 hour range is our planning default."),
+        .init(id: "timing.preWorkout.lowFatFibre", description: "Keep the last meal before training lower in fat and fibre for comfort.",
+              value: 0, range: 0...0, unit: "—", grade: .D, sources: [mine], population: "—",
+              note: "Practitioner convention for stomach comfort; not found in the position stand. A small preference in the planner, never a rule.", verified: false),
+        .init(id: "timing.postWorkout.protein", description: "Protein from right after training up to about 2 hours later strongly stimulates muscle growth; the 'anabolic window' is wider than once thought, especially if you ate before training.",
+              value: 2, range: 0...4, unit: "hours after", grade: .C, sources: [kerksick, aragon2013],
+              population: "Position stand and narrative review."),
+        .init(id: "carbs.training.gPerKg", description: "For resistance training, 3–7 g of carbohydrate per kg a day is the usual recommendation; a review argues lower intakes may not hurt lifting performance.",
+              value: 3, range: 3...7, unit: "g/kg/day", grade: .C, sources: [escobar],
+              population: "Review; the recommendation is largely borrowed from endurance research.",
+              note: "Context, not a target: on a cut the engine's calorie target decides; the planner only puts more of the day's carbs around training."),
+        .init(id: "timing.fastedTraining", description: "Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions.",
+              value: 0, range: 0...0, unit: "—", grade: .C, sources: [aird],
+              population: "Meta-analysis of 46 studies, mostly aerobic exercise.",
+              note: "Resistance sessions weren't analysed in the part we could verify; a secondary summary puts the threshold at about an hour. Your choice in the planner."),
+        .init(id: "fibre.per1000kcal", description: "About 14 g of fibre per 1 000 kcal eaten.",
+              value: 14, range: 10...16, unit: "g/1000 kcal", grade: .D, sources: [dga], population: "General adult population guidance.",
+              note: "Only confirmed through secondary sources, so graded D until the primary document is checked.", verified: false),
         .init(id: "partialDay.rule", description: "A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation.",
               value: 0.5, range: 0.3...0.7, unit: "share of usual entries", grade: .D, sources: [mine], population: "—"),
     ]
