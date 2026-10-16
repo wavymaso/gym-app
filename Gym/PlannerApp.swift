@@ -104,7 +104,7 @@ extension ModelContext {
         }
         for i in slots.indices where !slots[i].eaten { if let l = s.locks[i], !l.isEmpty { slots[i].items = l; slots[i].locked = true } }
         let kg = trendSeries(weightValues, through: day).last?.trend ?? 80
-        let fibreGoal = p.customGoals["fiber"] ?? Evidence.value("fibre.per1000kcal") * t.kcal / 1000 * 0.7
+        let fibreGoal = p.planner.fibreFloor(kcal: t.kcal, custom: p.customGoals["fiber"])
         let targets = PlanTargets(kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs, fibreFloor: fibreGoal,
                                   fatFloor: min(t.fat, max(40, Evidence.value("fat.min.gPerKg") * kg)), weightKg: kg)
         let plan = Planner.plan(targets, slots: slots, foods: foods, options: PlanOptions(preSleepProtein: s.preSleepProtein, exclusions: Set(s.exclusions), variety: s.variety, trainingCarbBoost: s.trainingCarbBoost))

@@ -59,7 +59,7 @@ MainActor.assumeIsolated {
         let tot = r.plan.totals
         let kg = trendSeries(ctx.weightValues, through: d).last?.trend ?? 80
         let fatFloor = min(t.fat, max(40, Evidence.value("fat.min.gPerKg") * kg))
-        let fibreFloor = p.customGoals["fiber"] ?? Evidence.value("fibre.per1000kcal") * t.kcal / 1000 * 0.7
+        let fibreFloor = p.planner.fibreFloor(kcal: t.kcal, custom: p.customGoals["fiber"])
         let dk = tot.kcal - t.kcal
         print(String(format: "  Day: %d kcal (target %d, %@%d, %+.1f%%) · protein %d (min %d) · fat %d (target %d, floor %d) · carbs %d (target %d) · fibre %d (floor %d)",
                      Int(tot.kcal.rounded()), Int(t.kcal.rounded()), (dk >= 0 ? "+" : "") as NSString, Int(dk.rounded()), dk / t.kcal * 100, Int(tot.protein.rounded()), Int(t.protein.rounded()), Int(tot.fat.rounded()), Int(t.fat.rounded()), Int(fatFloor.rounded()),
