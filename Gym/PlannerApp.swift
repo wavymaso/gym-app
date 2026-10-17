@@ -6,7 +6,7 @@ import SwiftUI
 
 /// The planner's inputs for the current data (rebuilt when saved data changes or the day turns).
 private var planFoodsCache: (key: String, foods: [PlanFood])?
-private var warmPlans: [String: (settings: String, plan: DayPlan)] = [:]
+private var warmPlans: [String: (settings: PlannerSettings, edits: DayEdits, plan: DayPlan)] = [:]
 private var weekCache: (key: String, days: [(day: String, plan: DayPlan, foods: [String: PlanFood])])?
 
 extension ModelContext {
@@ -35,6 +35,7 @@ extension ModelContext {
             let t = taxonomy(of: food)
             guard t.role != .drink else { return nil }
             var g = t.role == f.role ? f : f.with(role: t.role)
+            if let u = ModelContext.unit(food, role: t.role) { g.step = u.grams; g.unitName = u.name; g = g.with(role: t.role, usual: max(u.grams, (g.usualGrams / u.grams).rounded() * u.grams)) }
             g.bands.formUnion(Taxonomy.bands(t.canonical))
             g.nova = t.nova; g.canonical = t.canonical; g.tier = t.canonical.map(Taxonomy.tier) ?? (t.role == .treat ? 3 : 2)
             return g
@@ -46,13 +47,15 @@ extension ModelContext {
         let catalog = planCatalog()
         for s in st {
             if let i = mine.firstIndex(where: { $0.key == s.key }) {
-                var f = mine[i].with(role: mine[i].role, usual: s.grams)
+                let units = mine[i].unitName != nil ? max(mine[i].step, (s.grams / mine[i].step).rounded() * mine[i].step) : s.grams
+                var f = mine[i].with(role: mine[i].role, usual: units)
                 f.bands.insert(s.band); f.frequency += 20; f.staple = true; f.stapleBand = s.band
                 mine[i] = f
             } else if var f = Planner.foods(fromStaples: [s], catalog: catalog).first, let food = food(key: s.key) {
                 let t = taxonomy(of: food)
                 guard t.role != .drink else { continue }
-                f = f.with(role: t.role, usual: s.grams); f.bands.formUnion(Taxonomy.bands(t.canonical)); f.nova = t.nova; f.frequency = 20; f.staple = true; f.stapleBand = s.band
+                if let u = ModelContext.unit(food, role: t.role) { f.step = u.grams; f.unitName = u.name }
+                f = f.with(role: t.role, usual: f.unitName != nil ? max(f.step, (s.grams / f.step).rounded() * f.step) : s.grams); f.bands.formUnion(Taxonomy.bands(t.canonical)); f.nova = t.nova; f.frequency = 20; f.staple = true; f.stapleBand = s.band
                 mine.append(f)
             }
         }
@@ -113,8 +116,35 @@ extension ModelContext {
     static func unitGrams(_ f: Food) -> Double? {
         guard let s = f.servings.first, s.grams > 0, s.name.hasPrefix("1 ") else { return nil }
         let n = s.name.lowercased()
-        let piece = ["egg", "huevo", "bar", "barrita", "slice", "rebanada", "loncha", "scoop", "cacito", "tin", "lata", "tortita", "rice cake", "unidad", "unit", "piece", "pieza", "pot", "tarrina", "yogur", "pack"]
-        return piece.contains(where: { n.contains($0) }) || s.grams <= 25 ? s.grams : nil      // a 50 g "serving" of dates isn't a piece
+        return pieceWords.contains(where: { n.contains($0) }) || s.grams <= 25 ? s.grams : nil      // a 50 g "serving" of dates isn't a piece
+    }
+
+    static let pieceWords = ["egg", "huevo", "bar", "barrita", "slice", "rebanada", "loncha", "scoop", "cacito", "tin", "lata", "tortita", "rice cake", "unidad", "unit", "piece", "pieza", "pot", "tarrina", "yogur", "pack"]
+
+    /// How the plan shows a food: in its unit when it comes in pieces (2 eggs, 1 slice), and packaged
+    /// protein snacks and treats in their product serving (1 bar, not 55 g). Spoonfuls (jam, sauces) stay in grams.
+    static func unit(_ f: Food, role: FoodRole) -> (name: String, grams: Double)? {
+        guard let s = f.servings.first, s.grams > 0 else { return nil }
+        let n = s.name.lowercased()
+        let piece = pieceWords.first { n.contains($0) }
+        let packaged = (role == .proteinSnack || role == .treat) && f.source == "off" && s.grams >= 15 && s.grams <= 120 && !f.isLiquid
+        guard piece != nil || packaged else { return nil }
+        return (unitName(s.name, food: f.name, role: role), s.grams)
+    }
+    /// "1 egg" → "egg", "1 serving (1 slice)" → "slice", "1 serving (55 g)" of a bar → "bar", "1 tin (drained)" → "tin (drained)".
+    static func unitName(_ serving: String, food: String, role: FoodRole) -> String {
+        var n = serving.trimmingCharacters(in: .whitespaces)
+        if let r = n.range(of: #"^\d+([.,]\d+)?\s*"#, options: .regularExpression) { n.removeSubrange(r) }
+        if let r = n.range(of: #"\s*\(\s*[\d.,]+\s*(g|ml)\s*\)"#, options: .regularExpression) { n.removeSubrange(r) }
+        let lower = food.lowercased()
+        if ["serving", "ración", "porción", "portion", ""].contains(where: { n.lowercased().hasPrefix($0) && (n.count == $0.count || n.lowercased().dropFirst($0.count).hasPrefix(" (")) }) {
+            // "serving (1 slice)": the piece inside.
+            if let r = n.range(of: #"\(\s*1\s+([^)]+)\)"#, options: .regularExpression) {
+                return String(n[r]).replacingOccurrences(of: #"^\(\s*1\s+|\)$"#, with: "", options: .regularExpression)
+            }
+            return lower.contains("bar") ? "bar" : "serving"
+        }
+        return n
     }
 
     /// Your foods' names and values for the planner.
@@ -192,6 +222,7 @@ extension ModelContext {
         var previous: [Int: (items: [PlanItem], structure: MealStructure)] = [:]
         var only: Set<Int>? = nil
         var extraReasons: [EngineReason], carbs: DayPlan.Carbs, settings: PlannerSettings
+        var edits = DayEdits()
         func run() -> PlanResult {
             let built = MealBuilder.plan(targets, slots: slots, foods: foods, templates: templates, ctx: ctx, options: options, previous: previous, only: only)
             var plan = built.plan
@@ -210,16 +241,37 @@ extension ModelContext {
     func dayPlan(_ day: String, uses: [String: Int] = [:], style: String? = nil, offset: Int = 0, only: Set<Int>? = nil) -> PlanResult? {
         guard var job = planJob(day, uses: uses, style: style, offset: offset) else { return nil }
         let warmKey = "\(day)|\(style ?? "")|\(offset)"
-        let sig = profile?.plannerJSON ?? ""
+        // Settings other than the day's edits: when they change, the day is planned from scratch.
+        var sig = job.settings; sig.dayEdits = [:]
         if uses.isEmpty, let prev = warmPlans[warmKey], prev.settings == sig, prev.plan.slots.map(\.minute) == job.slots.map(\.minute) {
+            // The meals keep their foods and are resized. In a meal your latest edit touched, only that food
+            // changes: the swapped-in food takes the old one's place, a kept food takes its portion.
+            let dirty = Set(job.slots.map(\.index).filter { prev.edits.signature($0) != job.edits.signature($0) })
+            let b = job.edits.byslot
             for s in prev.plan.slots where !s.fixed {
-                guard let st = prev.plan.structure[s.index], let now = job.slots.first(where: { $0.index == s.index }), !now.fixed else { continue }
-                job.previous[s.index] = (s.items, st)
+                guard var st = prev.plan.structure[s.index], let now = job.slots.first(where: { $0.index == s.index }), !now.fixed else { continue }
+                var items = s.items
+                if dirty.contains(s.index) {
+                    for (kind, key) in b.picks[s.index] ?? [:] {
+                        guard let fi = st.fill.firstIndex(where: { $0.kind == kind && !$0.keys.isEmpty }), let old = st.fill[fi].keys.first, old != key else { continue }
+                        let g = b.start[s.index]?[key] ?? items.first { $0.key == old }?.grams ?? 100
+                        items = items.map { $0.key == old ? PlanItem(key: key, grams: g) : $0 }
+                        st.fill[fi].keys[0] = key
+                    }
+                    let pins = b.pins[s.index] ?? [:]
+                    items = items.map { it in pins[it.key].map { PlanItem(key: it.key, grams: $0, pinned: true) } ?? PlanItem(key: it.key, grams: it.grams) }
+                    for (key, g) in pins where !items.contains(where: { $0.key == key }) {
+                        items.append(PlanItem(key: key, grams: g, pinned: true))
+                        st.fill.append(.init(kind: (b.pinKinds[s.index]?[key]).flatMap(TemplateSlot.Kind.init(rawValue:)) ?? .protein, keys: [key], required: false))
+                    }
+                }
+                job.previous[s.index] = (items, st)
             }
-            job.only = only
+            let logged = zip(prev.plan.slots, job.slots).contains { $0.fixed != $1.fixed }
+            job.only = logged ? nil : (dirty.isEmpty ? only : dirty)
         }
         let r = job.run()
-        if uses.isEmpty { warmPlans[warmKey] = (sig, r.plan); if warmPlans.count > 30 { warmPlans = [warmKey: (sig, r.plan)] } }
+        if uses.isEmpty { warmPlans[warmKey] = (sig, job.edits, r.plan); if warmPlans.count > 30 { warmPlans = [warmKey: (sig, job.edits, r.plan)] } }
         return r
     }
 
@@ -294,11 +346,33 @@ extension ModelContext {
         let canonOf = Dictionary(foods.compactMap { f in f.canonical.map { (f.key, $0) } }, uniquingKeysWith: { a, _ in a })
         for (k, n) in uses { if let c = canonOf[k] { bctx.recent[c, default: 0] += n; bctx.recent["family:" + Taxonomy.family(c), default: 0] += n } }
         if style == "anything" { bctx.wholeFood = 0.3 }
+        let edits = s.dayEdits[day] ?? DayEdits()
+        bctx.apply(edits)
         return PlanJob(targets: targets, slots: slots, foods: foods, templates: s.mealTemplates, ctx: bctx, options: opts,
                        extraReasons: carbReasons(day, t: t, kg: kg, training: training) + carb.reasons,
                        carbs: .init(gPerKg: t.carbs / kg, range: CarbPlanner.range(phase).range, rangeIsTarget: CarbPlanner.range(phase).target, intra: carb.intra, recovery: carb.recovery),
-                       settings: s)
+                       settings: s, edits: edits)
     }
+
+    // MARK: Your edits to a day's plan
+
+    /// Change a day's edits (swap, keep, regenerate…) and save; older days' edits are dropped.
+    func editPlan(_ day: String, _ change: (inout DayEdits) -> Void) {
+        guard let p = profile else { return }
+        var s = p.planner
+        var e = s.dayEdits[day] ?? DayEdits()
+        change(&e)
+        s.dayEdits[day] = e.isEmpty ? nil : e
+        s.dayEdits = s.dayEdits.filter { $0.key >= addDays(dayKey(), -7) }
+        p.planner = s; commit()
+    }
+
+    /// Swap alternatives for a food in a meal (5, same slot, your style).
+    func swapOptions(_ day: String, slot: PlanSlot, kind: TemplateSlot.Kind, item: PlanItem) -> [(food: PlanFood, grams: Double)] {
+        guard let job = planJob(day) else { return [] }
+        return MealBuilder.alternatives(slot: slot, kind: kind, replacing: item, foods: job.foods, templates: job.templates, ctx: job.ctx, exclusions: job.options.exclusions)
+    }
+
 
     /// The first plan of each day, kept so the check-in can compare planned with eaten (context only).
     func recordPlan(_ day: String, _ plan: DayPlan) {

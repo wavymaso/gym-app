@@ -695,4 +695,60 @@ do {
     check("one meal changed: no slot left locked by the partial re-solve", only.plan.slots.allSatisfy { !$0.locked })
     print(String(format: "  timing (debug build): warm re-solve after a log %.0f ms, one meal %.0f ms", warmMs, onlyMs))
 }
+
+// MARK: Step 4: swap, keep a food, servings in product units
+do {
+    let base = pantry.map { f -> PlanFood in var f = f; f.canonical = Taxonomy.match(f.name, brand: nil)?.id; f.tier = f.canonical.map(Taxonomy.tier) ?? 1
+        f.nova = f.canonical.flatMap { Taxonomy.byID[$0]?.nova } ?? 1; return f }
+    let all = base + BasicFoods.planFoods(excluding: Set(base.map(\.key)))
+    let byK = Dictionary(all.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+    let tps = MealTemplates.defaults
+    let slots = slotsFor(training: nil)
+    let r = MealBuilder.plan(cutDay, slots: slots, foods: all, templates: tps, ctx: BuildContext())
+    let lunch = r.plan.slots.first { MealTemplates.template(for: $0, in: tps)?.meal == .lunch }!
+    let protKey = r.structure[lunch.index]!.fill.first { $0.kind == .protein }!.keys.first!
+    let prot = lunch.items.first { $0.key == protKey }!
+    // Swap: 5 alternatives for the same slot, same role, matched protein.
+    let alts = MealBuilder.alternatives(slot: lunch, kind: .protein, replacing: prot, foods: all, templates: tps, ctx: BuildContext())
+    check("swap: up to 5 alternatives, none the current food or its canonical", alts.count <= 5 && !alts.isEmpty && alts.allSatisfy { $0.food.key != protKey && $0.food.canonical != byK[protKey]?.canonical }, alts.map(\.food.key))
+    check("swap: all allowed in the lunch protein slot", alts.allSatisfy { tps[1].slots.first { $0.kind == .protein }!.allowed.contains($0.food.canonical ?? "") })
+    let was = byK[protKey]!.macros(prot.grams).protein
+    check("swap: portion matched to the protein it replaces (±1 step)", alts.allSatisfy { a in abs(a.food.macros(a.grams).protein - was) <= a.food.per100.protein * a.food.step / 100 + 0.5 || a.grams == a.food.maxGrams || a.grams == max(a.food.minGrams, a.food.step) },
+          alts.map { ($0.food.key, Int($0.food.macros($0.grams).protein), Int(was)) })
+    var basicCtx = BuildContext(); basicCtx.basicStyle = true
+    let basicAlts = MealBuilder.alternatives(slot: lunch, kind: .protein, replacing: prot, foods: all, templates: tps, ctx: basicCtx)
+    check("swap: Basic style offers whole foods only", basicAlts.allSatisfy { ($0.food.staple || $0.food.basic) && ((1...2).contains($0.food.nova) || $0.food.basicAllowed) })
+    // The swap applied: the chosen food fills the slot, starting at its matched portion, and the day re-solves.
+    let choice = alts[0]
+    var e = DayEdits(); e.picks[DayEdits.slotKey(lunch.index, .protein)] = choice.food.key; e.start[DayEdits.itemKey(lunch.index, choice.food.key)] = choice.grams
+    var c1 = BuildContext(); c1.apply(e)
+    let swapped = MealBuilder.plan(cutDay, slots: slots, foods: all, templates: tps, ctx: c1)
+    let sl = swapped.plan.slots.first { $0.index == lunch.index }!
+    check("swap applied: the food you chose is in the lunch protein slot", swapped.structure[lunch.index]!.fill.first { $0.kind == .protein }!.keys == [choice.food.key] && sl.items.contains { $0.key == choice.food.key })
+    check("swap applied: the day still meets calories and protein", !swapped.plan.misses.contains("calories") && !swapped.plan.misses.contains("protein"), swapped.plan.misses)
+    // Keep a food at a portion: never resized.
+    var e2 = DayEdits(); e2.pins[DayEdits.itemKey(lunch.index, protKey)] = 150; e2.pinKinds[DayEdits.itemKey(lunch.index, protKey)] = "protein"
+    var c2 = BuildContext(); c2.apply(e2)
+    let kept = MealBuilder.plan(cutDay, slots: slots, foods: all, templates: tps, ctx: c2)
+    let keptItem = kept.plan.slots.first { $0.index == lunch.index }!.items.first { $0.key == protKey }
+    check("keep: the food stays at exactly 150 g, marked kept", keptItem?.grams == 150 && keptItem?.isPinned == true, keptItem)
+    check("keep: the rest is resized so the day still fits", !kept.plan.misses.contains("calories"), kept.plan.misses)
+    // A kept extra (a second protein) doesn't take the main protein's slot.
+    let extraKey = all.first { $0.canonical == "eggs" }!.key
+    var e3 = DayEdits(); e3.pins[DayEdits.itemKey(lunch.index, extraKey)] = 120; e3.pinKinds[DayEdits.itemKey(lunch.index, extraKey)] = "extra"
+    var c3 = BuildContext(); c3.apply(e3)
+    let ex = MealBuilder.plan(cutDay, slots: slots, foods: all, templates: tps, ctx: c3)
+    let exFill = ex.structure[lunch.index]!.fill
+    check("keep extra: eggs added alongside, the main protein slot keeps its own food", exFill.first { $0.kind == .protein }!.keys.first != extraKey && ex.plan.slots.first { $0.index == lunch.index }!.items.contains { $0.key == extraKey && $0.grams == 120 })
+    // Edits tell which meals they touch.
+    var e6 = DayEdits(); e6.pins["1|x"] = 50
+    check("edits: a change to lunch touches only lunch", e6.signature(1) != DayEdits().signature(1) && e6.signature(2) == DayEdits().signature(2))
+    // Product units: eggs and bars shown in units.
+    var bar = food("Barebells Mint", 349, 36, 13, 34, 4, usual: 55, slots: [:], step: 55).with(role: .proteinSnack); bar.unitName = "bar"
+    check("units: 2 bars, not 110 g", bar.shown(110) == "2 bars" && bar.shown(55) == "1 bar")
+    var egg = BasicFoods.planFoods().first { $0.key == "basic:eggs" }!
+    check("units: basic eggs in eggs", egg.shown(180) == "3 eggs", egg.shown(180))
+    egg.unitName = "tin (drained)"
+    check("units: plural keeps the note", PlanFood.plural("tin (drained)") == "tins (drained)")
+}
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

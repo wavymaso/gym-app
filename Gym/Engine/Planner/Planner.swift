@@ -28,7 +28,21 @@ struct PlanFood: Equatable {
     var tier = 1                          // 1 whole food, 2 simple staple, 3 convenience (only when in stock)
     var shownRatio = 1.0                  // the plan shows grams × this (you weigh it cooked, values are raw: the cooked ratio)
     var shownUnit = "g"                   // "g", "g cooked", "g raw"
-    func shown(_ g: Double) -> String { "\(Int((g * shownRatio).rounded())) \(shownUnit)" }
+    var unitName: String? = nil           // the product's unit when it comes in pieces ("egg", "bar", "slice"): portions shown in units
+    /// A portion the way you'd measure it: "2 bars", "3 eggs", or "210 g cooked".
+    func shown(_ g: Double) -> String {
+        if let u = unitName, step > 0, abs((g / step).rounded() * step - g) < 0.5 {
+            let n = Int((g / step).rounded())
+            return "\(n) \(n == 1 ? u : PlanFood.plural(u))"
+        }
+        return "\(Int((g * shownRatio).rounded())) \(shownUnit)"
+    }
+    static func plural(_ u: String) -> String {
+        if let r = u.range(of: " (") { return plural(String(u[..<r.lowerBound])) + u[r.lowerBound...] }
+        if u.hasSuffix("s") { return u }
+        if u.hasSuffix("y"), !u.hasSuffix("ey") { return u.dropLast() + "ies" }
+        return u + (u.hasSuffix("ch") || u.hasSuffix("sh") ? "es" : "s")
+    }
 
     static func == (a: PlanFood, b: PlanFood) -> Bool { a.key == b.key }
     func macros(_ g: Double) -> Macros {
@@ -42,7 +56,12 @@ struct Macros: Equatable {
     static func - (a: Macros, b: Macros) -> Macros { Macros(kcal: a.kcal - b.kcal, protein: a.protein - b.protein, fat: a.fat - b.fat, carbs: a.carbs - b.carbs, fibre: a.fibre - b.fibre) }
 }
 
-struct PlanItem: Equatable, Codable { var key: String; var grams: Double }
+struct PlanItem: Equatable, Codable {
+    var key: String
+    var grams: Double
+    var pinned: Bool? = nil               // you keep this portion (a locked food, or a serving you set): never resized
+    var isPinned: Bool { pinned == true }
+}
 
 struct PlanSlot: Equatable {
     enum Kind: String, Codable { case meal, preWorkout, postWorkout, preSleep }
@@ -351,6 +370,9 @@ enum Planner {
         let perMeal = max(20, t.protein / Double(max(nS, 1)))
         let band = max(t.kcal * w.tolerance, 40)
         var F = slots.map { $0.items.map { idx[$0.key]! } }, G = slots.map { $0.items.map(\.grams) }
+        // Foods you keep at a portion are never resized, removed or swapped.
+        var pinnedAt = Set<Int>()
+        for (i, s) in slots.enumerated() { for it in s.items where it.isPinned { pinnedAt.insert(i * nF + idx[it.key]!) } }
         var counts = [Int](repeating: 0, count: nF)
         // Realism (hard) and the score together: a core food in every meal (protein main, carb side, dairy
         // or protein snack); condiments and fats only alongside one; a treat never alone and once a day;
@@ -442,7 +464,7 @@ enum Planner {
             for i in 0..<nS where !fixed[i] {
                 for j in F[i].indices {
                     let f = F[i][j], g0 = G[i][j]
-                    guard known[f] else { continue }
+                    guard known[f], !pinnedAt.contains(i * nF + f) else { continue }
                     for k in [-4.0, -1, 1, 4] {
                         let g = min(maxG[f], g0 + k * step[f])
                         if g < lowG[f] - 1e-9 || g == g0 { continue }
@@ -451,11 +473,11 @@ enum Planner {
                 }
                 if options.sizeOnly { continue }
                 if F[i].count > 1 {
-                    for j in F[i].indices { var F2 = F, G2 = G; F2[i].remove(at: j); G2[i].remove(at: j); consider(F2, G2) }
+                    for j in F[i].indices where !pinnedAt.contains(i * nF + F[i][j]) { var F2 = F, G2 = G; F2[i].remove(at: j); G2[i].remove(at: j); consider(F2, G2) }
                 }
                 for f in candIdx[i] where !F[i].contains(f) {
                     var F2 = F, G2 = G; F2[i].append(f); G2[i].append(usualG[f]); consider(F2, G2)
-                    for j in F[i].indices { F2 = F; G2 = G; F2[i][j] = f; G2[i][j] = usualG[f]; consider(F2, G2) }
+                    for j in F[i].indices where !pinnedAt.contains(i * nF + F[i][j]) { F2 = F; G2 = G; F2[i][j] = f; G2[i][j] = usualG[f]; consider(F2, G2) }
                 }
             }
             // Paired moves: one food up a step while another goes down (more oil, less rice), so the
@@ -464,12 +486,12 @@ enum Planner {
                 let pos = (0..<nS).flatMap { i in fixed[i] ? [] : F[i].indices.map { (i, $0) } }
                 for (ia, ja) in pos {
                     let fa = F[ia][ja]
-                    guard known[fa] else { continue }
+                    guard known[fa], !pinnedAt.contains(ia * nF + fa) else { continue }
                     let up = min(maxG[fa], G[ia][ja] + step[fa])
                     guard up > G[ia][ja] else { continue }
                     for (ib, jb) in pos where !(ib == ia && jb == ja) {
                         let fbi = F[ib][jb]
-                        guard known[fbi], roleOf[fbi] != roleOf[fa] else { continue }
+                        guard known[fbi], roleOf[fbi] != roleOf[fa], !pinnedAt.contains(ib * nF + fbi) else { continue }
                         let down = G[ib][jb] - step[fbi]
                         guard down >= lowG[fbi] - 1e-9 else { continue }
                         var G2 = G; G2[ia][ja] = up; G2[ib][jb] = down; consider(F, G2)
@@ -479,7 +501,11 @@ enum Planner {
             guard let m = bestMove else { break }
             F = m.F; G = m.G; curV = m.v; cur = m.sc
         }
-        for i in slots.indices where !slots[i].fixed { slots[i].items = zip(F[i], G[i]).map { PlanItem(key: keys[$0], grams: ($1 * 10).rounded() / 10) } }
+        for i in slots.indices where !slots[i].fixed {
+            slots[i].items = zip(F[i], G[i]).map { f, g in
+                pinnedAt.contains(i * nF + f) ? PlanItem(key: keys[f], grams: g, pinned: true) : PlanItem(key: keys[f], grams: (g * 10).rounded() / 10)
+            }
+        }
         func total(_ s: [PlanSlot]) -> Macros { s.filter { !$0.fixed }.flatMap(\.items).reduce(fixedTotal) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) } }
         let shortCount = shortMeals(slots, t, byKey).count
         let realism = issues(slots, byKey: byKey, t: t, checkBands: !options.sizeOnly).filter { !$0.text.contains("protein of the") }

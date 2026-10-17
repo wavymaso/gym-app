@@ -27,6 +27,7 @@ struct PlannerSettings: Codable, Equatable {
     var fibreFloorGrams: Double = 19                 // fixed fibre floor (g/day); 0: scale with calories (registry, 14 g per 1,000 kcal)
     var highDaysFollowTraining = true                // calorie distribution: training days = your training week
     var inferredWeek: [Int: TrainingSlot] = [:]      // last inferred from workouts (kept so targets can use it without a fetch)
+    var dayEdits: [String: DayEdits] = [:]           // day → your swaps and kept foods (Plan view), a week kept
 
     /// Your templates, or the defaults (a template you haven't edited follows the defaults).
     var mealTemplates: [MealTemplate] {
@@ -112,5 +113,6 @@ extension PlannerSettings {
         usualMeals = (try? c.decodeIfPresent(type(of: usualMeals), forKey: .usualMeals)) ?? d.usualMeals
         deletedUsualMeals = (try? c.decodeIfPresent(type(of: deletedUsualMeals), forKey: .deletedUsualMeals)) ?? d.deletedUsualMeals
         inStock = (try? c.decodeIfPresent(type(of: inStock), forKey: .inStock)) ?? d.inStock
+        dayEdits = (try? c.decodeIfPresent(type(of: dayEdits), forKey: .dayEdits)) ?? d.dayEdits
     }
 }

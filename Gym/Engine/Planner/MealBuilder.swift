@@ -28,6 +28,16 @@ struct BuildContext {
     var basicStyle = false                    // "Basic": whole foods only (NOVA 1–2 or chosen basics), hard
     var offset = 0                            // regenerate: take the n-th best choice for unlocked slots
     var fibreShort = false                    // the day misses its fibre floor: vegetables, fruit and breads by fibre per 100 g
+    // Your edits for the day (DayEdits) and preferences.
+    var picks: [Int: [TemplateSlot.Kind: String]] = [:]     // slot → kind → the food you swapped in
+    var start: [Int: [String: Double]] = [:]                // slot → food → its starting portion
+    var pins: [Int: [String: Double]] = [:]                 // slot → food → grams kept exactly
+    var pinKinds: [Int: [String: String]] = [:]             // slot → food → its template slot ("extra": an added food)
+
+    mutating func apply(_ e: DayEdits) {
+        let b = e.byslot
+        picks = b.picks; start = b.start; pins = b.pins; pinKinds = b.pinKinds
+    }
 }
 
 enum MealBuilder {
@@ -35,22 +45,22 @@ enum MealBuilder {
     nonisolated(unsafe) static var profile: (solves: Int, ms: Double, repairs: Int) = (0, 0, 0)
     nonisolated(unsafe) static var profiling = false
 
-    /// Stage 2 for one meal: a food for each slot of its template. `taken` are canonical ids already in
-    /// today's other meals (for the lunch/dinner protein rule).
-    static func select(_ template: MealTemplate, slot: PlanSlot, foods: [PlanFood], ctx: BuildContext, taken: [String: MealBand], usedToday: [String: Int] = [:],
-                       budget: Double? = nil) -> (items: [PlanItem], structure: MealStructure) {
-        var chosen: [PlanFood] = []
-        var fills: [MealStructure.Fill] = []
-        var unfilled: [String] = []
+    /// May this food fill this template slot? Allowed there, available (tier 3 only in stock), not removed,
+    /// and in the style.
+    static func allowed(_ f: PlanFood, _ ts: TemplateSlot, meal: MealTemplate.Meal, ctx: BuildContext) -> Bool {
+        guard let c = f.canonical, ts.allowed.contains(c), !ctx.removed.contains(c) else { return false }
+        if Taxonomy.needsStock(c) && !ctx.inStock.contains(c) { return false }
+        // Basic: your staples and the basic foods library only, NOVA 1–2 (or a basic you chose despite its NOVA).
+        if ctx.basicStyle && !((f.staple || f.basic) && ((1...2).contains(f.nova) || (f.basic && f.basicAllowed))) { return false }
+        return true
+    }
+
+    /// The foods for one template slot, best first (one per canonical food: your own product first).
+    /// `chosen`: the meal's foods so far (for the foods you eat together).
+    static func rank(_ template: MealTemplate, _ ts: TemplateSlot, slot: PlanSlot, foods: [PlanFood], ctx: BuildContext, chosen: [PlanFood],
+                     taken: [String: MealBand], usedToday: [String: Int], budget: Double?) -> [PlanFood] {
         let band = slot.band
-        func allowed(_ f: PlanFood, _ ts: TemplateSlot) -> Bool {
-            guard let c = f.canonical, ts.allowed.contains(c), !ctx.removed.contains(c) else { return false }
-            if Taxonomy.needsStock(c) && !ctx.inStock.contains(c) { return false }
-            // Basic: your staples and the basic foods library only, NOVA 1–2 (or a basic you chose despite its NOVA).
-            if ctx.basicStyle && !((f.staple || f.basic) && ((1...2).contains(f.nova) || (f.basic && f.basicAllowed))) { return false }
-            return true
-        }
-        func score(_ f: PlanFood, _ ts: TemplateSlot) -> Double {
+        func score(_ f: PlanFood) -> Double {
             let c = f.canonical ?? f.key
             var x = 0.0
             // A staple counts most at the meal you set it for (eggs as a lunch staple aren't a merienda default).
@@ -89,22 +99,43 @@ enum MealBuilder {
             if f.basic { x -= 0.5 }
             return x
         }
+        let inMeal = Set(chosen.compactMap(\.canonical))
+        var pool = foods.filter { allowed($0, ts, meal: template.meal, ctx: ctx) && !chosen.contains($0) && !inMeal.contains($0.canonical ?? "") && (usedToday[$0.key] ?? 0) < $0.maxPerDay }
+        // One protein main per family a day (no turkey before and after training, no chicken at lunch and
+        // dinner) unless you allow repeats; never a tier 3 food as a meal's only protein.
+        if ts.kind == .protein {
+            if !ctx.sameProteinTwice { pool = pool.filter { f in f.role != .proteinMain || taken["family:" + Taxonomy.family(f.canonical ?? "")] == nil } }
+            pool = pool.filter { $0.tier < 3 }
+        }
+        var best: [String: (PlanFood, Double)] = [:]
+        for f in pool { let c = f.canonical ?? f.key, sc = score(f); if let b = best[c], b.1 >= sc { continue }; best[c] = (f, sc) }
+        return best.values.sorted { ($0.1, $1.0.key) > ($1.1, $0.0.key) }.map(\.0)
+    }
+
+    /// Stage 2 for one meal: a food for each slot of its template. `taken` are canonical ids already in
+    /// today's other meals (for the lunch/dinner protein rule). Your swaps and kept foods for this meal
+    /// go in first.
+    static func select(_ template: MealTemplate, slot: PlanSlot, foods: [PlanFood], ctx: BuildContext, taken: [String: MealBand], usedToday: [String: Int] = [:],
+                       budget: Double? = nil) -> (items: [PlanItem], structure: MealStructure) {
+        var chosen: [PlanFood] = []
+        var fills: [MealStructure.Fill] = []
+        var unfilled: [String] = []
+        let byKey = Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+        let pins = ctx.pins[slot.index] ?? [:], kinds = ctx.pinKinds[slot.index] ?? [:]
+        let pinned = pins.keys.sorted().compactMap { byKey[$0] }
         for ts in template.slots {
-            guard ts.required || ts.defaultOn else { fills.append(.init(kind: ts.kind, keys: [], required: false)); continue }
-            // Never the same food twice in a meal, even as two products (sourdough as the base and the side).
-            let inMeal = Set(chosen.compactMap(\.canonical))
-            if ts.kind == .bread, chosen.contains(where: { ["bread", "wholemeal-bread"].contains($0.canonical ?? "") }) { fills.append(.init(kind: ts.kind, keys: [], required: false)); continue }
-            var pool = foods.filter { allowed($0, ts) && !chosen.contains($0) && !inMeal.contains($0.canonical ?? "") && (usedToday[$0.key] ?? 0) < $0.maxPerDay }
-            // One protein main per family a day (no turkey before and after training, no chicken at lunch and
-            // dinner) unless you allow repeats; never a tier 3 food as a meal's only protein.
-            if ts.kind == .protein {
-                if !ctx.sameProteinTwice { pool = pool.filter { f in f.role != .proteinMain || taken["family:" + Taxonomy.family(f.canonical ?? "")] == nil } }
-                pool = pool.filter { $0.tier < 3 }
+            // A food you kept goes back in its slot (the one it was in, else the first that allows it).
+            if let f = pinned.first(where: { f in !chosen.contains(f) && (kinds[f.key].map { $0 == ts.kind.rawValue } ?? ts.allowed.contains(f.canonical ?? "")) }) {
+                chosen.append(f); fills.append(.init(kind: ts.kind, keys: [f.key], required: ts.required)); continue
             }
-            // One food per canonical (your own product first: staples, then most eaten).
-            var best: [String: PlanFood] = [:]
-            for f in pool { let c = f.canonical ?? f.key; if let b = best[c], score(b, ts) >= score(f, ts) { continue }; best[c] = f }
-            let ranked = best.values.sorted { (score($0, ts), $1.key) > (score($1, ts), $0.key) }
+            // Your swap for this slot.
+            if let k = ctx.picks[slot.index]?[ts.kind], let f = byKey[k], !chosen.contains(f) {
+                chosen.append(f); fills.append(.init(kind: ts.kind, keys: [f.key], required: ts.required)); continue
+            }
+            guard ts.required || ts.defaultOn else { fills.append(.init(kind: ts.kind, keys: [], required: false)); continue }
+            // The bread side only when the meal's base isn't bread already.
+            if ts.kind == .bread, chosen.contains(where: { ["bread", "wholemeal-bread"].contains($0.canonical ?? "") }) { fills.append(.init(kind: ts.kind, keys: [], required: false)); continue }
+            let ranked = rank(template, ts, slot: slot, foods: foods, ctx: ctx, chosen: chosen, taken: taken, usedToday: usedToday, budget: budget)
             guard !ranked.isEmpty else {
                 if ts.required { unfilled.append("\(ts.kind.label.lowercased()): none of the allowed foods is available") }
                 fills.append(.init(kind: ts.kind, keys: [], required: ts.required)); continue
@@ -112,20 +143,23 @@ enum MealBuilder {
             let pick = ranked[min(ctx.offset, ranked.count - 1)]
             var picks = [pick]
             // A spread slot can take a second food you eat with the first (peanut butter and jam).
-            if ts.maxFoods > 1, let second = ranked.dropFirst().first(where: { ctx.patterns.association(pick.canonical ?? "", $0.canonical ?? "", at: band) > 0.3 }) { picks.append(second) }
+            if ts.maxFoods > 1, let second = ranked.first(where: { $0 != pick && ctx.patterns.association(pick.canonical ?? "", $0.canonical ?? "", at: slot.band) > 0.3 }) { picks.append(second) }
             chosen += picks
             fills.append(.init(kind: ts.kind, keys: picks.map(\.key), required: ts.required))
         }
+        // A kept food the template has no slot for stays too.
+        for f in pinned where !chosen.contains(f) {
+            chosen.append(f); fills.append(.init(kind: kinds[f.key].flatMap(TemplateSlot.Kind.init(rawValue:)) ?? (f.role.isProteinSource ? .protein : .carb), keys: [f.key], required: false))
+        }
         let items = chosen.map { f -> PlanItem in
-            var g = f.usualGrams
+            if let g = pins[f.key] { return PlanItem(key: f.key, grams: g, pinned: true) }
+            var g = ctx.start[slot.index]?[f.key] ?? f.usualGrams
             if let units = template.slots.first(where: { $0.allowed.contains(f.canonical ?? "") })?.maxUnits[f.canonical ?? ""] { g = min(g, Double(units) * f.step) }
             return PlanItem(key: f.key, grams: g)
         }
         return (items, MealStructure(template: template.name, fill: fills, unfilled: unfilled))
     }
 
-    /// How far a plan is from its hard constraints (lower is better): protein and the per-meal minimum
-    /// first, then calories, then the fat floor and fibre.
     /// Fibre comes last: any gain in the others beats any amount of fibre. Gaps of up to 2 g of protein
     /// or fat count as met.
     static func severity(_ p: DayPlan, _ t: PlanTargets) -> Double {
@@ -144,22 +178,8 @@ enum MealBuilder {
                      options: PlanOptions = PlanOptions(), previous: [Int: (items: [PlanItem], structure: MealStructure)] = [:],
                      only: Set<Int>? = nil) -> (plan: DayPlan, structure: [Int: MealStructure]) {
         var ctx = ctxIn
-        var foods = all.filter { !options.exclusions.contains($0.key) }
+        let foods = prepared(all, templates: templates, exclusions: options.exclusions)
         func basicOK(_ f: PlanFood) -> Bool { !ctx.basicStyle || ((f.staple || f.basic) && ((1...2).contains(f.nova) || (f.basic && f.basicAllowed))) }
-        // Portion limits: an absolute maximum per food in a meal (one tub of queso batido) and at least
-        // 150 g of vegetables.
-        for i in foods.indices {
-            if let c = foods[i].canonical, let mx = Portion.absoluteMax[c] {
-                foods[i].maxGrams = max(foods[i].step, min(foods[i].maxGrams, mx))
-                foods[i].usualGrams = min(foods[i].usualGrams, foods[i].maxGrams); foods[i].minGrams = min(foods[i].minGrams, foods[i].maxGrams)
-            }
-            if foods[i].role == .vegetable {
-                foods[i].minGrams = max(foods[i].minGrams, Portion.vegetableMin); foods[i].maxGrams = max(foods[i].maxGrams, 2 * Portion.vegetableMin)
-                foods[i].usualGrams = max(foods[i].usualGrams, Portion.vegetableMin)
-            }
-        }
-        // Template limits on units (3 chocolate rice cakes) become portion caps.
-        for t in templates { for ts in t.slots { for (c, n) in ts.maxUnits { for i in foods.indices where foods[i].canonical == c { foods[i].maxGrams = min(foods[i].maxGrams, Double(n) * foods[i].step) } } } }
         var slots = input
         var structure: [Int: MealStructure] = [:]
         var taken: [String: MealBand] = [:]
@@ -182,7 +202,9 @@ enum MealBuilder {
         func selectAll() {
             taken = takenFixed; used = usedFixed
             for i in slots.indices where !slots[i].fixed { if let p = previous[slots[i].index] {
-                slots[i].items = p.items; structure[slots[i].index] = p.structure
+                let pins = ctx.pins[slots[i].index] ?? [:]
+                slots[i].items = p.items.map { it in pins[it.key].map { PlanItem(key: it.key, grams: $0, pinned: true) } ?? PlanItem(key: it.key, grams: it.grams) }
+                structure[slots[i].index] = p.structure
                 for it in p.items { used[it.key, default: 0] += 1; mark(it.key, slots[i].band) }
             } }
             for i in slots.indices where !slots[i].fixed && previous[slots[i].index] == nil {
@@ -263,6 +285,7 @@ enum MealBuilder {
                 if var st = structure[slots[i].index] { st.fill.append(.init(kind: kind, keys: [f.key], required: false)); st.dropped.removeAll { $0 == kind.label.lowercased() }; structure[slots[i].index] = st }
             }
             func remove(_ i: Int, _ key: String, _ kind: TemplateSlot.Kind) {
+                guard !slots[i].items.contains(where: { $0.key == key && $0.isPinned }) else { return }
                 slots[i].items.removeAll { $0.key == key }
                 if var st = structure[slots[i].index] {
                     st.dropped.append(kind.label.lowercased())

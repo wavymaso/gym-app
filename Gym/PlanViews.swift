@@ -11,8 +11,8 @@ struct PlanDayView: View {
     let day: String
     let energy: EnergyUnit
     @State private var result: (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)?
-    @State private var swapping: (slot: Int, item: PlanItem)?
-    @State private var amount: (slot: PlanSlot, item: PlanItem)?
+    @State private var selected: ItemRef?
+    @State private var history: [DayEdits] = []          // undo: your edits before each change
     @State private var why = false
     @State private var week = false
     @State private var settings = false
@@ -31,6 +31,9 @@ struct PlanDayView: View {
                 if let note = r.plan.note { ProblemCard(title: "Today's calories are mostly used", message: note, icon: "info.circle") }
                 ForEach(r.plan.slots, id: \.index) { s in slotCard(s, r) }
                 totals(r)
+                if !history.isEmpty {
+                    Button { undo() } label: { Label("Undo last change", systemImage: "arrow.uturn.backward") }.font(.secondaryText.weight(.semibold))
+                }
                 HStack {
                     Button { why = true } label: { Label("Why this plan?", systemImage: "questionmark.circle") }
                     Spacer()
@@ -55,21 +58,57 @@ struct PlanDayView: View {
         .sheet(isPresented: $why) { if let r = result { NavigationStack { PlanWhyView(plan: r.plan) }.appStyle() } }
         .sheet(isPresented: $week) { NavigationStack { WeekPlanView(start: day) }.appStyle() }
         .sheet(isPresented: $settings) { NavigationStack { PlannerSettingsView() }.appStyle().onDisappear { version += 1 } }
-        .sheet(item: Binding(get: { swapping.map { SwapKey(slot: $0.slot, item: $0.item) } }, set: { _ in swapping = nil })) { k in
-            if let r = result { NavigationStack { SwapSheet(item: k.item, foods: r.foods) { replacement in lock(slot: k.slot, replacing: k.item, with: replacement, r) } }.appStyle() }
-        }
-        .sheet(item: Binding(get: { amount.map { SwapKey(slot: $0.slot.index, item: $0.item) } }, set: { _ in amount = nil })) { k in
-            if let r = result, let s = r.plan.slots.first(where: { $0.index == k.slot }) {
-                AmountSheet(item: k.item, food: r.foods[k.item.key]) { amount in
-                    // The amount is in the way you weigh it (g, g cooked or g raw).
-                    if let f = ctx.food(key: k.item.key) ?? ctx.materializeBasic(k.item.key) {
-                        let t = Calendar.current.date(byAdding: .minute, value: s.minute, to: date(fromKey: day)) ?? Date()
-                        let unit = r.foods[k.item.key].map(\.shownUnit).flatMap { f.units.contains($0) ? $0 : nil } ?? f.baseUnit
-                        _ = ctx.log(f, amount: amount, unit: unit, day: day, time: t); ctx.commit(); Haptics.tap()
-                    }
+        .sheet(item: $selected) { ref in
+            if let r = result, let slot = r.plan.slots.first(where: { $0.index == ref.slot }) {
+                let kind = r.plan.structure[slot.index]?.fill.first { $0.keys.contains(ref.item.key) }?.kind
+                NavigationStack {
+                    PlanItemSheet(item: ref.item, food: r.foods[ref.item.key], kind: kind,
+                                  options: kind.map { ctx.swapOptions(day, slot: slot, kind: $0, item: ref.item) } ?? []) { a in act(a, slot: slot, item: ref.item, kind: kind, r) }
                 }
-                .presentationDetents([.height(260)])
+                .appStyle()
             }
+        }
+    }
+
+    // MARK: Edits (swap, keep, undo)
+
+    private func change(_ f: (inout DayEdits) -> Void) {
+        let before = ctx.profile?.planner.dayEdits[day] ?? DayEdits()
+        history.append(before); if history.count > 30 { history.removeFirst() }
+        ctx.editPlan(day, f); version += 1; Haptics.tap()
+    }
+
+    private func undo() {
+        guard let prev = history.popLast() else { return }
+        // From scratch with the earlier edits: the same plan you had before the change.
+        ctx.forgetPlan(day); ctx.editPlan(day) { $0 = prev }; version += 1; Haptics.tick()
+    }
+
+    private func act(_ a: PlanItemSheet.Action, slot: PlanSlot, item: PlanItem, kind: TemplateSlot.Kind?, _ r: ModelContext.PlanResult) {
+        let ik = DayEdits.itemKey(slot.index, item.key)
+        // The first food of its kind fills the template slot; any other (a second protein) is an extra.
+        let primary = kind.map { k in r.plan.structure[slot.index]?.fill.first { $0.kind == k && !$0.keys.isEmpty }?.keys.first == item.key } ?? false
+        switch a {
+        case .keep(let g):
+            change { $0.pins[ik] = g; $0.pinKinds[ik] = primary ? kind?.rawValue : "extra" }
+        case .unkeep:
+            change { $0.pins[ik] = nil; $0.pinKinds[ik] = nil }
+        case .swap(let f, let g):
+            let nk = DayEdits.itemKey(slot.index, f.key)
+            change { e in
+                e.pins[ik] = nil; e.pinKinds[ik] = nil; e.start[ik] = nil
+                if primary, let k = kind { e.picks[DayEdits.slotKey(slot.index, k)] = f.key; e.start[nk] = g }
+                else { e.pins[nk] = g; e.pinKinds[nk] = "extra" }      // an extra food: swapped in at its matched portion
+            }
+        case .log(let g):
+            guard let f = ctx.food(key: item.key) ?? ctx.materializeBasic(item.key) else { return }
+            let t = Calendar.current.date(byAdding: .minute, value: slot.minute, to: date(fromKey: day)) ?? Date()
+            if let p = r.foods[item.key], p.shownUnit != "g", f.units.contains(p.shownUnit) {
+                _ = ctx.log(f, amount: (g * p.shownRatio).rounded(), unit: p.shownUnit, day: day, time: t)
+            } else {
+                _ = ctx.log(f, amount: g.rounded(), unit: f.baseUnit, day: day, time: t)
+            }
+            ctx.commit(); Haptics.success()
         }
     }
 
@@ -165,17 +204,18 @@ struct PlanDayView: View {
                         Text(kind.label).font(.fine).foregroundStyle(.tertiary).frame(width: 74, alignment: .leading).lineLimit(1)
                     }
                     Text(r.foods[it.key]?.name ?? it.key).lineLimit(1)
+                    if it.isPinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(palette.accent).accessibilityLabel("Kept at this portion") }
                     Spacer()
                     Text(it.grams > 1 ? (r.foods[it.key]?.shown(it.grams) ?? "\(Int(it.grams)) g") : "\(Int(r.foods[it.key]?.macros(it.grams).kcal ?? 0)) kcal").monospacedDigit().foregroundStyle(.secondary)
-                    if !s.eaten {
-                        Button { swapping = (s.index, it) } label: { Image(systemName: "arrow.triangle.2.circlepath") }.buttonStyle(.borderless)
-                            .accessibilityLabel("Swap \(r.foods[it.key]?.name ?? "")")
+                    if !s.eaten && !s.locked {
+                        Button { selected = ItemRef(slot: s.index, item: it) } label: { Image(systemName: "arrow.triangle.2.circlepath") }.buttonStyle(.borderless)
+                            .accessibilityLabel("Swap or change \(r.foods[it.key]?.name ?? "")")
                     }
                 }
                 .font(.secondaryText)
                 .opacity(s.eaten ? 1 : 0.6)
                 .contentShape(Rectangle())
-                .onTapGesture { if !s.eaten { amount = (s, it) } }
+                .onTapGesture { if !s.eaten && !s.locked { selected = ItemRef(slot: s.index, item: it) } }
             }
             if let short = r.plan.shortMeals.first(where: { r.plan.slots.indices.contains($0.index) && r.plan.slots[$0.index].index == s.index }) {
                 Label("\(Int(short.protein)) g protein, below this meal's \(Int(short.needed)) g minimum: none of your foods for it has enough. Add a protein staple.",
@@ -227,85 +267,10 @@ struct PlanDayView: View {
         p.planner = st; ctx.commit(); version += 1; Haptics.tick()
     }
 
-    private func lock(slot: Int, replacing old: PlanItem, with new: PlanItem, _ r: (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)) {
-        // A swap keeps that meal as you want it (locked), and the rest of the day re-plans around it.
-        guard let p = ctx.profile, let s = r.plan.slots.first(where: { $0.index == slot }) else { return }
-        var st = p.planner
-        st.locks[slot] = s.items.map { $0 == old ? new : $0 }
-        p.planner = st; ctx.commit(); version += 1; Haptics.tap()
-    }
 }
 
-private struct SwapKey: Identifiable { var slot: Int; var item: PlanItem; var id: String { "\(slot)-\(item.key)" } }
-
-/// Replacements from your own foods with similar macros, at the same calories, most-eaten first.
-struct SwapSheet: View {
-    let item: PlanItem
-    let foods: [String: PlanFood]
-    let choose: (PlanItem) -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        let cur = foods[item.key]
-        let m = cur?.macros(item.grams) ?? Macros()
-        let options = foods.values.filter { $0.key != item.key && !$0.key.hasPrefix("entry:") && $0.per100.kcal > 0 }.map { f -> (PlanFood, Double, Double) in
-            var g = m.kcal / f.per100.kcal * 100
-            g = max(f.step, (g / f.step).rounded() * f.step)
-            let n = f.macros(g)
-            let d = abs(n.protein - m.protein) * 4 + abs(n.carbs - m.carbs) * 2 + abs(n.fat - m.fat) * 3
-            return (f, g, d - f.frequency * 0.5)
-        }.sorted { ($0.2, $0.0.key) < ($1.2, $1.0.key) }.prefix(8)
-        return List {
-            Section { Text("Similar calories and macros, from foods you eat; most familiar first.").font(.caption).foregroundStyle(.secondary) }
-            ForEach(Array(options), id: \.0.key) { f, g, _ in
-                let n = f.macros(g)
-                Button { choose(PlanItem(key: f.key, grams: g)); dismiss() } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(f.name).lineLimit(1)
-                            Text("\(Int(n.kcal)) kcal · \(Int(n.protein))P \(Int(n.fat))F \(Int(n.carbs))C").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                        }
-                        Spacer()
-                        Text("\(Int(g)) g").foregroundStyle(.secondary).monospacedDigit()
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .themedList()
-        .navigationTitle("Swap \(cur?.name ?? "")")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-    }
-}
-
-/// Ate a different amount: log what you actually had (the rest of the day re-plans).
-struct AmountSheet: View {
-    let item: PlanItem
-    let food: PlanFood?
-    let log: (Double) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-    var body: some View {
-        VStack(spacing: Space.l) {
-            Text(food?.name ?? "").font(.cardTitle)
-            HStack(alignment: .firstTextBaseline) {
-                TextField("\(Int((item.grams * (food?.shownRatio ?? 1)).rounded()))", text: $text).font(.numberLarge).multilineTextAlignment(.center).frame(maxWidth: 160)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                Text(food?.shownUnit ?? "g").unitStyle()
-            }
-            Button {
-                log(parseNumber(text) ?? (item.grams * (food?.shownRatio ?? 1)).rounded()); dismiss()
-            } label: { Text("Log what I ate").font(.headline).frame(maxWidth: .infinity, minHeight: 48) }
-                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
-        }
-        .padding(Space.xl)
-    }
-}
+/// A food in a meal (sheet item: an Identifiable value, so the sheet always has its content, Mac included).
+private struct ItemRef: Identifiable, Equatable { var slot: Int; var item: PlanItem; var id: String { "\(slot)-\(item.key)" } }
 
 /// Why this plan: the rules applied and their evidence.
 struct PlanWhyView: View {

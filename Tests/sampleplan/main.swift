@@ -96,4 +96,33 @@ MainActor.assumeIsolated {
         for m in r.plan.shortMeals { print("    · \(Planner.mealName(r.plan.slots[m.index])): \(Int(m.protein)) g protein of the \(Int(m.needed)) g minimum (no protein food for that meal)") }
         print("")
     }
+    // PLAN_EDITS=1: swap, keep and undo through the app's own path (dayPlan, editPlan) on tomorrow.
+    if ProcessInfo.processInfo.environment["PLAN_EDITS"] != nil {
+        func ms(_ f: () -> Void) -> Double { let t = Date(); f(); return Date().timeIntervalSince(t) * 1000 }
+        let d = addDays(dayKey(), 1)
+        ctx.editPlan(d) { $0 = DayEdits() }; ctx.forgetPlan(d)
+        var r = ctx.dayPlan(d)!
+        func line(_ r: ModelContext.PlanResult) -> String { r.plan.slots.map { s in s.items.map { (r.foods[$0.key]?.name.prefix(14) ?? "?") + " " + (r.foods[$0.key]?.shown($0.grams) ?? "") + ($0.isPinned ? "📌" : "") }.joined(separator: ", ") }.joined(separator: " | ") }
+        print("EDITS before: \(line(r))")
+        let lunch = r.plan.slots.first { r.plan.structure[$0.index]?.template == "Lunch" || r.plan.structure[$0.index]?.template == "Post-workout" }!
+        let pk = r.plan.structure[lunch.index]!.fill.first { $0.kind == .protein }!.keys.first!
+        let item = lunch.items.first { $0.key == pk }!
+        var opts: [(food: PlanFood, grams: Double)] = []
+        print(String(format: "EDITS swap options in %.0f ms: %@", ms { opts = ctx.swapOptions(d, slot: lunch, kind: .protein, item: item) }, opts.map { "\($0.food.name) \($0.food.shown($0.grams))" }.joined(separator: "; ")))
+        let o = opts[0]
+        ctx.editPlan(d) { $0.picks[DayEdits.slotKey(lunch.index, .protein)] = o.food.key; $0.start[DayEdits.itemKey(lunch.index, o.food.key)] = o.grams }
+        let before = r
+        print(String(format: "EDITS swap re-solve %.1f ms", ms { r = ctx.dayPlan(d)! }))
+        print("EDITS after swap: \(line(r))  misses \(r.plan.misses)  \(r.plan.reasons.contains { $0.rule == "re-planned" } ? "(only that meal)" : "(day resized)")")
+        let others = r.plan.slots.filter { $0.index != lunch.index }.allSatisfy { s in Set(s.items.map(\.key)) == Set(before.plan.slots.first { $0.index == s.index }!.items.map(\.key)) }
+        print("EDITS other meals kept their foods: \(others)")
+        ctx.editPlan(d) { $0.pins[DayEdits.itemKey(lunch.index, o.food.key)] = o.grams + o.food.step; $0.pinKinds[DayEdits.itemKey(lunch.index, o.food.key)] = "protein" }
+        print(String(format: "EDITS keep a portion re-solve %.1f ms", ms { r = ctx.dayPlan(d)! }))
+        print("EDITS after keep: \(line(r))  misses \(r.plan.misses)")
+        ctx.forgetPlan(d); ctx.editPlan(d) { $0 = DayEdits() }
+        print(String(format: "EDITS undo all %.1f ms", ms { r = ctx.dayPlan(d)! }))
+        print("EDITS undone: \(line(r))")
+        print("EDITS undo restores the original: \(r.plan.slots.map(\.items) == before.plan.slots.map(\.items))")
+        exit(0)
+    }
 }
