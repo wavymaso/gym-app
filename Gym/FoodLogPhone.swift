@@ -12,7 +12,7 @@ struct PhoneFoodLog: View {
     @Query private var profiles: [Profile]
     @State private var day = dayKey()
     @AppStorage("phoneLogStyle") private var style: FoodLogView.LogStyle = .timeline
-    @AppStorage("showEmptyHours") private var showEmptyHours = true
+    @AppStorage("showEmptyHours") private var showEmptyHours = false
     @State private var sheet: FoodLogView.LogSheet?
     @State private var details = false
     @State private var picking = false
@@ -237,6 +237,8 @@ struct DayEntries: View {
     let open: (FoodLogView.LogSheet) -> Void
     @ObservedObject private var sel = FoodSelection.shared
     @State private var targetHour: Int?
+    @State private var nextPlanned: (minute: Int, name: String, kcal: Double)?
+    @AppStorage("phoneLogStyle") private var storedStyle: FoodLogView.LogStyle = .timeline
 
     init(day: String, energy: EnergyUnit, style: FoodLogView.LogStyle, showEmptyHours: Bool, selected: Binding<Set<String>>,
          open: @escaping (FoodLogView.LogSheet) -> Void) {
@@ -278,18 +280,79 @@ struct DayEntries: View {
     private var timeline: some View {
         let cal = Calendar.current
         let byHour = Dictionary(grouping: entries) { cal.component(.hour, from: $0.time) }
-        let now = day == dayKey() ? cal.component(.hour, from: Date()) : 0
         let lo = min(6, byHour.keys.min() ?? 6), hi = 23                // the whole evening, up to midnight
-        let hours = showEmptyHours || sel.mode != nil ? Array(sel.mode != nil ? min(lo, 5)...max(hi, 23) : lo...hi) : byHour.keys.sorted()
+        let full = showEmptyHours || sel.mode != nil
+        // Compact (the default): the hours you logged and the next planned meal; the gaps between
+        // them are thin "+ add" rows. The full hourly view is in ⋯ → Show empty hours.
+        let planHour = nextPlanned.map { $0.minute / 60 }
+        let hours = full ? Array(sel.mode != nil ? min(lo, 5)...max(hi, 23) : lo...hi) : Array(Set(byHour.keys).union(planHour.map { [$0] } ?? [])).sorted()
         return VStack(alignment: .leading, spacing: Space.l) {
-            if entries.isEmpty && !showEmptyHours {
+            if entries.isEmpty && !full && nextPlanned == nil {
                 emptyState
             }
-            ForEach(hours, id: \.self) { h in hourBlock(h, (byHour[h] ?? []).sorted { $0.time < $1.time }) }
+            ForEach(Array(hours.enumerated()), id: \.element) { i, h in
+                if !full, i > 0, h - hours[i - 1] > 1 { gapRow(after: hours[i - 1]) }
+                if !full, h == planHour, byHour[h] == nil, let p = nextPlanned { plannedRow(p) }
+                else { hourBlock(h, (byHour[h] ?? []).sorted { $0.time < $1.time }) }
+            }
+            if !full, let last = hours.last, last < 23 { gapRow(after: last) }
         }
         .background(alignment: .leading) {
             Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 2).padding(.leading, Space.xxl).padding(.vertical, Space.l)
         }
+        .task(id: "\(day)|\(dataVersion)|\(entries.count)") { nextPlanned = upcomingMeal() }
+    }
+
+    /// The next planned meal not yet eaten (today and later days only), from the plan.
+    private func upcomingMeal() -> (minute: Int, name: String, kcal: Double)? {
+        guard day >= dayKey(), let r = ctx.dayPlan(day) else { return nil }
+        let cal = Calendar.current
+        let now = day == dayKey() ? cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date()) : 0
+        guard let s = r.plan.slots.first(where: { !$0.eaten && $0.minute >= now - 30 && !$0.items.isEmpty }) else { return nil }
+        let kcal = s.items.reduce(0.0) { $0 + (r.foods[$1.key]?.macros($1.grams).kcal ?? 0) }
+        let name: String
+        switch s.kind { case .meal: name = s.band.label; case .preWorkout: name = "Before training"; case .postWorkout: name = "After training"; case .preSleep: name = "Before bed" }
+        return (s.minute, name, kcal)
+    }
+
+    /// A gap between logged hours, as one thin row: tap to log at the hour after.
+    private func gapRow(after h: Int) -> some View {
+        let cal = Calendar.current
+        return Button { open(.add(cal.date(bySettingHour: min(h + 1, 23), minute: 0, second: 0, of: date(fromKey: day)))) } label: {
+            HStack(spacing: Space.s) {
+                Image(systemName: "plus").font(.label)
+                Text("Add").font(.label)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, Space.m).frame(minWidth: 62).frame(height: 24)
+            .background(Color.raisedBackground.opacity(0.6), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add a food after \(String(format: "%02d:00", h))")
+    }
+
+    /// The next planned meal, faint, on its hour: tap to see the plan.
+    private func plannedRow(_ p: (minute: Int, name: String, kcal: Double)) -> some View {
+        Button { animate(Motion.smooth) { storedStyle = .plan } } label: {
+            HStack(spacing: Space.m) {
+                Text(String(format: "%02d:%02d", p.minute / 60, p.minute % 60)).font(.secondaryEmphasis).monospacedDigit()
+                    .padding(.horizontal, Space.m).frame(minWidth: 62).frame(height: 34)
+                    .background(Color.raisedBackground, in: Capsule())
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text("Next planned: \(p.name)").font(.secondaryEmphasis)
+                    Text("\(energy.format(p.kcal)) · see the plan").font(.note).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.label).foregroundStyle(.tertiary)
+            }
+            .padding(.trailing, Space.m).padding(.vertical, Space.xs)
+            .background(RoundedRectangle(cornerRadius: Radius.l).strokeBorder(Color.primary.opacity(0.15), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Next planned meal: \(p.name) at \(String(format: "%02d:%02d", p.minute / 60, p.minute % 60)), \(energy.format(p.kcal))")
+        .accessibilityHint("Opens the plan")
     }
 
     private func hourBlock(_ h: Int, _ items: [FoodEntry]) -> some View {
@@ -353,7 +416,7 @@ struct DayEntries: View {
 
     private var emptyState: some View {
         EmptyState(icon: "fork.knife", title: day == dayKey() ? "Nothing logged yet today" : "Nothing logged",
-                   message: "Tap + by an hour, or search for a food below.",
+                   message: "Tap + by an hour, or search for a food from the top bar.",
                    action: ("Log a food", { open(.add(nil)) }))
     }
 
