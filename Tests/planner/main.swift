@@ -405,4 +405,16 @@ for (st, len) in [(7 * 60 + 30, 60), (10 * 60, 75), (13 * 60, 60), (18 * 60, 75)
 }
 
 check("templates: round-trip as JSON (editable, saved in settings)", (try? JSONDecoder().decode([MealTemplate].self, from: JSONEncoder().encode(tps))) == tps)
+
+// MARK: Simple foods catalogue (Gym/SimpleFoods.json)
+let cat = SimpleFoods.load(try? Data(contentsOf: URL(fileURLWithPath: "../../Gym/SimpleFoods.json")))
+check("catalogue loads", cat.count >= 60, cat.count)
+check("catalogue: every entry is a canonical food with its tier", cat.allSatisfy { Taxonomy.byID[$0.id] != nil && $0.tier == Taxonomy.tier($0.id) })
+let pool = cat.filter { $0.tier <= 2 && $0.availableAtMyStores }
+check("catalogue pool: tier 1–2 at your stores, every role covered", Set(pool.map(\.role)).isSuperset(of: [.proteinMain, .carbSide, .vegetable, .fruit, .fatSource, .dairy, .condiment]))
+for f in pool {
+    let v = f.values, atwater = v.protein * 4 + v.carbs * 4 + v.fat * 9 + v.fibre * 2
+    check("catalogue \(f.name): calories match macros (±20%)", abs(atwater - v.kcal) <= max(v.kcal * 0.2, 10), (atwater, v.kcal))
+}
+check("catalogue: no drinks", !cat.contains { $0.role == .drink })
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

@@ -76,7 +76,8 @@ enum Taxonomy {
         .init(id: "biscuits", name: "Biscuits / cookies", usda: "Cookies, butter, commercially prepared, enriched", role: .treat, nova: 4,
               words: ["pepero", "galleta", "cookie", "biscuit", "oreo", "príncipe", "digestive"]),
         .init(id: "popcorn", name: "Popcorn", usda: "Snacks, popcorn, microwave, regular (butter) flavor, made with partially hydrogenated oil", role: .treat, nova: 4, words: ["palomitas", "popcorn"]),
-        .init(id: "crisps", name: "Crisps", usda: "Snacks, potato chips, plain, salted", role: .treat, nova: 4, words: ["patatas fritas de bolsa", "chips", "crisps", "pringles", "doritos", "nachos"]),
+        .init(id: "crisps", name: "Crisps", usda: "Snacks, potato chips, plain, salted", role: .treat, nova: 4, words: ["patatas fritas", "chips", "crisps", "pringles", "doritos", "nachos"]),
+        .init(id: "dessert", name: "Dessert", usda: "Puddings, vanilla, ready-to-eat", role: .treat, nova: 4, words: ["flan", "natillas", "postre", "pudding", "arroz con leche", "cuajada"]),
         .init(id: "chocolate", name: "Chocolate", usda: "Candies, milk chocolate", role: .treat, nova: 4, words: ["chocolate con leche", "tableta de chocolate", "kitkat", "kinder", "milka", "chocolatina", "bombón"]),
         .init(id: "ice-cream", name: "Ice cream", usda: "Ice creams, vanilla", role: .treat, nova: 4, words: ["helado", "ice cream"]),
         .init(id: "pastry", name: "Pastry", usda: "Croissants, butter", role: .treat, nova: 4, words: ["croissant", "napolitana", "donut", "bollo", "magdalena", "muffin", "brownie", "palmera"]),
@@ -93,11 +94,15 @@ enum Taxonomy {
         .init(id: "ketchup", name: "Ketchup", usda: "Catsup", role: .condiment, nova: 4, words: ["ketchup", "kétchup", "catsup"]),
         .init(id: "mayonnaise", name: "Mayonnaise", usda: "Salad dressing, mayonnaise, light", role: .condiment, nova: 4, words: ["ligeresa", "mayonesa", "mayonnaise", "mayo"]),
         .init(id: "aioli", name: "Garlic sauce (aioli)", usda: "Salad dressing, mayonnaise, regular", role: .condiment, nova: 4, words: ["aioli", "alioli", "allioli", "garlic sauce", "dipping sauce"]),
-        .init(id: "sauce", name: "Sauce", usda: "Sauce, barbecue", role: .condiment, nova: 4, words: ["sauce", "salsa", "dressing", "aliño", "pesto", "mustard", "mostaza", "sriracha", "soja"]),
+        .init(id: "sauce", name: "Sauce", usda: "Sauce, barbecue", role: .condiment, nova: 4, words: ["sauce", "salsa", "dressing", "aliño", "pesto", "mustard", "mostaza", "sriracha", "salsa de soja", "guacamole"]),
         .init(id: "butter", name: "Butter", usda: "Butter, salted", role: .fatSource, nova: 2, words: ["mantequilla", "butter"]),
         .init(id: "olive-oil", name: "Olive oil", usda: "Oil, olive, salad or cooking", role: .fatSource, nova: 2, words: ["aceite de oliva", "olive oil", "aove"]),
         .init(id: "oil", name: "Oil", usda: "Oil, sunflower, linoleic, (approx. 65%)", role: .fatSource, nova: 2, words: ["aceite", " oil"]),
-        // Protein mains
+        // Protein mains (cold cuts and processed meat first: "pechuga de pavo en lonchas" is a cold cut)
+        .init(id: "ham", name: "Cold cuts / cured ham", usda: "Ham, sliced, regular (approximately 11% fat)", role: .proteinMain, nova: 3,
+              words: ["jamón", "jamon", "ham", "fiambre", "lonchas", "loncheada", "loncheado", "chopped", "mortadela", "chorizo", "salami", "lomo embuchado", "pechuga de pavo cocida", "pechuga de pollo cocida", "pavo braseado", "pollo braseado", "pechuga de pavo asada"]),
+        .init(id: "burger", name: "Burgers", usda: "Beef, ground, 80% lean meat / 20% fat, patty, cooked, broiled", role: .proteinMain, nova: 3, words: ["burger", "hamburguesa", "burguer"]),
+        .init(id: "sausages", name: "Sausages", usda: "Sausage, pork, chorizo, link or ground, raw", role: .proteinMain, nova: 4, words: ["salchicha", "sausage", "frankfurt", "bratwurst"]),
         .init(id: "chicken-breast", name: "Chicken breast", usda: "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw", role: .proteinMain, nova: 1,
               words: ["pechuga de pollo", "chicken breast", "filete de pollo"]),
         .init(id: "chicken-thigh", name: "Chicken thigh", usda: "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", role: .proteinMain, nova: 1, words: ["muslo de pollo", "contramuslo", "chicken thigh"]),
@@ -106,9 +111,8 @@ enum Taxonomy {
         .init(id: "turkey", name: "Turkey breast", usda: "Turkey, retail parts, breast, meat only, raw", role: .proteinMain, nova: 1, words: ["pechuga de pavo", "pavo", "turkey"]),
         .init(id: "beef-mince", name: "Lean beef mince", usda: "Beef, ground, 95% lean meat / 5% fat, raw", role: .proteinMain, nova: 1,
               words: ["carne picada", "picada de ternera", "beef mince", "ground beef", "mince"]),
-        .init(id: "beef", name: "Beef", usda: "Beef, top sirloin, steak, separable lean only, trimmed to 1/8\" fat, all grades, raw", role: .proteinMain, nova: 1, words: ["ternera", "beef", "solomillo", "entrecot", "vacuno", "burger", "hamburguesa"]),
+        .init(id: "beef", name: "Beef", usda: "Beef, top sirloin, steak, separable lean only, trimmed to 1/8\" fat, all grades, raw", role: .proteinMain, nova: 1, words: ["ternera", "beef", "solomillo", "entrecot", "vacuno", "añojo"]),
         .init(id: "pork", name: "Pork", usda: "Pork, fresh, loin, tenderloin, separable lean only, raw", role: .proteinMain, nova: 1, words: ["cerdo", "pork", "lomo"]),
-        .init(id: "ham", name: "Cured ham", usda: "Ham, sliced, regular (approximately 11% fat)", role: .proteinMain, nova: 3, words: ["jamón", "jamon", "ham", "fiambre", "pechuga de pavo loncheada"]),
         .init(id: "tuna-tinned", name: "Tinned tuna", usda: "Fish, tuna, light, canned in water, drained solids", role: .proteinMain, nova: 2, words: ["atún", "atun", "tuna"]),
         .init(id: "salmon", name: "Salmon", usda: "Fish, salmon, Atlantic, farmed, raw", role: .proteinMain, nova: 1, words: ["salmón", "salmon"]),
         .init(id: "white-fish", name: "White fish", usda: "Fish, cod, Atlantic, raw", role: .proteinMain, nova: 1, words: ["merluza", "bacalao", "hake", "cod", "dorada", "lubina", "pescado", "fish"]),
@@ -151,13 +155,27 @@ enum Taxonomy {
         .init(id: "fruit", name: "Fruit", usda: "Oranges, raw, all commercial varieties", role: .fruit, nova: 1,
               words: ["naranja", "orange", "pera", "pear", "uva", "grape", "mango", "piña", "pineapple", "kiwi", "melón", "melon", "sandía", "melocotón", "peach", "fruta", "fruit"]),
         .init(id: "nuts", name: "Nuts", usda: "Nuts, almonds", role: .fatSource, nova: 1, words: ["almendra", "almond", "nuez", "walnut", "anacardo", "cashew", "pistacho", "cacahuete", "peanut", "avellana", "frutos secos", "nuts"]),
-        .init(id: "avocado", name: "Avocado", usda: "Avocados, raw, all commercial varieties", role: .fatSource, nova: 1, words: ["aguacate", "avocado", "guacamole"]),
+        .init(id: "avocado", name: "Avocado", usda: "Avocados, raw, all commercial varieties", role: .fatSource, nova: 1, words: ["aguacate", "avocado"]),
         // Drinks
         .init(id: "energy-drink", name: "Energy drink", usda: "Beverages, Energy drink, AMP, sugar free", role: .drink, nova: 4, words: ["nocco", "monster", "red bull", "energy", "ramonade", "bcaa drink"]),
         .init(id: "soft-drink", name: "Soft drink", usda: "Beverages, carbonated, cola, without caffeine", role: .drink, nova: 4, words: ["coca-cola", "coca cola", "coke", "pepsi", "fanta", "refresco", "soda", "zero"]),
         .init(id: "coffee", name: "Coffee", usda: "Beverages, coffee, brewed, prepared with tap water", role: .drink, nova: 1, words: ["café", "coffee", "té ", "tea"]),
     ]
     static let byID: [String: CanonicalFood] = Dictionary(uniqueKeysWithValues: canonical.map { ($0.id, $0) })
+
+    /// Whole foods first. Tier 1: whole foods (meat, fish, eggs, rice, potatoes, pasta, oats, bread,
+    /// fruit, vegetables, legumes, plain dairy). Tier 2: simple staples (peanut butter, jam, oil, tinned
+    /// fish, plain sauces; chocolate rice cakes as a breakfast base; whey, when in stock). Tier 3:
+    /// convenience products (bars, ready meals, protein noodles, snacks): only planned when in stock.
+    static func tier(_ id: String) -> Int {
+        let two: Set<String> = ["peanut-butter", "jam", "honey", "olive-oil", "oil", "butter", "tuna-tinned", "ham", "tomato-sauce", "ketchup", "mayonnaise", "aioli",
+                                "sauce", "rice-cakes", "rice-cakes-chocolate", "protein-shake", "cheese", "cottage-cheese", "tofu", "cereal", "chocolate-spread"]
+        let three: Set<String> = ["burger", "sausages", "dessert", "protein-bar", "protein-noodles", "biscuits", "popcorn", "crisps", "chocolate", "ice-cream", "pastry", "filled-pasta", "chicken-wings",
+                                  "energy-drink", "soft-drink", "juice"]
+        return three.contains(id) ? 3 : two.contains(id) ? 2 : 1
+    }
+    /// Planned only when you've marked it in stock (tier 3, and whey).
+    static func needsStock(_ id: String) -> Bool { tier(id) == 3 || id == "protein-shake" }
 
     struct Result: Equatable {
         enum Source: String, Codable { case user, rule, category, macros, ai }
@@ -192,9 +210,40 @@ enum Taxonomy {
     struct Override: Codable, Equatable { var canonical: String?; var role: FoodRole?; var nova: Int? }
     struct Suggestion: Codable, Equatable { var canonical: String?; var role: FoodRole?; var confidence: Double = 0.6 }
 
+    /// Lower-case words separated by single spaces (letters, digits, + & % kept), padded with spaces.
+    static func words(_ s: String) -> String {
+        let mapped = s.lowercased().unicodeScalars.map { CharacterSet.alphanumerics.contains($0) || "+&%".unicodeScalars.contains($0) ? Character($0) : " " }
+        return " " + String(mapped).split(separator: " ").joined(separator: " ") + " "
+    }
+    /// A keyword matches whole words (plurals allowed: "patata" matches "patatas", "strawberr" "strawberries"),
+    /// so "tuna" doesn't match "aceitunas" and "jam" doesn't match "jamón".
+    static func contains(_ text: String, _ keyword: String) -> Bool {
+        let k = words(keyword).trimmingCharacters(in: .whitespaces)
+        guard !k.isEmpty else { return false }
+        var from = text.startIndex
+        while let r = text.range(of: " " + k, range: from..<text.endIndex) {
+            let rest = text[r.upperBound...]
+            if ["", "s", "es", "ies", "ones", "as", "os"].contains(where: { rest.hasPrefix($0 + " ") }) { return true }
+            from = text.index(after: r.lowerBound)
+        }
+        return false
+    }
+
     static func match(_ name: String, brand: String?) -> CanonicalFood? {
-        let text = " " + (name + " " + (brand ?? "")).lowercased() + " "
-        return canonical.first { c in c.words.contains { text.contains($0) } }
+        let text = words(name + " " + (brand ?? ""))
+        return canonical.first { c in c.words.contains { contains(text, $0) } }
+    }
+
+    /// Processed forms of a whole food (crisps aren't potatoes, dried berries aren't berries): left out
+    /// of the catalogue's values and availability for tier 1 foods.
+    static let processedWords = ["frita", "fritas", "frito", "chips", "puré", "pure", "crema", "tortilla", "empanad", "rebozad", "relleno", "rellena", "kebab", "nugget",
+                                 "salchicha", "deshidratad", "desecad", "postre", "flan", "bebible", "bebida", "batido", "zumo", "caldo", "sopa", "crunchy", "chocolate",
+                                 "barrita", "barres", "bar", "sabor", "azúcar", "azucar", "con", "salad", "ensalada", "guacamole", "glace", "cup", "pudding", "gelificado",
+                                 "marinad", "ahumad", "al huevo", "copos", "galleta", "snack", "light", "compota", "mermelada", "confitura", "helado", "salsa", "pizza", "croqueta",
+                                 "lasagna", "lasaña", "canelones", "precocinad", "sandwich", "wrap", "pastel", "tarta", "muffin", "bollo", "dulce"]
+    static func isPlainForm(_ name: String) -> Bool {
+        let t = words(name)
+        return !processedWords.contains { contains(t, $0) || t.contains(" " + $0) }
     }
 
     /// The role the database's category points to (Open Food Facts food group or USDA category).

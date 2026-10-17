@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Adds the food taxonomy inputs to foods.sqlite, offline:
-  food:    nova (NOVA group 1-4 from Open Food Facts), pnns2 (OFF food group), cats (a few category tags)
+  food:    nova (NOVA group 1-4 from Open Food Facts), pnns2 (OFF food group), cats (a few category tags), pack (pack size, g or ml)
   generic: category (USDA food category / WWEIA group)
 
     python3 build-taxonomy-db.py <foods.sqlite> <off.csv.gz> <unzipped FDC folder>
@@ -9,7 +9,7 @@ import csv, glob, gzip, io, os, sqlite3, sys
 db, offpath, fdc = sys.argv[1], sys.argv[2], sys.argv[3]
 con = sqlite3.connect(db)
 cols = {r[1] for r in con.execute("pragma table_info(food)")}
-for c, t in [("nova", "INTEGER"), ("pnns2", "TEXT"), ("cats", "TEXT")]:
+for c, t in [("nova", "INTEGER"), ("pnns2", "TEXT"), ("cats", "TEXT"), ("pack", "REAL")]:
     if c not in cols: con.execute(f"alter table food add column {c} {t}")
 gcols = {r[1] for r in con.execute("pragma table_info(generic)")}
 if "category" not in gcols: con.execute("alter table generic add column category TEXT")
@@ -24,7 +24,11 @@ with gzip.open(offpath, "rt", encoding="utf-8", errors="replace", newline="") as
         nova = int(float(nova)) if nova.strip() else None
         pn = (row.get("pnns_groups_2") or "").strip() or None
         cats = ",".join([c for c in (row.get("categories_tags") or "").split(",") if c][-4:]) or None
-        con.execute("update food set nova=?, pnns2=?, cats=? where code=?", (nova, pn, cats, code)); n += 1
+        try:
+            pack = float((row.get("product_quantity") or "").replace(",", ".")) or None
+            if pack is not None and not (1 <= pack <= 20000): pack = None
+        except ValueError: pack = None
+        con.execute("update food set nova=?, pnns2=?, cats=?, pack=? where code=?", (nova, pn, cats, pack, code)); n += 1
 con.commit()
 print("food rows with taxonomy:", n, "with NOVA:", con.execute("select count(*) from food where nova is not null").fetchone()[0])
 # USDA categories: SR Legacy / Foundation food_category, FNDDS WWEIA category.

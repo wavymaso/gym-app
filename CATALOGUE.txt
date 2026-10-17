@@ -1,0 +1,134 @@
+SIMPLE FOODS CATALOGUE · 257337 Spanish products scanned · tier 1–2 canonical foods sold at Mercadona, Alcampo or Costco
+
+PROTEIN MAIN
+  T2 Cold cuts / cured ham  234 kcal 30.0 P 12.0 F  1.5 C 0.0 fibre (Spain (8339)) · pack 160 g · Mercadona 470 · Alcampo 97 · Costco 0
+        e.g. Pechuga de Pavo Cocida 92% (Hacendado); Jamón Cocido (HACENDADO); Pechuga de pavo reducido en sal finas lonchas (Hacendado)
+  T1 Chicken breast  108 kcal 22.3 P  1.7 F  0.9 C 0.0 fibre (Spain (874)) · pack 160 g · Mercadona 163 · Alcampo 4 · Costco 1
+        e.g. Pechuga de Pollo 92% (Hacendado); Tiras de pechuga de pollo al horno (Hacendado); Chunk Chicken Breast (Kirkland Signature)
+  T1 Chicken thigh  148 kcal 17.0 P  8.2 F  1.5 C 0.0 fibre (Spain (22)) · pack 500 g · Mercadona 1 · Alcampo 0 · Costco 0
+        e.g. Chicken Thigh No Skin Raw (Hacendado)
+  T1 Chicken  167 kcal 19.0 P 10.0 F  3.0 C 0.0 fibre (Spain (4306)) · pack 300 g · Mercadona 585 · Alcampo 6 · Costco 1
+        e.g. tiras pollo (Hacendado); Delicias de Pollo (HACENDADO); Salteado de pollo (HACENDADO)
+  T1 Turkey breast   99 kcal 22.0 P  0.9 F  0.1 C 0.0 fibre (Spain (3681)) · pack 150 g · Mercadona 317 · Alcampo 8 · Costco 0
+        e.g. Pechuga de pavo (Hacendado); Pechuga de pavo al corte (Hacendado); Lomo de Pavo (Costa Brava)
+  T1 Lean beef mince  137 kcal 21.4 P  5.0 F  0.0 C 0.0 fibre (USDA) · pack 500 g · Mercadona 8 · Alcampo 1 · Costco 0
+        e.g. Preparado de carne picada vacuno (HACENDADO); Preparado de carne picada de cerdo (mercadona); Preparado de carne picada de vacuno (mercadona)
+  T1 Beef  127 kcal 20.0 P  4.9 F  0.5 C 0.0 fibre (Spain (1646)) · pack 340 g · Mercadona 169 · Alcampo 4 · Costco 1
+        e.g. Vacuno (Medina); Callos de ternera preparados (Rogusa); Cerdo Vacuno Picada (Hacendado)
+  T1 Pork  109 kcal 21.0 P  2.2 F  0.0 C 0.0 fibre (USDA) · pack 220 g · Mercadona 500 · Alcampo 10 · Costco 0
+        e.g. Lomo (Costa Brava); Maxi lomo (Hacendado); Cabecero de lomo (Hacendado)
+  T2 Tinned tuna  188 kcal 11.7 P 13.9 F  4.1 C 0.0 fibre (Spain (1537)) · pack 240 g · Mercadona 98 · Alcampo 25 · Costco 2
+        e.g. Atún claro al natural (Hacendado); Light Tuna Salad Corn with peas, carrots and black olives (RIO mare); ALBACORE SOLID WHITE TUNA IN WATER (KIRKLAND Signature)
+  T1 Salmon  196 kcal 23.7 P 11.2 F  0.5 C 0.0 fibre (Spain (337)) · pack 240 g · Mercadona 23 · Alcampo 2 · Costco 2
+        e.g. Salmón al natural (HACENDADO); Poke salmón (Hacendado); Salmón al natural (Hacendado)
+  T1 White fish   91 kcal 13.0 P  3.6 F  0.3 C 0.0 fibre (Spain (1003)) · pack 345 g · Mercadona 91 · Alcampo 11 · Costco 0
+        e.g. Filetes de merluza del cabo sin piel (Hacendado); Varitas de merluza (Hacendado); Palitos de merluza (Hacendado)
+  T1 Prawns   96 kcal 21.3 P  1.2 F  0.0 C 0.0 fibre (Spain (161)) · pack 400 g · Mercadona 10 · Alcampo 5 · Costco 1
+        e.g. Salteado de gambas (Terra Nostra); Gambas peladas (hacendado); Gambas Peladas Grandes (Hacendado)
+  T1 Eggs  142 kcal 13.0 P 11.1 F  1.2 C 0.0 fibre (Spain (835)) · pack 350 g · Mercadona 29 · Alcampo 21 · Costco 1
+        e.g. Huevos cocidos (HACENDADO); Huevos de gallinas camperas (Huevos Guillén); Huevos Frescos de Gallinas Camperas (Huevos Guillén)
+  T2 Tofu  181 kcal  7.0 P 14.5 F  4.2 C 2.7 fibre (Spain (175)) · pack 180 g · Mercadona 1 · Alcampo 1 · Costco 0
+        e.g. Seitan (Hacendado); Brillante Benefit legumbres tofu verduras (Brillante)
+
+CARB SIDE
+  T2 Rice cakes  388 kcal  7.9 P  3.0 F 80.7 C 3.4 fibre (Spain (246)) · pack 120 g · Mercadona 7 · Alcampo 5 · Costco 0
+        e.g. Tortitas de arroz y legumbres (Hacendado); Tortitas de arroz (Hacendado); Tortitas de maíz sabor jamón serrano (Hacendado)
+  T1 Pasta  350 kcal 13.0 P  0.0 F 74.0 C 0.0 fibre (Spain (2045)) · pack 450 g · Mercadona 50 · Alcampo 47 · Costco 1
+        e.g. Whole Wheat Penne Rigate (Barilla); Penne Rigate No. 73 Durum Wheat Semolina Pasta (Barilla); Pasta Lentejas (felicia)
+  T1 White rice  347 kcal  8.4 P  1.1 F 73.0 C 3.5 fibre (Spain (1472)) · pack 500 g · Mercadona 50 · Alcampo 41 · Costco 1
+        e.g. Sabroz arroz integral (Sabroz); Arroz integral largo (Hacendado); Arroz basmati aromático (Hacendado)
+  T1 Oats  371 kcal  9.9 P  8.0 F 57.1 C 0.0 fibre (Spain (692)) · pack 500 g · Mercadona 14 · Alcampo 6 · Costco 0
+        e.g. Pan de molde 35% avena (Hacendado); Avena molida (Hacendado); avena y semillas (Hacendado)
+  T2 Breakfast cereal  385 kcal  8.5 P  1.2 F 83.4 C 3.4 fibre (Spain (1741)) · pack 375 g · Mercadona 75 · Alcampo 26 · Costco 2
+        e.g. Muesli Raisin, Figue, Abricot (Bjorg); Special Muesli 30% fruits & noix (Jordans); Muesli Superfruits Raisins, cassis, cranberry, myrtille (Bjorg)
+  T1 Wholemeal bread  248 kcal 10.8 P  5.2 F 40.0 C 6.0 fibre (Spain (233)) · pack 450 g · Mercadona 7 · Alcampo 2 · Costco 0
+        e.g. Pan de centeno 51% (Panamar); Pan de centeno 82% integral (Hacendado); Pan integral de centeno (Hacendado)
+  T1 Bread  280 kcal 10.0 P  1.0 F 57.0 C 2.0 fibre (Spain (3053)) · pack 360 g · Mercadona 150 · Alcampo 56 · Costco 2
+        e.g. Pan de molde 100% integral (Hacendado); Pan Fibra & Sésamo (Hacendado); Pan de Molde 100% Integral (Hacendado)
+  T1 Sweet potato   86 kcal  1.6 P  0.1 F 20.1 C 3.0 fibre (USDA) · pack 400 g · Mercadona 6 · Alcampo 2 · Costco 0
+        e.g. Batata Rustica (Hacendado); Batata/Boniato (Hacendado); BATATA (HACENDADO fresh)
+  T1 Potatoes   77 kcal  2.1 P  0.1 F 17.5 C 2.1 fibre (USDA) · pack 400 g · Mercadona 48 · Alcampo 6 · Costco 1
+        e.g. Patatas Cocidas (Hacendado); Patatas Horno Forno Air-Fryer (Hacendado); Sticks de patata (Hacendado)
+  T1 Pulses  110 kcal  4.0 P  2.0 F 19.0 C 0.0 fibre (Spain (2104)) · pack 500 g · Mercadona 57 · Alcampo 65 · Costco 0
+        e.g. Garbanzos Bote (HACENDADO); Alubia Blanca (Hacendado); Garbanzos (Hacendado)
+  T1 Couscous / quinoa  354 kcal 19.0 P  5.1 F 55.0 C 7.2 fibre (Spain (475)) · pack 400 g · Mercadona 5 · Alcampo 16 · Costco 0
+        e.g. Quinoa (Hacendado); Quinoa blanca y roja (brillante); Graine de Couscous moyen (Auchan)
+
+VEGETABLE
+  T1 Spinach   27 kcal  3.0 P  0.0 F  2.3 C 0.0 fibre (Spain (239)) · pack 400 g · Mercadona 17 · Alcampo 11 · Costco 0
+        e.g. Espinacas, Brócoli y Aceitunas (Hacendado); Espinacas (Verdifresh); Espinacas (Hacendado)
+  T1 Tomatoes   33 kcal  1.4 P  0.5 F  4.7 C 2.0 fibre (Spain (429)) · pack 390 g · Mercadona 19 · Alcampo 16 · Costco 0
+        e.g. Tomate (Hacendado); Tomate tamizado sin piel (Hacendado); Tomate Pelado Troceado (Hacendado)
+  T1 Mixed vegetables   72 kcal  3.3 P  0.5 F 13.5 C 4.0 fibre (USDA) · pack 450 g · Mercadona 30 · Alcampo 14 · Costco 0
+        e.g. Salteado de verduras (Hacendado); Macedonia de verduras (Hacendado); Tempura de verduras (Hacendado)
+  T1 Vegetables   36 kcal  4.0 P  0.5 F  1.7 C 2.9 fibre (Spain (1372)) · pack 340 g · Mercadona 59 · Alcampo 39 · Costco 2
+        e.g. Palitos de zanahoria (HIJOLUSA); Pimientos rojos asados en tiras (Hacendado); Champiñones Laminados (Hacendado)
+
+FRUIT
+  T1 Banana   90 kcal  1.1 P  0.5 F 19.7 C 2.7 fibre (Spain (245)) · pack 200 g · Mercadona 11 · Alcampo 3 · Costco 0
+        e.g. Platanos de canarias; Fresa y plátano 100% fruta (Hacendado); Bananas (Hacendado)
+  T1 Apple   58 kcal  0.5 P  0.5 F 12.2 C 0.0 fibre (Spain (306)) · pack 220 g · Mercadona 15 · Alcampo 0 · Costco 0
+        e.g. Pera y manzana (Hacendado); Manzana Asada (Hacendado); Manzana, melón y sandía (Hacendado)
+  T1 Berries   32 kcal  0.7 P  0.3 F  7.7 C 2.0 fibre (USDA) · pack 200 g · Mercadona 41 · Alcampo 12 · Costco 3
+        e.g. Mix frutos rojos (Hacendado); Chicles fresa (Hacendado); Especialidad vegetal de soja arándanos y frutos rojos (Alpro)
+  T1 Dates  294 kcal  2.0 P  0.0 F 68.0 C 8.1 fibre (Spain (267)) · pack 250 g · Mercadona 8 · Alcampo 9 · Costco 0
+        e.g. Dátiles en rama Deglet Nour (Hacendado); Avellana & Datil (Hacendado); Dátiles (Hacendado)
+  T1 Fruit   47 kcal  0.9 P  0.1 F 11.8 C 2.4 fibre (USDA) · pack 300 g · Mercadona 200 · Alcampo 39 · Costco 1
+        e.g. Sungold Kiwi (Zespri); Piña en su Jugo (HACENDADO); Cocktail de fruta (Hacendado)
+
+FAT SOURCE
+  T2 Peanut butter  582 kcal 28.6 P 49.2 F  5.5 C 0.0 fibre (Spain (177)) · pack 350 g · Mercadona 3 · Alcampo 1 · Costco 0
+        e.g. Crema de cacahuete 100% crunchy (Hacendado); Ben & Jerry's Glace en Pot Peanut Butter Cup 465ml (BEN & JERRY'S); Crema de cacahuete (Hacendado)
+  T2 Butter  647 kcal 25.0 P 56.6 F  4.8 C 8.4 fibre (Spain (627)) · pack 250 g · Mercadona 34 · Alcampo 1 · Costco 0
+        e.g. Mantequilla sin sal (Hacendado); Mantequilla sin sal añadida (Hacendado); Mantequilla (Central Lechera Asturiana)
+  T2 Olive oil  900 kcal  0.0 P 100.0 F  0.0 C 0.0 fibre (Spain (4236)) · pack 500 g · Mercadona 58 · Alcampo 34 · Costco 1
+        e.g. Aceite de oliva virgen extra (Hacendado); Aceite de oliva virgen extra (Hacendado); Aceite de oliva virgen extra gran selección (Hacendado)
+  T2 Oil  837 kcal  0.0 P 93.0 F  0.0 C 0.0 fibre (Spain (2042)) · pack 350 g · Mercadona 41 · Alcampo 11 · Costco 0
+        e.g. Aceite de coco virgen (Hacendado); Pastas de aceite (Hacendado); Aceite de girasol refinado 0,2º (Hacendado)
+  T1 Nuts  595 kcal 14.0 P 63.0 F  3.3 C 5.2 fibre (Spain (3562)) · pack 200 g · Mercadona 79 · Alcampo 33 · Costco 7
+        e.g. Nuez natural pelada (Hacendado); Anacardo natural (Hacendado); Almendra natural (HACENDADO)
+  T1 Avocado  160 kcal  2.0 P 14.7 F  8.5 C 6.7 fibre (USDA) · pack 200 g · Mercadona 1 · Alcampo 0 · Costco 0
+        e.g. Hummus de aguacate (Hacendado)
+
+DAIRY
+  T1 Queso fresco batido 0%   78 kcal  5.5 P  0.4 F 12.7 C 0.0 fibre (Spain (23)) · pack 250 g · Mercadona 1 · Alcampo 0 · Costco 0
+        e.g. Queso Fresco Quark (Hacendado)
+  T1 Greek yogurt / skyr   61 kcal 10.3 P  0.4 F  3.6 C 0.0 fibre (USDA) · pack 300 g · Mercadona 5 · Alcampo 4 · Costco 1
+        e.g. Yogur griego ligero (Hacendado); organic GREEK YOGURT plain (KIRKLAND signature); Yogur griego fresa (Hacendado)
+  T1 Yogurt   72 kcal  2.7 P  0.7 F 14.0 C 0.0 fibre (Spain (1391)) · pack 500 g · Mercadona 66 · Alcampo 45 · Costco 1
+        e.g. Yogur natural al estilo griego (Hacendado); Yogur estilo griego natural (Hacendado); Yogur natural (Hacendado)
+  T2 Cottage cheese  103 kcal 13.0 P  4.5 F  3.0 C 0.0 fibre (Spain (91)) · pack 200 g · Mercadona 7 · Alcampo 3 · Costco 0
+        e.g. Queso fresco cottage (Hacendado); Requesón (Hacendado); Lasagna espinacas y requesón (Hacendado)
+  T2 Cheese  353 kcal 25.0 P 28.0 F  0.5 C 0.9 fibre (Spain (6425)) · pack 250 g · Mercadona 303 · Alcampo 125 · Costco 4
+        e.g. Queso crema suave (Hacendado Suave); Queso blanco pasteurizado (Hacendado); mozzarella (Galbani)
+  T1 Milk   46 kcal  3.2 P  1.6 F  4.7 C 0.0 fibre (Spain (1926)) · pack 1000 g · Mercadona 173 · Alcampo 42 · Costco 1
+        e.g. Leche Semi desnatada (Central Lechera Asturiana); Leche desnatada Proteínas y Calcio (Hacendado); Leche semidesnatada (HACENDADO)
+
+PROTEIN SNACK
+  T2 Protein shake / whey  380 kcal 73.0 P  7.0 F  5.3 C 0.0 fibre (Spain (1072)) · pack 910 g · Mercadona 9 · Alcampo 2 · Costco 0
+        e.g. Batido de proteínas de chocolate (Hacendado); +Proteinas (Hacendado); Pudding +Proteinas (Hacendado)
+
+CONDIMENT
+  T2 Jam  205 kcal  0.2 P  0.1 F 50.7 C 0.0 fibre (Spain (1811)) · pack 330 g · Mercadona 45 · Alcampo 28 · Costco 0
+        e.g. Confitura de Fresa 0% (Hacendado); Mermelada de fresa (Haciendado); Confitura de  melocotón 0% (Hacendado)
+  T2 Honey  332 kcal  0.5 P  0.1 F 82.5 C 0.0 fibre (Spain (863)) · pack 350 g · Mercadona 26 · Alcampo 8 · Costco 1
+        e.g. Miel de flores (Hacendado); Miel de Flores (Hacendado); Salsa miel y mostaza (Hacendado)
+  T2 Chocolate spread  544 kcal  4.0 P 31.0 F 62.0 C 0.6 fibre (Spain (257)) · pack 285 g · Mercadona 12 · Alcampo 3 · Costco 0
+        e.g. Nutella (nutella); Nocilla Original (Nocilla); Nocilla Leche y avellanas (Nocilla)
+  T2 Tomato sauce   78 kcal  1.0 P  3.7 F  9.6 C 1.0 fibre (Spain (863)) · pack 390 g · Mercadona 16 · Alcampo 26 · Costco 1
+        e.g. Tomate frito (Hacendado); Tomate frito receta artesana (hacendado); Tomate frito (Hacendado)
+  T2 Ketchup  102 kcal  1.2 P  0.1 F 23.2 C 0.0 fibre (Spain (410)) · pack 340 g · Mercadona 21 · Alcampo 10 · Costco 0
+        e.g. Tomato Ketchup (Heinz); Ketchup (Hacendado); Ketchup Zero (Hacendado)
+  T2 Mayonnaise  599 kcal  0.6 P 65.0 F 24.0 C 0.0 fibre (Spain (569)) · pack 380 g · Mercadona 23 · Alcampo 7 · Costco 0
+        e.g. mayonnaise (Hacendado); Mayonesa (Hacendado); Mayonesa (Ybarra)
+  T2 Garlic sauce (aioli)  651 kcal  1.1 P 81.0 F  1.5 C 0.0 fibre (Spain (151)) · pack 190 g · Mercadona 12 · Alcampo 1 · Costco 0
+        e.g. Allioli (Choví); Allioli (Hacendado); Allioli (Hacendado)
+  T2 Sauce  174 kcal  4.0 P 12.9 F 10.7 C 0.0 fibre (Spain (3064)) · pack 260 g · Mercadona 125 · Alcampo 54 · Costco 5
+        e.g. Guacamole (Hacendado); Sauce Soja (Kikkoman); Sriracha Sauce Hot Chilli Sauce (Go-Tan)
+
+TREAT
+  T2 Rice cakes with chocolate  473 kcal  8.4 P 19.0 F 65.0 C 4.4 fibre (Spain (40)) · pack 100 g · Mercadona 4 · Alcampo 2 · Costco 0
+        e.g. Tortitas de arroz con chocolate blanco (Hacendado); Tortitas de arroz con chocolate con leche (Hacendado); Tortitas de arroz con chocolate (Hacendado)
+
+Not found at your stores (left out): Egg whites
+Tier 3 (only when in stock): Protein bar, Protein noodles, Biscuits / cookies, Popcorn, Crisps, Dessert, Chocolate, Ice cream, Pastry, Burgers, Sausages, Chicken wings, Filled pasta

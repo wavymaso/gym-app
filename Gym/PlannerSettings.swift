@@ -17,6 +17,8 @@ struct PlannerSettings: Codable, Equatable {
     var weighAs: [String: WeightState] = [:]         // per food: you weigh it raw or cooked (default raw; sold-cooked foods cooked)
     var templates: [MealTemplate] = []               // your edited meal templates (empty: the defaults)
     var treatsEnabled = false                        // an evening snack with one treat a day
+    var catalogRemoved: [String] = []                // simple foods you'd never buy (canonical ids)
+    var inStock: [String] = []                       // tier 3 foods (and whey) you have: only these are planned
     var fibreFloorGrams: Double = 19                 // fixed fibre floor (g/day); 0: scale with calories (registry, 14 g per 1,000 kcal)
     var highDaysFollowTraining = true                // calorie distribution: training days = your training week
     var inferredWeek: [Int: TrainingSlot] = [:]      // last inferred from workouts (kept so targets can use it without a fetch)
@@ -98,5 +100,7 @@ extension PlannerSettings {
         dismissedCarbProposal = (try? c.decodeIfPresent(type(of: dismissedCarbProposal), forKey: .dismissedCarbProposal)) ?? d.dismissedCarbProposal
         templates = (try? c.decodeIfPresent(type(of: templates), forKey: .templates)) ?? d.templates
         treatsEnabled = (try? c.decodeIfPresent(type(of: treatsEnabled), forKey: .treatsEnabled)) ?? d.treatsEnabled
+        catalogRemoved = (try? c.decodeIfPresent(type(of: catalogRemoved), forKey: .catalogRemoved)) ?? d.catalogRemoved
+        inStock = (try? c.decodeIfPresent(type(of: inStock), forKey: .inStock)) ?? d.inStock
     }
 }
