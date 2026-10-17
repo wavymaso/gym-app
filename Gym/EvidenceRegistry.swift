@@ -87,6 +87,9 @@ enum Evidence {
                                              link: "https://doi.org/10.1111/sms.13054")
     private static let dga = EvidenceSource(citation: "Dietary Guidelines for Americans (14 g fibre per 1 000 kcal), as reported by secondary sources; the primary document was not checked", link: "https://www.dietaryguidelines.gov")
     private static let backtest = EvidenceSource(citation: "Gym backtest on the user's own data against MacroFactor's exported estimates (Tests/backtest)", link: "tools/backtest.sh")
+    private static let elloMartin = EvidenceSource(citation: "Ello-Martin JA, Roe LS, Ledikwe JH, Beach AM, Rolls BJ. 2007. Dietary energy density in the treatment of obesity: a year-long trial comparing 2 weight-loss diets. Am J Clin Nutr 85(6):1465–1477",
+                                                   link: "https://doi.org/10.1093/ajcn/85.6.1465")
+    private static let convention = EvidenceSource(citation: "Practitioner convention; no trial of this rule was found (17 Oct 2026)", link: "—")
     private static let mine = EvidenceSource(citation: "The user's own choice (15 Oct 2026)", link: "COACHING_AUDIT.md")
 
     static let all: [EvidenceEntry] = [
@@ -281,6 +284,26 @@ enum Evidence {
               value: 0, range: 0...0, unit: "—", grade: .C, sources: [aird],
               population: "Meta-analysis of 46 studies, mostly aerobic exercise.",
               note: "Resistance sessions weren't analysed in the part we could verify; a secondary summary puts the threshold at about an hour. Your choice in the planner."),
+        // MARK: Weekly check-in questions (proposals only, never automatic changes)
+        .init(id: "checkin.q.hunger.high", description: "Hunger of 4 or 5 (out of 5) at the weekly check-in counts as high hunger.",
+              value: 4, range: 3...5, unit: "score 1–5", grade: .D, sources: [convention], population: "—",
+              note: "A threshold for asking, not a validated cut-off; the 1–5 questions aren't a validated questionnaire.", verified: false),
+        .init(id: "checkin.q.hungerTiming", description: "With high hunger, proposes putting more of the same daily calories at the time of day you're hungriest.",
+              value: 0, range: 0...0, unit: "—", grade: .D, sources: [convention], population: "—",
+              note: "Meal timing doesn't change fat loss when calories are equal (timing.totalFirst); this is only about comfort and adherence, and untested.", verified: false),
+        .init(id: "checkin.q.highVolume", description: "With high hunger, proposes more high-volume, low-energy-density foods (vegetables, fruit). In a year-long trial, adding water-rich foods lowered energy density, and that group reported less hunger and lost somewhat more weight.",
+              value: 0, range: 0...0, unit: "—", grade: .B, sources: [elloMartin],
+              population: "97 obese women, 1 year (71 completers).",
+              note: "A single trial in obese women, not lean lifters; the hunger finding is self-reported."),
+        .init(id: "checkin.q.training.low", description: "Training quality of 2 or less (out of 5) during a cut counts as low.",
+              value: 2, range: 1...3, unit: "score 1–5", grade: .D, sources: [convention], population: "—", verified: false),
+        .init(id: "checkin.q.trainingCarbs", description: "Low training quality during a cut: proposes shifting carbs to training days (same weekly calories).",
+              value: 0, range: 0...0, unit: "—", grade: .D, sources: [convention], population: "—",
+              note: "Carbs help lifting mainly in longer, higher-volume sessions (carbs.performance.nuance, graded separately); low self-rated quality has many causes (sleep, stress), so this is a proposal only.", verified: false),
+        .init(id: "checkin.q.dietBreak", description: "High hunger plus a plan that's hard to follow (your rating of 4–5, or under 60% of planned meals eaten as planned) for 2 weeks in a row during a cut: proposes a diet break or a maintenance phase.",
+              value: 2, range: 2...4, unit: "weeks", grade: .D, sources: [convention, mine], population: "—",
+              note: "The trigger is a convention (2 weeks: the user's choice, 17 Oct 2026). What breaks do is in dietBreak.benefit (graded B, mixed: less hunger in ICECAP, no fat-loss advantage in trained people).", verified: false),
+
         .init(id: "fibre.per1000kcal", description: "About 14 g of fibre per 1 000 kcal eaten.",
               value: 14, range: 10...16, unit: "g/1000 kcal", grade: .D, sources: [dga], population: "General adult population guidance.",
               note: "Only confirmed through secondary sources, so graded D until the primary document is checked.", verified: false),

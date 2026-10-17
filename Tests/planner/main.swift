@@ -751,4 +751,58 @@ do {
     egg.unitName = "tin (drained)"
     check("units: plural keeps the note", PlanFood.plural("tin (drained)") == "tins (drained)")
 }
+// MARK: Weekly check-in questions → proposals (never automatic)
+do {
+    var a = CheckInAnswers(day: "2026-10-19"); a.hunger = 5; a.hungriest = .afternoon
+    let p1 = CheckInQuestions.proposals(a, history: [], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false)
+    check("high hunger + hungriest time → more calories then, and high-volume foods", Set(p1.map(\.kind)) == [.moveCalories, .highVolume], p1.map(\.kind))
+    a.hungriest = nil
+    check("high hunger, time not given → high-volume foods only", CheckInQuestions.proposals(a, history: [], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false).map(\.kind) == [.highVolume])
+    var t = CheckInAnswers(day: "2026-10-19"); t.training = 2
+    check("low training quality on a cut → shift carbs to training days", CheckInQuestions.proposals(t, history: [], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false).map(\.kind) == [.carbsToTraining])
+    check("…not on a bulk, nor when already shifted", CheckInQuestions.proposals(t, history: [], onCut: false, carbShiftOn: false, adherence: nil, inBreak: false).isEmpty
+          && CheckInQuestions.proposals(t, history: [], onCut: true, carbShiftOn: true, adherence: nil, inBreak: false).isEmpty)
+    var h = CheckInAnswers(day: "2026-10-19"); h.hunger = 4; h.difficulty = 4
+    var last = CheckInAnswers(day: "2026-10-12"); last.hunger = 5; last.difficulty = 5
+    let br = CheckInQuestions.proposals(h, history: [last], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false).map(\.kind)
+    check("hungry and hard to follow 2 weeks running → diet break or maintenance", br.contains(.dietBreak) && br.contains(.maintenance), br)
+    check("…one week only → no break proposed", !CheckInQuestions.proposals(h, history: [], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false).map(\.kind).contains(.dietBreak))
+    var easy = h; easy.difficulty = 2
+    check("…poor adherence (under 60% of planned meals) counts as hard to follow", CheckInQuestions.proposals(easy, history: [last], onCut: true, carbShiftOn: false, adherence: 0.4, inBreak: false).map(\.kind).contains(.dietBreak)
+          && !CheckInQuestions.proposals(easy, history: [last], onCut: true, carbShiftOn: false, adherence: 0.9, inBreak: false).map(\.kind).contains(.dietBreak))
+    check("…not during a break", !CheckInQuestions.proposals(h, history: [last], onCut: true, carbShiftOn: false, adherence: nil, inBreak: true).map(\.kind).contains(.dietBreak))
+    check("neutral answers → no proposals", CheckInQuestions.proposals(CheckInAnswers(day: "x"), history: [], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false).isEmpty)
+    let ids = Set((p1 + br.compactMap { _ in nil } + CheckInQuestions.proposals(h, history: [last], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false)
+                   + CheckInQuestions.proposals(t, history: [], onCut: true, carbShiftOn: false, adherence: nil, inBreak: false)).flatMap(\.evidence))
+    check("every proposal's rule is in the registry", ids.allSatisfy { Evidence.entry($0) != nil }, ids.filter { Evidence.entry($0) == nil })
+    check("untested thresholds graded D, unverified", ["checkin.q.hunger.high", "checkin.q.hungerTiming", "checkin.q.training.low", "checkin.q.trainingCarbs", "checkin.q.dietBreak"].allSatisfy { Evidence.entry($0)?.grade == .D && Evidence.entry($0)?.verified == false })
+    // Answers stored with the check-in record; older records (no answers) still read.
+    let old = try? JSONDecoder().decode(CheckInAnswers.self, from: Data(#"{"day":"2026-10-05","hunger":9}"#.utf8))
+    check("answers: missing fields default to 3, out-of-range clamped", old?.hunger == 5 && old?.sleep == 3 && old?.note == "")
+    var withA = a; withA.note = "busy week"; withA.decisions = ["highVolume": true]
+    check("answers round-trip with decisions", (try? JSONDecoder().decode(CheckInAnswers.self, from: JSONEncoder().encode(withA))) == withA)
+}
+
+// MARK: Plan adherence
+do {
+    let planned = [PlannedMeal(index: 0, minute: 480, name: "Breakfast", foods: ["oats", "skyr", "banana"]),
+                   PlannedMeal(index: 1, minute: 840, name: "Lunch", foods: ["chicken", "potato", "spinach"]),
+                   PlannedMeal(index: 2, minute: 1080, name: "Merienda", foods: ["queso-fresco-batido", "banana"]),
+                   PlannedMeal(index: 3, minute: 1290, name: "Dinner", foods: ["salmon", "white-rice"])]
+    let eaten: [(minute: Int, food: String)] = [(470, "oats"), (475, "skyr"), (850, "pasta"), (855, "beef-mince"), (860, "spinach")]
+    let o = Adherence.outcomes(planned, eaten: eaten, now: 19 * 60)
+    check("adherence: breakfast as planned (2 of 3 foods)", o[0].outcome == .asPlanned)
+    check("adherence: lunch swapped (1 of 3)", o[1].outcome == .swapped)
+    check("adherence: merienda an hour ago, not logged yet → still to come", o[2].outcome == nil, o[2].outcome as Any)
+    let late = Adherence.outcomes(planned, eaten: eaten, now: 21 * 60 + 5)
+    check("adherence: skipped once 3 h have passed; dinner still to come", late[2].outcome == .skipped && late[3].outcome == nil)
+    let over = Adherence.outcomes(planned, eaten: eaten, now: nil)
+    check("adherence: a past day — unlogged meals skipped", over[3].outcome == .skipped)
+    let s = Adherence.summary([over, over, late])
+    check("weekly summary: counts and the meal skipped most", s.counts[.asPlanned] == 3 && s.counts[.swapped] == 3 && s.counts[.skipped] == 5 && s.skippedMost?.name == "Merienda" && s.days == 3,
+          (s.counts, s.skippedMost as Any))
+    check("weekly summary: share as planned", abs((s.asPlannedShare ?? 0) - 3.0 / 11) < 1e-9)
+    check("planned meals round-trip (saved on the profile)", (try? JSONDecoder().decode([PlannedMeal].self, from: JSONEncoder().encode(planned))) == planned)
+}
+
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

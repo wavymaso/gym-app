@@ -32,6 +32,7 @@ struct CheckInRecord: Codable, Equatable {
     var output: MacroTargets           // what the engine decides
     var action: String                 // applied | proposed | reported | no change
     var reasons: [EngineReason]
+    var answers: CheckInAnswers? = nil  // the check-in questions, with your decisions on their proposals
     var evidence: [String] { Array(Set(reasons.flatMap(\.evidence))).sorted() }
     var changed: Bool { output != input.currentTargets }
 }

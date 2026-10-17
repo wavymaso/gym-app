@@ -111,11 +111,29 @@ extension ModelContext {
     }
 
     /// Store today's shadow decision (once per day).
-    func saveShadowCheckIn() {
-        guard let r = engineCheckIn(), let data = try? JSONEncoder().encode(r) else { return }
+    func saveShadowCheckIn(answers: CheckInAnswers? = nil) {
+        guard var r = engineCheckIn() else {
+            // Not enough data for the engine yet: the answers are kept on their own.
+            if let a = answers, let data = try? JSONEncoder().encode(a) {
+                let day = a.day
+                for old in (try? fetch(FetchDescriptor<DecisionRecord>(predicate: #Predicate { $0.day == day && $0.kind == "questions" }))) ?? [] { delete(old) }
+                insert(DecisionRecord(day: day, kind: "questions", json: String(decoding: data, as: UTF8.self), live: false)); commit()
+            }
+            return
+        }
+        r.answers = answers
+        guard let data = try? JSONEncoder().encode(r) else { return }
         let day = r.input.day
         for old in (try? fetch(FetchDescriptor<DecisionRecord>(predicate: #Predicate { $0.day == day && $0.kind == "checkin" }))) ?? [] { delete(old) }
         insert(DecisionRecord(day: day, kind: "checkin", json: String(decoding: data, as: UTF8.self), live: false))
         commit()
+    }
+
+    /// Your answers at earlier check-ins, oldest first (not today's).
+    func checkInAnswers(before day: String = dayKey()) -> [CheckInAnswers] {
+        let recs = (try? fetch(FetchDescriptor<DecisionRecord>(predicate: #Predicate { $0.day < day }, sortBy: [SortDescriptor(\.day)]))) ?? []
+        return recs.compactMap { r in
+            r.kind == "checkin" ? r.record?.answers : r.kind == "questions" ? try? JSONDecoder().decode(CheckInAnswers.self, from: Data(r.json.utf8)) : nil
+        }
     }
 }

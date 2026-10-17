@@ -33,6 +33,7 @@ struct BuildContext {
     var start: [Int: [String: Double]] = [:]                // slot → food → its starting portion
     var pins: [Int: [String: Double]] = [:]                 // slot → food → grams kept exactly
     var pinKinds: [Int: [String: String]] = [:]             // slot → food → its template slot ("extra": an added food)
+    var vegetableMin = Portion.vegetableMin                 // more with high-volume foods (accepted at a check-in)
 
     mutating func apply(_ e: DayEdits) {
         let b = e.byslot
@@ -178,7 +179,7 @@ enum MealBuilder {
                      options: PlanOptions = PlanOptions(), previous: [Int: (items: [PlanItem], structure: MealStructure)] = [:],
                      only: Set<Int>? = nil) -> (plan: DayPlan, structure: [Int: MealStructure]) {
         var ctx = ctxIn
-        let foods = prepared(all, templates: templates, exclusions: options.exclusions)
+        let foods = prepared(all, templates: templates, exclusions: options.exclusions, vegetableMin: ctx.vegetableMin)
         func basicOK(_ f: PlanFood) -> Bool { !ctx.basicStyle || ((f.staple || f.basic) && ((1...2).contains(f.nova) || (f.basic && f.basicAllowed))) }
         var slots = input
         var structure: [Int: MealStructure] = [:]

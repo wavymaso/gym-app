@@ -348,6 +348,7 @@ extension ModelContext {
         if style == "anything" { bctx.wholeFood = 0.3 }
         let edits = s.dayEdits[day] ?? DayEdits()
         bctx.apply(edits)
+        if s.highVolume { bctx.vegetableMin = 250 }
         return PlanJob(targets: targets, slots: slots, foods: foods, templates: s.mealTemplates, ctx: bctx, options: opts,
                        extraReasons: carbReasons(day, t: t, kg: kg, training: training) + carb.reasons,
                        carbs: .init(gPerKg: t.carbs / kg, range: CarbPlanner.range(phase).range, rangeIsTarget: CarbPlanner.range(phase).target, intra: carb.intra, recovery: carb.recovery),
@@ -381,6 +382,41 @@ extension ModelContext {
         if log[day] == nil { log[day] = [plan.totals.kcal, plan.totals.protein] }
         log = log.filter { $0.key >= addDays(dayKey(), -30) }
         UserDefaults.standard.set(log, forKey: "planLog")
+    }
+
+    /// Today's planned meals as they stand, for adherence: meals still to eat take the latest plan, eaten
+    /// ones keep the plan you had before eating them. Saved only when something changed.
+    func recordMeals(_ day: String, _ r: PlanResult) {
+        guard day == dayKey(), let p = profile else { return }
+        var log = p.planLog
+        var meals = Dictionary((log[day] ?? []).map { ($0.index, $0) }, uniquingKeysWith: { a, _ in a })
+        for s in r.plan.slots where !s.eaten && !s.items.isEmpty {
+            meals[s.index] = PlannedMeal(index: s.index, minute: s.minute, name: r.plan.structure[s.index]?.template ?? Planner.mealName(s).capitalized,
+                                         foods: s.items.filter { !$0.key.hasPrefix("entry:") }.map { r.foods[$0.key]?.canonical ?? $0.key })
+        }
+        let list = meals.values.sorted { $0.index < $1.index }
+        guard log[day] != list else { return }
+        log[day] = list
+        log = log.filter { $0.key >= addDays(dayKey(), -35) }
+        p.planLog = log; commit()
+    }
+
+    /// Each planned meal of a day: eaten as planned, swapped, skipped, or still to come (nil).
+    func adherence(on day: String) -> [(meal: PlannedMeal, outcome: MealOutcome?)] {
+        guard let planned = profile?.planLog[day], !planned.isEmpty else { return [] }
+        let cal = Calendar.current
+        let eaten = entries(on: day).map { e -> (minute: Int, food: String) in
+            let m = cal.component(.hour, from: e.time) * 60 + cal.component(.minute, from: e.time)
+            let c = e.foodKey.flatMap { k in food(key: k).flatMap { taxonomy(of: $0).canonical } ?? k } ?? "entry:\(e.syncID)"
+            return (m, c)
+        }
+        let now = day == dayKey() ? cal.component(.hour, from: Date()) * 60 + cal.component(.minute, from: Date()) : nil
+        return Adherence.outcomes(planned, eaten: eaten, now: now)
+    }
+
+    /// The last 7 days (today's meals so far included).
+    func weekAdherence(through day: String = dayKey()) -> Adherence.Summary {
+        Adherence.summary((0..<7).map { adherence(on: addDays(day, -$0)) })
     }
 
     /// Last 7 days: how many planned days you ate within 10% of the plan's calories with its protein.
@@ -430,6 +466,8 @@ extension ModelContext {
             case .dinner: pref[sl.index] = session == nil ? 0.8 : 1.0
             default: pref[sl.index] = 1
             }
+            // You're hungriest at this meal (accepted at a check-in): a bigger share of the same day.
+            if let b = s.hungerBand, sl.band == b, sl.kind == .meal { pref[sl.index, default: 1] *= 1.4 }
         }
         return CarbPlanner.meals(dayCarbs: dayCarbs, slots: slots, kg: kg, session: session.map { ($0.start, $0.minutes) }, factor: factor, hoursToNext: toNext,
                                  previousEndedHoursAgo: sincePrev, wake: s.wake, fasted: fasted, preference: pref, settings: s.carbs)

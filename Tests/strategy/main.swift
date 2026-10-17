@@ -194,9 +194,9 @@ do {
     // Plan edits (step 4): saved and read back; old settings without them still load.
     var withEdits = PlannerSettings()
     var e = DayEdits(); e.picks["1|protein"] = "basic:salmon"; e.pins["2|eggs"] = 120; e.pinKinds["2|eggs"] = "extra"
-    withEdits.dayEdits["2026-10-18"] = e
+    withEdits.dayEdits["2026-10-18"] = e; withEdits.hungerBand = .afternoon; withEdits.highVolume = true
     let back = try? JSONDecoder().decode(PlannerSettings.self, from: JSONEncoder().encode(withEdits))
-    check(back == withEdits, "plan edits round-trip")
+    check(back == withEdits, "plan edits and accepted check-in proposals round-trip")
     check(ps?.dayEdits.isEmpty == true, "settings from before step 4 load with no edits")
     let partial = try? JSONDecoder().decode(DayEdits.self, from: Data(#"{"pins":{"0|x":50}}"#.utf8))
     check(partial?.pins["0|x"] == 50 && partial?.picks.isEmpty == true, "day edits missing fields still load")

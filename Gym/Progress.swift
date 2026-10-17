@@ -266,14 +266,14 @@ extension ModelContext {
     }
 
     /// Apply (or skip) a check-in.
-    func finishCheckIn(apply targets: Targets?, expenditure: Double) {
+    func finishCheckIn(answers: CheckInAnswers? = nil, apply targets: Targets?, expenditure: Double) {
         if let targets {
             if activeProgram?.mode == "collaborative", let old = self.targets()?.targets.kcal { rescaleWeekPlan(from: old, to: targets.kcal) }
             insert(TargetSet(targets: targets, expenditure: expenditure, reason: "check-in"))
         }
         activeProgram?.lastCheckIn = dayKey()
         commit()
-        saveShadowCheckIn()                 // the new engine's decision, kept alongside (shadow mode)
+        saveShadowCheckIn(answers: answers) // the new engine's decision, kept alongside (shadow mode), with your answers
     }
 }
 

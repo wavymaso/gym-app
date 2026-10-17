@@ -45,7 +45,7 @@ struct DayEdits: Codable, Equatable {
 extension MealBuilder {
     /// Foods as the builder sizes them: an absolute maximum per food in a meal (one tub of queso batido),
     /// at least 150 g of vegetables, template unit caps (3 chocolate rice cakes).
-    static func prepared(_ all: [PlanFood], templates: [MealTemplate], exclusions: Set<String>) -> [PlanFood] {
+    static func prepared(_ all: [PlanFood], templates: [MealTemplate], exclusions: Set<String>, vegetableMin: Double = Portion.vegetableMin) -> [PlanFood] {
         var foods = all.filter { !exclusions.contains($0.key) }
         for i in foods.indices {
             if let c = foods[i].canonical, let mx = Portion.absoluteMax[c] {
@@ -53,8 +53,8 @@ extension MealBuilder {
                 foods[i].usualGrams = min(foods[i].usualGrams, foods[i].maxGrams); foods[i].minGrams = min(foods[i].minGrams, foods[i].maxGrams)
             }
             if foods[i].role == .vegetable {
-                foods[i].minGrams = max(foods[i].minGrams, Portion.vegetableMin); foods[i].maxGrams = max(foods[i].maxGrams, 2 * Portion.vegetableMin)
-                foods[i].usualGrams = max(foods[i].usualGrams, Portion.vegetableMin)
+                foods[i].minGrams = max(foods[i].minGrams, vegetableMin); foods[i].maxGrams = max(foods[i].maxGrams, 2 * vegetableMin)
+                foods[i].usualGrams = max(foods[i].usualGrams, vegetableMin)
             }
         }
         for t in templates { for ts in t.slots { for (c, n) in ts.maxUnits { for i in foods.indices where foods[i].canonical == c { foods[i].maxGrams = min(foods[i].maxGrams, Double(n) * foods[i].step) } } } }
@@ -67,7 +67,7 @@ extension MealBuilder {
     /// the protein of what it replaces (protein slot) or its calories (any other slot).
     static func alternatives(slot: PlanSlot, kind: TemplateSlot.Kind, replacing current: PlanItem, foods all: [PlanFood], templates: [MealTemplate],
                              ctx: BuildContext, exclusions: Set<String> = [], n: Int = 5) -> [(food: PlanFood, grams: Double)] {
-        let foods = prepared(all, templates: templates, exclusions: exclusions)
+        let foods = prepared(all, templates: templates, exclusions: exclusions, vegetableMin: ctx.vegetableMin)
         let byKey = Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
         guard let t = MealTemplates.template(for: slot, in: templates), let ts = t.slots.first(where: { $0.kind == kind }) else { return [] }
         let others = slot.items.filter { $0.key != current.key }.compactMap { byKey[$0.key] }

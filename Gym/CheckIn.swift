@@ -11,6 +11,7 @@ struct CheckInView: View {
     @State private var estimates: [String: String] = [:]
     @State private var refresh = 0
     @State private var confirmBig = false
+    @State private var answers = CheckInAnswers(day: dayKey())
 
     var body: some View {
         let energy = profiles.first?.energy ?? .kcal
@@ -19,6 +20,8 @@ struct CheckInView: View {
             ScrollView {
                 if let s = ctx.checkInSummary() {
                     VStack(alignment: .leading, spacing: 16) {
+                        CheckInQuestionsView(answers: $answers).arrive(0)
+                        CheckInProposalsView(answers: $answers, proposals: ctx.checkInProposals(answers)).arrive(0)
                         if ctx.phaseDone, let p = profiles.first { phaseCard(p) }
                         if !fast { WeeklyReview().arrive(0) }
                         Text(fast ? "How your week went" : "The numbers").font(.title2.bold()).arrive(1)
@@ -33,7 +36,9 @@ struct CheckInView: View {
                             Label("Only \(s.trackedDays) days logged this week, so the estimate barely moved. Logging most days makes check-ins accurate.",
                                   systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
                         }
-                        if let a = ctx.planAdherence() {
+                        let adh = ctx.weekAdherence()
+                        if adh.total > 0 { AdherenceCard(summary: adh).arrive(2) }
+                        else if let a = ctx.planAdherence() {
                             Label("Meal plan: \(a.followed) of \(a.planned) planned days eaten as planned (context only: it never changes targets by itself).",
                                   systemImage: "calendar.badge.checkmark").font(.callout).foregroundStyle(.secondary).arrive(2)
                         }
@@ -52,19 +57,19 @@ struct CheckInView: View {
                                 }
                             }
                             HStack {
-                                Button("Keep current targets") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
+                                Button("Keep current targets") { ctx.finishCheckIn(answers: answers, apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 Spacer()
                                 Button(profiles.first?.shadowMode == true ? "Log it (shadow)" : "Apply new targets") {
                                     if let prof = profiles.first, prof.shadowMode {
                                         prof.shadowEntries += [ShadowEntry(day: dayKey(), currentKcal: s.current.kcal, proposedKcal: p.kcal, rawKcal: s.raw?.kcal ?? p.kcal,
                                                                            expenditure: s.expenditure, weekChangeKg: s.weekChangeKg)]
-                                        ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss()
-                                    } else if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
+                                        ctx.finishCheckIn(answers: answers, apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss()
+                                    } else if s.needsConfirmation && !confirmBig { confirmBig = true } else { ctx.finishCheckIn(answers: answers, apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 }
                                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).keyboardShortcut(.defaultAction)
                                 .confirmationDialog("Expenditure moved \(energy.format(abs(s.expenditure - s.previousExpenditure))) since last time", isPresented: $confirmBig, titleVisibility: .visible) {
-                                    Button("Apply anyway") { ctx.finishCheckIn(apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
-                                    Button("Keep current targets", role: .cancel) { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
+                                    Button("Apply anyway") { ctx.finishCheckIn(answers: answers, apply: p, expenditure: s.expenditure); Haptics.success(); dismiss() }
+                                    Button("Keep current targets", role: .cancel) { ctx.finishCheckIn(answers: answers, apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 } message: {
                                     Text("Real changes are slow. A jump this big is usually a half-logged day, a missed weigh-in or water. Check last week's log first.")
                                 }
@@ -73,7 +78,7 @@ struct CheckInView: View {
                         } else {
                             Text("You set your own targets, so nothing changes automatically. Adjust them in Strategy if you want.")
                                 .foregroundStyle(.secondary)
-                            Button("Done") { ctx.finishCheckIn(apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
+                            Button("Done") { ctx.finishCheckIn(answers: answers, apply: nil, expenditure: s.expenditure); Haptics.success(); dismiss() }
                                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                         }
                     }

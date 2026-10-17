@@ -28,6 +28,8 @@ struct PlannerSettings: Codable, Equatable {
     var highDaysFollowTraining = true                // calorie distribution: training days = your training week
     var inferredWeek: [Int: TrainingSlot] = [:]      // last inferred from workouts (kept so targets can use it without a fetch)
     var dayEdits: [String: DayEdits] = [:]           // day → your swaps and kept foods (Plan view), a week kept
+    var hungerBand: MealBand? = nil                  // accepted check-in proposal: more of the day's calories at this meal
+    var highVolume = false                           // accepted check-in proposal: bigger portions of vegetables
 
     /// Your templates, or the defaults (a template you haven't edited follows the defaults).
     var mealTemplates: [MealTemplate] {
@@ -66,6 +68,11 @@ struct PlannerSettings: Codable, Equatable {
 
 
 extension Profile {
+    /// Each day's planned meals (the last plan before each was eaten), for adherence.
+    var planLog: [String: [PlannedMeal]] {
+        get { (try? JSONDecoder().decode([String: [PlannedMeal]].self, from: Data(planLogJSON.utf8))) ?? [:] }
+        set { planLogJSON = String(decoding: (try? JSONEncoder().encode(newValue)) ?? Data(), as: UTF8.self) }
+    }
     var planner: PlannerSettings {
         get { (try? JSONDecoder().decode(PlannerSettings.self, from: Data(plannerJSON.utf8))) ?? PlannerSettings() }
         set { plannerJSON = String(decoding: (try? JSONEncoder().encode(newValue)) ?? Data(), as: UTF8.self) }
@@ -114,5 +121,7 @@ extension PlannerSettings {
         deletedUsualMeals = (try? c.decodeIfPresent(type(of: deletedUsualMeals), forKey: .deletedUsualMeals)) ?? d.deletedUsualMeals
         inStock = (try? c.decodeIfPresent(type(of: inStock), forKey: .inStock)) ?? d.inStock
         dayEdits = (try? c.decodeIfPresent(type(of: dayEdits), forKey: .dayEdits)) ?? d.dayEdits
+        hungerBand = (try? c.decodeIfPresent(MealBand.self, forKey: .hungerBand)) ?? d.hungerBand
+        highVolume = (try? c.decodeIfPresent(type(of: highVolume), forKey: .highVolume)) ?? d.highVolume
     }
 }

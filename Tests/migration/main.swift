@@ -20,11 +20,16 @@ MainActor.assumeIsolated {
         ctx.insert(e); ctx.commit()
         let p = try ctx.fetch(FetchDescriptor<Profile>()).first
         check("profile has the new settings", p != nil && (p!.fastKcal > 0) && BMREquation(rawValue: p!.bmrEquation) != nil, (p?.fastKcal ?? -1, p?.bmrEquation ?? "?"))
+        // Plan adherence log (17 Oct 2026): existing profiles open with an empty log; a day saves and reads back.
+        check("profile opens with an empty plan log", p?.planLog.isEmpty ?? false || p?.planLogJSON.isEmpty == false, p?.planLogJSON ?? "")
+        p?.planLog = ["2000-01-01": [PlannedMeal(index: 0, minute: 480, name: "Breakfast", foods: ["oats"])]]
+        ctx.commit()
     } catch { print("ERROR", error); fails += 1 }
     do {
         let c = try ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(url: url))
         let ctx = c.mainContext
         let back = try c.mainContext.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.name == "migration test" })).first
+        check("plan log saved and read back", try ctx.fetch(FetchDescriptor<Profile>()).first?.planLog["2000-01-01"]?.first?.foods == ["oats"])
         check("micros saved and read back", back?.nutrients.micros?["iron"] == 2.5 && back?.nutrients.micros?["vitD"] == 4, back?.nutrients.micros ?? [:])
         // Taxonomy and raw/cooked fields: existing foods open with defaults, and corrections save and read back.
         let foods = try ctx.fetch(FetchDescriptor<Food>())

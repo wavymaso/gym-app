@@ -12,6 +12,7 @@ struct PlanDayView: View {
     let energy: EnergyUnit
     @State private var result: (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)?
     @State private var selected: ItemRef?
+    @State private var adherence = Adherence.Summary()
     @State private var history: [DayEdits] = []          // undo: your edits before each change
     @State private var why = false
     @State private var week = false
@@ -31,6 +32,7 @@ struct PlanDayView: View {
                 if let note = r.plan.note { ProblemCard(title: "Today's calories are mostly used", message: note, icon: "info.circle") }
                 ForEach(r.plan.slots, id: \.index) { s in slotCard(s, r) }
                 totals(r)
+                if adherence.total > 0 { AdherenceCard(summary: adherence) }
                 if !history.isEmpty {
                     Button { undo() } label: { Label("Undo last change", systemImage: "arrow.uturn.backward") }.font(.secondaryText.weight(.semibold))
                 }
@@ -47,7 +49,8 @@ struct PlanDayView: View {
         .task(id: "\(day)|\(dataVersion)|\(version)") {
             ctx.refreshTrainingWeek()
             inferred = ctx.inferredSchedule(); source = ctx.planSource
-            result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan) }
+            result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan); ctx.recordMeals(day, r) }
+            adherence = ctx.weekAdherence()
             // The week view, ready before you open it.
             _ = await ctx.weekPlans(from: day)
         }
@@ -482,5 +485,30 @@ struct ExclusionsView: View {
         }
         .themedList()
         .navigationTitle("Leave out")
+    }
+}
+
+/// The last 7 days of planned meals: eaten as planned, swapped or skipped.
+struct AdherenceCard: View {
+    let summary: Adherence.Summary
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Label("Plan, last 7 days", systemImage: "calendar.badge.checkmark").font(.cardTitle)
+            HStack(spacing: Space.l) {
+                ForEach(MealOutcome.allCases, id: \.self) { o in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("\(summary.counts[o] ?? 0)").font(.numberSmall).monospacedDigit()
+                        Text(o.label).font(.fine).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            if let share = summary.asPlannedShare {
+                Text("\(Int((share * 100).rounded()))% of \(summary.total) planned meals eaten as planned" + (summary.skippedMost.map { " · \($0.name) skipped \($0.times)×" } ?? "") + ".")
+                    .font(.fine).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Text("Context only: it never changes your targets by itself.").font(.fine).foregroundStyle(.tertiary)
+        }
+        .padding(Space.l).modifier(CardSurface())
     }
 }

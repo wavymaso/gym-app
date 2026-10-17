@@ -60,6 +60,12 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `carbs.dayShift.share` | On training days, carbs go up and fat toward its floor; on rest days fat goes up and carbs down; the week's calories stay the same. | 0.5 share of the shift | 0.25–1 | D |
 | `carbs.intra.minMinutes` | Carbohydrate during a session (dates, banana, a sports drink) only for sessions longer than about 90 minutes, and only if you turn it on. | 90 minutes | 60–120 | D |
 | `timing.fastedTraining` | Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions. | — | — | C |
+| `checkin.q.hunger.high` | Hunger of 4 or 5 (out of 5) at the weekly check-in counts as high hunger. | 4 score 1–5 | 3–5 | D |
+| `checkin.q.hungerTiming` | With high hunger, proposes putting more of the same daily calories at the time of day you're hungriest. | — | — | D |
+| `checkin.q.highVolume` | With high hunger, proposes more high-volume, low-energy-density foods (vegetables, fruit). In a year-long trial, adding water-rich foods lowered energy density, and that group reported less hunger and lost somewhat more weight. | — | — | B |
+| `checkin.q.training.low` | Training quality of 2 or less (out of 5) during a cut counts as low. | 2 score 1–5 | 1–3 | D |
+| `checkin.q.trainingCarbs` | Low training quality during a cut: proposes shifting carbs to training days (same weekly calories). | — | — | D |
+| `checkin.q.dietBreak` | High hunger plus a plan that's hard to follow (your rating of 4–5, or under 60% of planned meals eaten as planned) for 2 weeks in a row during a cut: proposes a diet break or a maintenance phase. | 2 weeks | 2–4 | D |
 | `fibre.per1000kcal` | About 14 g of fibre per 1 000 kcal eaten. | 14 g/1000 kcal | 10–16 | D |
 | `partialDay.rule` | A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation. | 0.5 share of usual entries | 0.3–0.7 | D |
 
@@ -487,6 +493,54 @@ Training fasted is fine if you prefer it: eating beforehand improved longer aero
 - **Studied in:** Meta-analysis of 46 studies, mostly aerobic exercise.
 - **Note:** Resistance sessions weren't analysed in the part we could verify; a secondary summary puts the threshold at about an hour. Your choice in the planner.
 - Aird TP, Davies RW, Carson BP. 2018. Effects of fasted vs fed-state exercise on performance and post-exercise metabolism: a systematic review and meta-analysis. Scand J Med Sci Sports 28(5):1476–1493. <https://doi.org/10.1111/sms.13054>
+
+### `checkin.q.hunger.high` (grade D, unverified)
+
+Hunger of 4 or 5 (out of 5) at the weekly check-in counts as high hunger.
+
+- **Studied in:** —
+- **Note:** A threshold for asking, not a validated cut-off; the 1–5 questions aren't a validated questionnaire.
+- Practitioner convention; no trial of this rule was found (17 Oct 2026). `—`
+
+### `checkin.q.hungerTiming` (grade D, unverified)
+
+With high hunger, proposes putting more of the same daily calories at the time of day you're hungriest.
+
+- **Studied in:** —
+- **Note:** Meal timing doesn't change fat loss when calories are equal (timing.totalFirst); this is only about comfort and adherence, and untested.
+- Practitioner convention; no trial of this rule was found (17 Oct 2026). `—`
+
+### `checkin.q.highVolume` (grade B)
+
+With high hunger, proposes more high-volume, low-energy-density foods (vegetables, fruit). In a year-long trial, adding water-rich foods lowered energy density, and that group reported less hunger and lost somewhat more weight.
+
+- **Studied in:** 97 obese women, 1 year (71 completers).
+- **Note:** A single trial in obese women, not lean lifters; the hunger finding is self-reported.
+- Ello-Martin JA, Roe LS, Ledikwe JH, Beach AM, Rolls BJ. 2007. Dietary energy density in the treatment of obesity: a year-long trial comparing 2 weight-loss diets. Am J Clin Nutr 85(6):1465–1477. <https://doi.org/10.1093/ajcn/85.6.1465>
+
+### `checkin.q.training.low` (grade D, unverified)
+
+Training quality of 2 or less (out of 5) during a cut counts as low.
+
+- **Studied in:** —
+- Practitioner convention; no trial of this rule was found (17 Oct 2026). `—`
+
+### `checkin.q.trainingCarbs` (grade D, unverified)
+
+Low training quality during a cut: proposes shifting carbs to training days (same weekly calories).
+
+- **Studied in:** —
+- **Note:** Carbs help lifting mainly in longer, higher-volume sessions (carbs.performance.nuance, graded separately); low self-rated quality has many causes (sleep, stress), so this is a proposal only.
+- Practitioner convention; no trial of this rule was found (17 Oct 2026). `—`
+
+### `checkin.q.dietBreak` (grade D, unverified)
+
+High hunger plus a plan that's hard to follow (your rating of 4–5, or under 60% of planned meals eaten as planned) for 2 weeks in a row during a cut: proposes a diet break or a maintenance phase.
+
+- **Studied in:** —
+- **Note:** The trigger is a convention (2 weeks: the user's choice, 17 Oct 2026). What breaks do is in dietBreak.benefit (graded B, mixed: less hunger in ICECAP, no fat-loss advantage in trained people).
+- Practitioner convention; no trial of this rule was found (17 Oct 2026). `—`
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
 
 ### `fibre.per1000kcal` (grade D, unverified)
 

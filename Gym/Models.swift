@@ -43,6 +43,7 @@ import SwiftData
     var shadowLog: String = ""               // what the coach would have done (JSON [ShadowEntry])
     var dayPlan: String = ""                 // collaborative/manual: your own targets per weekday (JSON [weekday: Targets])
     var plannerJSON: String = ""             // meal planner settings (PlannerSettings)
+    var planLogJSON: String = ""             // each day's planned meals, for adherence ([day: [PlannedMeal]], 5 weeks)
     var dietBreakStart: String = ""          // a planned stretch at maintenance ("" = none)
     var dietBreakEnd: String = ""
 
