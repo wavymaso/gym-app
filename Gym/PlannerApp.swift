@@ -4,6 +4,11 @@ import SwiftUI
 // The meal planner in the app: your settings (synced), your foods as candidates, today's plan with
 // what you've eaten fixed, and the week ahead.
 
+/// The planner's inputs for the current data (rebuilt when saved data changes or the day turns).
+private var planFoodsCache: (key: String, foods: [PlanFood])?
+private var warmPlans: [String: (settings: String, plan: DayPlan)] = [:]
+private var weekCache: (key: String, days: [(day: String, plan: DayPlan, foods: [String: PlanFood])])?
+
 extension ModelContext {
     /// Where the planner's foods come from right now.
     enum PlanSource { case history, staples, recent }
@@ -17,6 +22,14 @@ extension ModelContext {
     /// Roles from the taxonomy (your corrections included), with the meals a canonical food belongs
     /// in (oats and protein bars: breakfast and merienda). Drinks aren't planned.
     func planFoods() -> [PlanFood] {
+        let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)|\(dayKey())"
+        if let hit = planFoodsCache, hit.key == key { return hit.foods }
+        let v = planFoodsUncached()
+        planFoodsCache = (key, v)
+        return v
+    }
+
+    private func planFoodsUncached() -> [PlanFood] {
         let own = planFoodsGuessed().compactMap { f -> PlanFood? in
             guard let food = food(key: f.key) else { return f }
             let t = taxonomy(of: food)
@@ -170,10 +183,67 @@ extension ModelContext {
         return ScheduleInference.infer(sessions, today: dayKey())
     }
 
+    typealias PlanResult = (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)
+
+    /// Everything the planner needs for one day, gathered from your data (main thread); `run()` then plans
+    /// it anywhere (the week view runs it in the background).
+    struct PlanJob {
+        var targets: PlanTargets, slots: [PlanSlot], foods: [PlanFood], templates: [MealTemplate], ctx: BuildContext, options: PlanOptions
+        var previous: [Int: (items: [PlanItem], structure: MealStructure)] = [:]
+        var only: Set<Int>? = nil
+        var extraReasons: [EngineReason], carbs: DayPlan.Carbs, settings: PlannerSettings
+        func run() -> PlanResult {
+            let built = MealBuilder.plan(targets, slots: slots, foods: foods, templates: templates, ctx: ctx, options: options, previous: previous, only: only)
+            var plan = built.plan
+            plan.structure = built.structure
+            plan.reasons += extraReasons
+            plan.carbs = carbs
+            return (plan, Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a }), settings)
+        }
+    }
+
     /// The plan for a day: today's (or that day's) targets, meal times around training, what's
     /// already eaten fixed, your locked meals kept.
     /// `uses`: how often each food was planned on the days before (the week view), so a week has some variety.
-    func dayPlan(_ day: String, uses: [String: Int] = [:], style: String? = nil, offset: Int = 0) -> (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)? {
+    /// The day's last plan is kept (in memory): after you log a meal or change one, the rest of the day
+    /// starts from it and is only resized (a warm start), instead of being chosen again from scratch.
+    func dayPlan(_ day: String, uses: [String: Int] = [:], style: String? = nil, offset: Int = 0, only: Set<Int>? = nil) -> PlanResult? {
+        guard var job = planJob(day, uses: uses, style: style, offset: offset) else { return nil }
+        let warmKey = "\(day)|\(style ?? "")|\(offset)"
+        let sig = profile?.plannerJSON ?? ""
+        if uses.isEmpty, let prev = warmPlans[warmKey], prev.settings == sig, prev.plan.slots.map(\.minute) == job.slots.map(\.minute) {
+            for s in prev.plan.slots where !s.fixed {
+                guard let st = prev.plan.structure[s.index], let now = job.slots.first(where: { $0.index == s.index }), !now.fixed else { continue }
+                job.previous[s.index] = (s.items, st)
+            }
+            job.only = only
+        }
+        let r = job.run()
+        if uses.isEmpty { warmPlans[warmKey] = (sig, r.plan); if warmPlans.count > 30 { warmPlans = [warmKey: (sig, r.plan)] } }
+        return r
+    }
+
+    /// Plan again from scratch (a regenerate, or settings changed): forget the day's last plan.
+    func forgetPlan(_ day: String) { warmPlans = warmPlans.filter { !$0.key.hasPrefix(day + "|") } }
+
+    /// The week ahead, planned in the background (each day's inputs gathered here, the planning off the
+    /// main thread), cached until your data changes.
+    @MainActor func weekPlans(from start: String) async -> [(day: String, plan: DayPlan, foods: [String: PlanFood])] {
+        let key = "\(start)|\(dataVersion)|\(profile?.plannerJSON.hashValue ?? 0)"
+        if let hit = weekCache, hit.key == key { return hit.days }
+        var uses: [String: Int] = [:], out: [(day: String, plan: DayPlan, foods: [String: PlanFood])] = []
+        for i in 0..<7 {
+            let d = addDays(start, i)
+            guard let job = planJob(d, uses: uses) else { continue }
+            let r = await Task.detached(priority: .userInitiated) { job.run() }.value
+            for s in r.plan.slots where !s.eaten { for it in s.items { uses[it.key, default: 0] += 1 } }
+            out.append((d, r.plan, r.foods))
+        }
+        weekCache = (key, out)
+        return out
+    }
+
+    func planJob(_ day: String, uses: [String: Int] = [:], style: String? = nil, offset: Int = 0) -> PlanJob? {
         let style = style ?? profile?.planner.style ?? "usual"
         guard let p = profile, let t = dayTargets(on: day) else { return nil }
         let s = p.planner
@@ -224,12 +294,10 @@ extension ModelContext {
         let canonOf = Dictionary(foods.compactMap { f in f.canonical.map { (f.key, $0) } }, uniquingKeysWith: { a, _ in a })
         for (k, n) in uses { if let c = canonOf[k] { bctx.recent[c, default: 0] += n; bctx.recent["family:" + Taxonomy.family(c), default: 0] += n } }
         if style == "anything" { bctx.wholeFood = 0.3 }
-        let built = MealBuilder.plan(targets, slots: slots, foods: foods, templates: s.mealTemplates, ctx: bctx, options: opts)
-        var plan = built.plan
-        plan.structure = built.structure
-        plan.reasons += carbReasons(day, t: t, kg: kg, training: training) + carb.reasons
-        plan.carbs = .init(gPerKg: t.carbs / kg, range: CarbPlanner.range(phase).range, rangeIsTarget: CarbPlanner.range(phase).target, intra: carb.intra, recovery: carb.recovery)
-        return (plan, Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a }), s)
+        return PlanJob(targets: targets, slots: slots, foods: foods, templates: s.mealTemplates, ctx: bctx, options: opts,
+                       extraReasons: carbReasons(day, t: t, kg: kg, training: training) + carb.reasons,
+                       carbs: .init(gPerKg: t.carbs / kg, range: CarbPlanner.range(phase).range, rangeIsTarget: CarbPlanner.range(phase).target, intra: carb.intra, recovery: carb.recovery),
+                       settings: s)
     }
 
     /// The first plan of each day, kept so the check-in can compare planned with eaten (context only).

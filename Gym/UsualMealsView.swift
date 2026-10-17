@@ -1,9 +1,19 @@
 import SwiftUI
 import SwiftData
 
+private var mealPatternsCache: (key: String, patterns: MealPatterns)?
+
 extension ModelContext {
     /// Your meals learned from the log, at the canonical level (Roosterz chicken counts as chicken).
     func mealPatterns() -> MealPatterns {
+        let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)|\(dayKey())"
+        if let hit = mealPatternsCache, hit.key == key { return hit.patterns }
+        let v = mealPatternsUncached()
+        mealPatternsCache = (key, v)
+        return v
+    }
+
+    private func mealPatternsUncached() -> MealPatterns {
         var canon: [String: String?] = [:]
         return MealPatterns.learn(loggedFoods(days: 120), canonical: { key in
             if let c = canon[key] { return c }

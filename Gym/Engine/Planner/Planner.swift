@@ -265,20 +265,22 @@ enum Planner {
         var minMealKcal = 0.0             // after a too-big day: every remaining meal still a real meal
     }
 
+    static let proteinFatTolerance = 2.0
+
     /// Hard constraints that fail.
     static func hard(_ m: Macros, _ t: PlanTargets, _ o: PlanOptions, tolerance: Double? = nil) -> [String] {
         var out: [String] = []
         let tol = tolerance ?? o.kcalTolerance
         if abs(m.kcal - t.kcal) > max(t.kcal * tol, 40) { out.append("calories") }
-        if m.protein < t.protein - 0.5 { out.append("protein") }
-        if m.fat < t.fatFloor - 0.5 { out.append("fat floor") }
+        // Protein and the fat floor: a gap of up to 2 g counts as met (rounding, not worth another change).
+        if m.protein < t.protein - proteinFatTolerance { out.append("protein") }
+        if m.fat < t.fatFloor - proteinFatTolerance { out.append("fat floor") }
         if t.fibreFloor > 0, m.fibre < t.fibreFloor - 0.5 { out.append("fibre") }
         return out
     }
 
     private static func search(_ t: PlanTargets, input: [PlanSlot], foods: [PlanFood], byKey: [String: PlanFood], fixedTotal: Macros,
                                w: Weights, options: PlanOptions) -> (slots: [PlanSlot], score: Double, hard: [String]) {
-        var cur = 0.0
         // Candidates per slot: your usual foods there first (or any of your foods once that's relaxed).
         func fits(_ f: PlanFood, _ s: PlanSlot) -> Bool { s.anyBand || f.bands.isEmpty || f.bands.contains(s.band) }
         // How much you have this food at this meal: from your log by slot, or a staple's chosen meal.
@@ -323,109 +325,162 @@ enum Planner {
             slots[i].items = Array(items.prefix(5))
             if slots[i].items.isEmpty, let f = cands[i].first { slots[i].items = [PlanItem(key: f.key, grams: f.usualGrams)] }
         }
-        // Realism (hard): a core food in every meal (protein main, carb side, dairy or protein snack);
-        // condiments and fats only alongside one; a treat never alone and once a day; at most two protein
-        // mains and two carb sides a meal; foods only at their meals; no food in more meals than allowed.
-        func violations(_ s: [PlanSlot]) -> Int {
-            issues(s, byKey: byKey, t: t, checkBands: !options.sizeOnly).reduce(0) { $0 + $1.weight }
-        }
-        var curV = violations(slots)
-        func total(_ s: [PlanSlot]) -> Macros { s.filter { !$0.fixed }.flatMap(\.items).reduce(fixedTotal) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) } }
-        func score(_ s: [PlanSlot]) -> Double {
-            let m = total(s)
-            var x = 0.0
-            // Hard constraints, heavily.
-            // Aim at the target: every kcal away costs, and going outside the band costs far more.
-            let band = max(t.kcal * w.tolerance, 40)
-            x += pow(max(0, abs(m.kcal - t.kcal) - band), 2) * 5 + pow(m.kcal - t.kcal, 2) * 0.4
-            // Floors: quadratic, plus a linear part so small shortfalls (half a gram) still get closed.
-            x += pow(max(0, t.protein - m.protein), 2) * 40 + max(0, t.protein - m.protein) * 60
-            x += pow(max(0, t.fatFloor - m.fat), 2) * 40 + max(0, t.fatFloor - m.fat) * 50
-            if t.fibreFloor > 0 { x += pow(max(0, t.fibreFloor - m.fibre), 2) * 20 + max(0, t.fibreFloor - m.fibre) * 25 }
-            // Soft: carbs and fat near target, not wildly over protein.
-            x += pow(m.carbs - t.carbs, 2) * 0.05 + pow(m.fat - t.fat, 2) * 0.3 + pow(max(0, m.protein - t.protein * 1.15), 2) * 0.05
-            let openSlots = s.filter { !$0.fixed }
-            let perMeal = max(20, t.protein / Double(max(s.count, 1)))
-            for sl in s {
-                let mm = sl.items.reduce(Macros()) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) }
-                if !sl.fixed {
-                    // Your foods, where you usually have them, near your usual portions.
-                    for it in sl.items {
-                        guard let f = byKey[it.key] else { continue }
-                        let usual = affinity(f, sl)
-                        x -= w.slotPreference * 6 * min(usual, 3)
-                        x += w.slotPreference * (usual == 0 ? 8 : 0)
-                        if f.basic { x += 6 }               // the library fills gaps; your own foods come first
-                        if f.staple { x -= f.role == .proteinMain ? 8 : 4 }
-                        x += pow((it.grams - f.usualGrams) / max(f.usualGrams, 30), 2) * 4
-                        x += w.variety * Double(f.uses7) * 1.5
+        // The search runs on a compact copy: foods by index, values per gram, so a move costs a few
+        // array reads (no name lookups). Same rules and scoring as `issues` and the weights below.
+        var keys: [String] = [], idx: [String: Int] = [:]
+        func reg(_ k: String) -> Int { if let i = idx[k] { return i }; idx[k] = keys.count; keys.append(k); return keys.count - 1 }
+        for s in slots { for it in s.items { _ = reg(it.key) } }
+        let candIdx = cands.map { $0.map { reg($0.key) } }
+        let pf: [PlanFood?] = keys.map { byKey[$0] }
+        let nF = keys.count, nS = slots.count
+        let kc = pf.map { ($0?.per100.kcal ?? 0) / 100 }, pr = pf.map { ($0?.per100.protein ?? 0) / 100 }
+        let ft = pf.map { ($0?.per100.fat ?? 0) / 100 }, cb = pf.map { ($0?.per100.carbs ?? 0) / 100 }, fb = pf.map { ($0?.per100.fibre ?? 0) / 100 }
+        let known = pf.map { $0 != nil }
+        let roleOf: [FoodRole?] = pf.map { $0?.role }
+        let isCore = roleOf.map { $0?.isCore ?? false }, isAcc = roleOf.map { $0?.isAccompaniment ?? false }
+        let isTreat = roleOf.map { $0 == .treat }, isPM = roleOf.map { $0 == .proteinMain }, isCS = roleOf.map { $0 == .carbSide }, isDrink = roleOf.map { $0 == .drink }
+        let step = pf.map { $0?.step ?? 10 }, maxG = pf.map { $0?.maxGrams ?? 400 }, lowG = pf.map { max($0?.step ?? 10, $0?.minGrams ?? 0) }
+        let usualG = pf.map { $0?.usualGrams ?? 100 }, uses7 = pf.map { Double($0?.uses7 ?? 0) }, maxDay = pf.map { $0?.maxPerDay ?? 99 }
+        let basic = pf.map { $0?.basic ?? false }, stapleBonus = pf.map { f -> Double in f?.staple == true ? (f!.role == .proteinMain ? 8 : 4) : 0 }
+        let fixed = slots.map(\.fixed), kind = slots.map(\.kind)
+        let aff: [[Double]] = slots.map { s in pf.map { $0.map { affinity($0, s) } ?? 0 } }
+        let inBand: [[Bool]] = slots.map { s in pf.map { f in f.map { fits($0, s) } ?? true } }
+        let minP = slots.map { t.minProtein($0.kind) }
+        let mealCarb: [Double?] = slots.map { t.mealCarbs[$0.index] }
+        let checkBands = !options.sizeOnly
+        let perMeal = max(20, t.protein / Double(max(nS, 1)))
+        let band = max(t.kcal * w.tolerance, 40)
+        var F = slots.map { $0.items.map { idx[$0.key]! } }, G = slots.map { $0.items.map(\.grams) }
+        var counts = [Int](repeating: 0, count: nF)
+        // Realism (hard) and the score together: a core food in every meal (protein main, carb side, dairy
+        // or protein snack); condiments and fats only alongside one; a treat never alone and once a day;
+        // at most two protein mains and two carb sides a meal; foods only at their meals; no food in
+        // more meals than allowed; each meal's protein minimum and the pre-workout fat and fibre caps (graded).
+        func eval(_ F: [[Int]], _ G: [[Double]]) -> (v: Int, sc: Double) {
+            var v = 0, x = 0.0, treats = 0
+            var tk = fixedTotal.kcal, tp = fixedTotal.protein, tf = fixedTotal.fat, tc = fixedTotal.carbs, tfi = fixedTotal.fibre
+            for i in 0..<nF { counts[i] = 0 }
+            for s in 0..<nS {
+                let fs = F[s], gs = G[s]
+                var mk = 0.0, mp = 0.0, mf = 0.0, mc = 0.0, mfi = 0.0
+                for j in fs.indices {
+                    let f = fs[j], g = gs[j]
+                    var dup = false
+                    for q in 0..<j where fs[q] == f { dup = true; break }
+                    if !dup { counts[f] += 1 }
+                    mk += kc[f] * g; mp += pr[f] * g; mf += ft[f] * g; mc += cb[f] * g; mfi += fb[f] * g
+                }
+                if !fixed[s] {
+                    tk += mk; tp += mp; tf += mf; tc += mc; tfi += mfi
+                    var core = false, acc = 0, tr = 0, pm = 0, cs = 0, drink = false
+                    for j in fs.indices {
+                        let f = fs[j]
+                        if known[f] {
+                            if isCore[f] { core = true }; if isAcc[f] { acc += 1 }; if isTreat[f] { tr += 1 }
+                            if isPM[f] { pm += 1 }; if isCS[f] { cs += 1 }; if isDrink[f] { drink = true }
+                        }
+                        if checkBands && !inBand[s][f] { v += 1 }
+                        // Your foods, where you usually have them, near your usual portions.
+                        guard known[f] else { continue }
+                        let u = aff[s][f]
+                        x -= w.slotPreference * 6 * min(u, 3)
+                        x += w.slotPreference * (u == 0 ? 8 : 0)
+                        if basic[f] { x += 6 }               // the library fills gaps; your own foods come first
+                        x -= stapleBonus[f]
+                        x += pow((gs[j] - usualG[f]) / max(usualG[f], 30), 2) * 4
+                        x += w.variety * uses7[f] * 1.5
                     }
-                    x += Double(max(0, sl.items.count - 5)) * 10
-                    if w.minMealKcal > 0 { x += pow(max(0, w.minMealKcal - mm.kcal), 2) * 0.5 }
+                    treats += tr
+                    if !fs.isEmpty && !core { v += 1 }
+                    if acc > 2 { v += 1 }; if tr > 1 { v += 1 }; if pm > 2 { v += 1 }; if cs > 2 { v += 1 }; if drink { v += 1 }
+                    if fs.count > 6 { v += 1 }
+                    if mp < minP[s] - 0.5 { v += 1 + Int((minP[s] - mp) / 3) }
+                    if kind[s] == .preWorkout {
+                        if mf > t.preWorkoutMaxFat + 0.5 { v += 1 + Int((mf - t.preWorkoutMaxFat) / 3) }
+                        if mfi > t.preWorkoutMaxFibre + 0.5 { v += 1 + Int((mfi - t.preWorkoutMaxFibre) / 1.5) }
+                    }
+                    x += Double(max(0, fs.count - 5)) * 10
+                    if w.minMealKcal > 0 { x += pow(max(0, w.minMealKcal - mk), 2) * 0.5 }
                 }
                 // Protein spread (registry: 20–40 g per meal), and no 200 g-protein dinners.
-                x += w.spread * pow(max(0, perMeal * 0.7 - mm.protein), 2) * 0.15
-                x += pow(max(0, mm.protein - max(70, perMeal * 1.6)), 2) * 0.3
+                x += w.spread * pow(max(0, perMeal * 0.7 - mp), 2) * 0.15
+                x += pow(max(0, mp - max(70, perMeal * 1.6)), 2) * 0.3
                 // Carbs where the carb plan puts them (else simply more around training); lighter fat and fibre right before.
-                if let target = t.mealCarbs[sl.index], !sl.fixed { x += w.trainingCarbs * pow(mm.carbs - target, 2) * (sl.kind == .preWorkout || sl.kind == .postWorkout ? 0.25 : 0.08) }
-                else if t.mealCarbs.isEmpty, sl.kind == .preWorkout || sl.kind == .postWorkout { x -= w.trainingCarbs * min(mm.carbs, 120) * 0.15 }
-                if sl.kind == .preWorkout { x += w.preWorkoutFat * (max(0, mm.fat - 15) * 0.8 + max(0, mm.fibre - 6) * 0.8) }
-                if sl.kind == .preSleep, options.preSleepProtein { x += w.preSleep * pow(max(0, Evidence.value("timing.preSleep.casein") - mm.protein), 2) * 0.1 }
+                let around = kind[s] == .preWorkout || kind[s] == .postWorkout
+                if let target = mealCarb[s], !fixed[s] { x += w.trainingCarbs * pow(mc - target, 2) * (around ? 0.25 : 0.08) }
+                else if t.mealCarbs.isEmpty, around { x -= w.trainingCarbs * min(mc, 120) * 0.15 }
+                if kind[s] == .preWorkout { x += w.preWorkoutFat * (max(0, mf - 15) * 0.8 + max(0, mfi - 6) * 0.8) }
+                if kind[s] == .preSleep, options.preSleepProtein { x += w.preSleep * pow(max(0, Evidence.value("timing.preSleep.casein") - mp), 2) * 0.1 }
             }
-            _ = openSlots
-            return x
+            for f in 0..<nF where known[f] && counts[f] > maxDay[f] { v += counts[f] - maxDay[f] }
+            if treats > 1 { v += treats - 1 }
+            // Hard constraints, heavily. Aim at the target: every kcal away costs, outside the band far more.
+            let over = max(0, abs(tk - t.kcal) - band)
+            // Inside the band calories count as met: only a light pull toward the middle, so fibre can still move them.
+            x += pow(over, 2) * 5 + over * 30 + pow(tk - t.kcal, 2) * 0.4
+            // Floors: quadratic, plus a linear part so small shortfalls (half a gram) still get closed.
+            x += pow(max(0, t.protein - tp), 2) * 40 + max(0, t.protein - tp) * 60
+            x += pow(max(0, t.fatFloor - tf), 2) * 40 + max(0, t.fatFloor - tf) * 50
+            // Fibre comes last: linear and cheaper per gram than protein, the fat floor or calories outside
+            // the band, so it never displaces them (it still beats every soft preference).
+            if t.fibreFloor > 0 { x += max(0, t.fibreFloor - tfi) * 40 }
+            // Soft: carbs and fat near target, not wildly over protein.
+            x += pow(tc - t.carbs, 2) * 0.05 + pow(tf - t.fat, 2) * 0.3 + pow(max(0, tp - t.protein * 1.15), 2) * 0.05
+            return (v, x)
         }
-        cur = score(slots)
+        var (curV, cur) = eval(F, G)
         // Moves until nothing improves: each round tries every resize, removal, addition and swap in
         // every meal and takes the best (ties: the first, so it stays deterministic).
         for _ in 0..<(options.quick ? 40 : 120) {
-            var bestMove: (slots: [PlanSlot], v: Int, sc: Double)?
-            func consider(_ s2: [PlanSlot]) {
-                let v2 = violations(s2)
-                guard v2 <= curV else { return }
-                let sc = score(s2)
-                guard v2 < curV || sc < cur - 1e-9 else { return }
+            var bestMove: (F: [[Int]], G: [[Double]], v: Int, sc: Double)?
+            func consider(_ F2: [[Int]], _ G2: [[Double]]) {
+                let (v2, sc) = eval(F2, G2)
+                guard v2 <= curV, v2 < curV || sc < cur - 1e-9 else { return }
                 if let b = bestMove, (b.v, b.sc) <= (v2, sc) { return }
-                bestMove = (s2, v2, sc)
+                bestMove = (F2, G2, v2, sc)
             }
-            for i in slots.indices where !slots[i].fixed {
-                for j in slots[i].items.indices {
-                    guard let f = byKey[slots[i].items[j].key] else { continue }
+            for i in 0..<nS where !fixed[i] {
+                for j in F[i].indices {
+                    let f = F[i][j], g0 = G[i][j]
+                    guard known[f] else { continue }
                     for k in [-4.0, -1, 1, 4] {
-                        let g = min(f.maxGrams, slots[i].items[j].grams + k * f.step)
-                        if g < max(f.step, f.minGrams) - 1e-9 || g == slots[i].items[j].grams { continue }
-                        var s2 = slots; s2[i].items[j].grams = g; consider(s2)
+                        let g = min(maxG[f], g0 + k * step[f])
+                        if g < lowG[f] - 1e-9 || g == g0 { continue }
+                        var G2 = G; G2[i][j] = g; consider(F, G2)
                     }
                 }
                 if options.sizeOnly { continue }
-                if slots[i].items.count > 1 {
-                    for j in slots[i].items.indices { var s2 = slots; s2[i].items.remove(at: j); consider(s2) }
+                if F[i].count > 1 {
+                    for j in F[i].indices { var F2 = F, G2 = G; F2[i].remove(at: j); G2[i].remove(at: j); consider(F2, G2) }
                 }
-                for f in cands[i] where !slots[i].items.contains(where: { $0.key == f.key }) {
-                    var s2 = slots; s2[i].items.append(PlanItem(key: f.key, grams: f.usualGrams)); consider(s2)
-                    for j in slots[i].items.indices { s2 = slots; s2[i].items[j] = PlanItem(key: f.key, grams: f.usualGrams); consider(s2) }
+                for f in candIdx[i] where !F[i].contains(f) {
+                    var F2 = F, G2 = G; F2[i].append(f); G2[i].append(usualG[f]); consider(F2, G2)
+                    for j in F[i].indices { F2 = F; G2 = G; F2[i][j] = f; G2[i][j] = usualG[f]; consider(F2, G2) }
                 }
             }
             // Paired moves: one food up a step while another goes down (more oil, less rice), so the
             // search can trade between macros without passing through a worse day.
             if bestMove == nil {
-                let pos = slots.indices.flatMap { i in slots[i].fixed ? [] : slots[i].items.indices.map { (i, $0) } }
+                let pos = (0..<nS).flatMap { i in fixed[i] ? [] : F[i].indices.map { (i, $0) } }
                 for (ia, ja) in pos {
-                    guard let fa = byKey[slots[ia].items[ja].key] else { continue }
-                    let up = min(fa.maxGrams, slots[ia].items[ja].grams + fa.step)
-                    guard up > slots[ia].items[ja].grams else { continue }
+                    let fa = F[ia][ja]
+                    guard known[fa] else { continue }
+                    let up = min(maxG[fa], G[ia][ja] + step[fa])
+                    guard up > G[ia][ja] else { continue }
                     for (ib, jb) in pos where !(ib == ia && jb == ja) {
-                        guard let fb = byKey[slots[ib].items[jb].key], fb.role != fa.role else { continue }
-                        let down = slots[ib].items[jb].grams - fb.step
-                        guard down >= max(fb.step, fb.minGrams) - 1e-9 else { continue }
-                        var s2 = slots; s2[ia].items[ja].grams = up; s2[ib].items[jb].grams = down; consider(s2)
+                        let fbi = F[ib][jb]
+                        guard known[fbi], roleOf[fbi] != roleOf[fa] else { continue }
+                        let down = G[ib][jb] - step[fbi]
+                        guard down >= lowG[fbi] - 1e-9 else { continue }
+                        var G2 = G; G2[ia][ja] = up; G2[ib][jb] = down; consider(F, G2)
                     }
                 }
             }
             guard let m = bestMove else { break }
-            slots = m.slots; curV = m.v; cur = m.sc
+            F = m.F; G = m.G; curV = m.v; cur = m.sc
         }
-        for i in slots.indices where !slots[i].fixed { slots[i].items = slots[i].items.map { PlanItem(key: $0.key, grams: ($0.grams * 10).rounded() / 10) } }
+        for i in slots.indices where !slots[i].fixed { slots[i].items = zip(F[i], G[i]).map { PlanItem(key: keys[$0], grams: ($1 * 10).rounded() / 10) } }
+        func total(_ s: [PlanSlot]) -> Macros { s.filter { !$0.fixed }.flatMap(\.items).reduce(fixedTotal) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) } }
         let shortCount = shortMeals(slots, t, byKey).count
         let realism = issues(slots, byKey: byKey, t: t, checkBands: !options.sizeOnly).filter { !$0.text.contains("protein of the") }
         return (slots, cur, hard(total(slots), t, options, tolerance: w.tolerance) + (shortCount > 0 ? ["protein per meal"] : [])

@@ -11,17 +11,18 @@ FOOD ROLES (correct any in Food log → Plan → Change → Planner settings →
     Pipe Rigate  80–400 g a meal, up to 2× a day, Lunch/Dinner · 347 kcal 12.0 g protein per 100 g
     Potatoes, flesh and skin, raw 150–480 g a meal, up to 2× a day, Lunch/Dinner ·  77 kcal  2.0 g protein per 100 g
     Russet Potato 150–340 g a meal, up to 2× a day, Lunch/Dinner ·  80 kcal  2.3 g protein per 100 g
+    Sourdough Bread  60–180 g a meal, up to 2× a day, Lunch · 228 kcal  8.8 g protein per 100 g
     Sourdough Bread  53– 53 g a meal, up to 2× a day, Lunch · 230 kcal 10.7 g protein per 100 g
     Tortellini Carne 100–400 g a meal, up to 2× a day, Lunch/Dinner · 163 kcal  5.8 g protein per 100 g
   VEGETABLE
     Brotes de espinaca  80–240 g a meal, up to 2× a day, Lunch ·  11 kcal  1.0 g protein per 100 g
   FRUIT
-    Banana, raw  50–150 g a meal, up to 2× a day, Breakfast ·  97 kcal  0.7 g protein per 100 g
+    Banana, raw  50–150 g a meal, up to 2× a day, Breakfast/Lunch ·  97 kcal  0.7 g protein per 100 g
     Dates  50–160 g a meal, up to 2× a day, Merienda · 288 kcal  2.0 g protein per 100 g
   FAT SOURCE
-    Peanut butter  15– 25 g a meal, up to 1× a day, Dinner · 598 kcal 22.2 g protein per 100 g
+    Peanut butter  15– 25 g a meal, up to 1× a day, Lunch/Dinner · 598 kcal 22.2 g protein per 100 g
   PROTEIN SNACK
-    Barebells Mint Dark Chocolate  60–170 g a meal, up to 1× a day, Breakfast/Merienda/Dinner · 349 kcal 36.4 g protein per 100 g
+    Barebells Mint Dark Chocolate  60–170 g a meal, up to 1× a day, Breakfast/Merienda · 349 kcal 36.4 g protein per 100 g
   CONDIMENT
     In N Out Sauce  30– 60 g a meal, up to 1× a day, Lunch · 138 kcal  0.9 g protein per 100 g
     Ketchup cero sin azúcares añadidos  30– 60 g a meal, up to 1× a day, Lunch ·  38 kcal  3.1 g protein per 100 g
@@ -36,202 +37,227 @@ FOOD ROLES (correct any in Food log → Plan → Change → Planner settings →
 Note: you have a weekly refeed on Saturday (+400 kcal, taken back evenly from the other 6 days).
 Training days get +250 kcal (your distribution), following the training week.
 
+  [planned in 0.16 s: 187 solves, 132 ms solving, 11 repairs]
 ── Sunday 18 Oct · rest day
-  08:00 Breakfast · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch · 475 kcal, 62 g protein, 42 g carbs
-     template: Lunch (dropped to fit: bread (side))
-     · Carb base: Potatoes, flesh and skin, raw, 160 g  (123 kcal, 3 P, 28 C, 0 F)
-     · Protein: Premium Roasted Chicken, 210 g  (241 kcal, 50 P, 1 C, 2 F)
-     · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
-     · Olive oil or sauce: In N Out Sauce, 30 g  (41 kcal, 0 P, 2 C, 3 F)
-  18:00 Merienda · 489 kcal, 37 g protein, 44 g carbs
-     template: Merienda
-     · Protein: Greek yogurt, nonfat, 130 g  (79 kcal, 13 P, 4 C, 0 F)
-     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
+  08:00 Breakfast · 272 kcal, 32 g protein, 16 g carbs
+     template: Breakfast (dropped to fit: carb base)
      · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
-     · Protein: Eggs, 180 g  (257 kcal, 22 P, 1 C, 17 F)
-  21:30 Dinner · 451 kcal, 56 g protein, 38 g carbs
-     template: Dinner (dropped to fit: bread (side))
-     · Carb base: Russet Potato, 153 g  (122 kcal, 3 P, 27 C, 0 F)
-     · Protein: Turkey breast, 190 g  (216 kcal, 44 P, 0 C, 4 F)
-     · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
-     · Olive oil or sauce: Olive oil, 5 g  (44 kcal, 0 P, 0 C, 5 F)
-  Day: 1991 kcal (target 1980, +10, +0.5%) · protein 193 (min 193) · fat 59 (target 57, floor 56) · carbs 179 (target 174) · fibre 25 (floor 28)
-  Carbs: 179 g = 1.6 g/kg (cut reference 2–5 g/kg)
-    why (rest day): A rest day: a little more fat and fewer carbs, so training days can have more (the week's calories are the same).
-  ⚠ HARD CONSTRAINTS NOT MET: fibre
-
-── Monday 19 Oct · training 18:00
-  08:00 Breakfast · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch · 554 kcal, 60 g protein, 44 g carbs
+     · Spread: Peanut butter, 15 g  (89 kcal, 3 P, 3 C, 7 F)
+     · Protein: Egg whites, 260 g  (135 kcal, 28 P, 1 C, 0 F)
+     · Fruit: Raspberries, 75 g  (39 kcal, 0 P, 8 C, 0 F)
+  14:00 Lunch · 576 kcal, 69 g protein, 34 g carbs
      template: Lunch (dropped to fit: bread (side))
-     · Carb base: Potatoes, flesh and skin, raw, 150 g  (115 kcal, 3 P, 26 C, 0 F)
+     · Carb base: Potatoes, flesh and skin, raw, 70 g  (53 kcal, 1 P, 12 C, 0 F)
+     · Protein: Premium Roasted Chicken, 200 g  (230 kcal, 48 P, 1 C, 2 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
+     · Olive oil or sauce: In N Out Sauce, 30 g  (41 kcal, 0 P, 2 C, 3 F)
+     · Protein: Eggs, 120 g  (171 kcal, 15 P, 0 C, 11 F)
+  18:00 Merienda · 404 kcal, 40 g protein, 5 g carbs
+     template: Merienda (dropped to fit: carb)
+     · Protein: Greek yogurt, nonfat, 100 g  (61 kcal, 10 P, 3 C, 0 F)
+     · Protein: Eggs, 240 g  (343 kcal, 30 P, 1 C, 22 F)
+  21:30 Dinner · 337 kcal, 38 g protein, 30 g carbs
+     template: Dinner (dropped to fit: bread (side))
+     · Carb base: Potatoes, flesh and skin, raw, 70 g  (53 kcal, 1 P, 12 C, 0 F)
+     · Protein: Turkey breast, 140 g  (159 kcal, 32 P, 0 C, 3 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
+     · Olive oil or sauce: Olive oil, 5 g  (44 kcal, 0 P, 0 C, 5 F)
+  Day: 1590 kcal (target 1590, 0, -0.0%) · protein 181 (min 180) · fat 59 (target 56, floor 56) · carbs 87 (target 92) · fibre 26 (floor 22)
+  Carbs: 87 g = 0.8 g/kg (cut reference 2–5 g/kg)
+    why (rest day): A rest day: a little more fat and fewer carbs, so training days can have more (the week's calories are the same).
+
+  [planned in 0.03 s: 49 solves, 24 ms solving, 4 repairs]
+── Monday 19 Oct · training 18:00
+  08:00 Breakfast · 473 kcal, 32 g protein, 52 g carbs
+     template: Breakfast
+     · Carb base: Oats, 30 g  (113 kcal, 3 P, 20 C, 1 F)
+     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
+     · Spread: Peanut butter, 25 g  (149 kcal, 5 P, 5 C, 12 F)
+     · Protein: Egg whites, 200 g  (104 kcal, 21 P, 1 C, 0 F)
+     · Fruit: Banana, raw, 55 g  (53 kcal, 0 P, 12 C, 0 F)
+     · Fruit: Raspberries, 85 g  (44 kcal, 1 P, 10 C, 0 F)
+  14:00 Lunch · 421 kcal, 59 g protein, 32 g carbs
+     template: Lunch (dropped to fit: bread (side))
+     · Carb base: Potatoes, flesh and skin, raw, 70 g  (53 kcal, 1 P, 12 C, 0 F)
      · Protein: Premium Roasted Chicken, 200 g  (230 kcal, 48 P, 1 C, 2 F)
      · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
-     · Olive oil or sauce: Tomate Frito, 75 g  (51 kcal, 0 P, 6 C, 2 F)
-     · Olive oil or sauce: Olive oil, 10 g  (88 kcal, 0 P, 0 C, 10 F)
-  16:30 Merienda (before training) · 445 kcal, 50 g protein, 51 g carbs
+     · Olive oil or sauce: Tomate Frito, 100 g  (69 kcal, 1 P, 8 C, 3 F)
+  16:30 Merienda (before training) · 327 kcal, 45 g protein, 27 g carbs
      template: Pre-workout
-     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
-     · Protein: Turkey breast, 210 g  (239 kcal, 48 P, 0 C, 4 F)
+     · Carb: Dates, 20 g  (57 kcal, 0 P, 14 C, 0 F)
+     · Protein: Turkey breast, 190 g  (216 kcal, 44 P, 0 C, 4 F)
      · Fruit: Banana, raw, 55 g  (53 kcal, 0 P, 12 C, 0 F)
-     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
-  21:00 Dinner (after training) · 661 kcal, 45 g protein, 97 g carbs
+  21:00 Dinner (after training) · 624 kcal, 51 g protein, 43 g carbs
      template: Post-workout
      · Protein: Tinned tuna in water (drained), 112 g  (100 kcal, 21 P, 0 C, 1 F)
-     · Carb base: Pipe Rigate, 90 g  (312 kcal, 10 P, 63 C, 1 F)
-     · Vegetable: Frozen vegetable mix, 150 g  (108 kcal, 4 P, 20 C, 0 F)
-     · Olive oil or sauce: In N Out Sauce, 55 g  (76 kcal, 0 P, 3 C, 6 F)
-     · Vegetable: Spinach, 280 g  (64 kcal, 8 P, 10 C, 1 F)
-  Day: 2236 kcal (target 2230, +5, +0.2%) · protein 193 (min 193) · fat 55 (target 57, floor 56) · carbs 248 (target 238) · fibre 32 (floor 31)
-  Carbs: 248 g = 2.1 g/kg (cut reference 2–5 g/kg)
-    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (18 sets, 75 min vs your average 18 sets).
-    why (before training): About 55 g of carbs (0.5 g/kg) 1–3 hours before, low in fat and fibre.
-
-── Tuesday 20 Oct · rest day
-  08:00 Breakfast · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch · 564 kcal, 84 g protein, 43 g carbs
-     template: Lunch (dropped to fit: bread (side))
-     · Carb base: Potatoes, flesh and skin, raw, 150 g  (115 kcal, 3 P, 26 C, 0 F)
-     · Protein: Premium Roasted Chicken, 300 g  (345 kcal, 72 P, 2 C, 4 F)
-     · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
-     · Olive oil or sauce: Tomate Frito, 50 g  (34 kcal, 0 P, 4 C, 1 F)
-  18:00 Merienda · 423 kcal, 33 g protein, 47 g carbs
-     template: Merienda
-     · Protein: Queso fresco batido 0%, 210 g  (96 kcal, 16 P, 7 C, 0 F)
-     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
-     · Spread: Mermelada de Fresa Diet, 20 g  (11 kcal, 0 P, 2 C, 0 F)
-     · Protein: Eggs, 120 g  (171 kcal, 15 P, 0 C, 11 F)
-  21:30 Dinner · 427 kcal, 39 g protein, 37 g carbs
-     template: Dinner (dropped to fit: bread (side))
      · Carb base: Sourdough Bread, 53 g  (121 kcal, 5 P, 23 C, 0 F)
-     · Protein: Lean beef mince 5%, 145 g  (198 kcal, 31 P, 0 C, 7 F)
-     · Vegetable: Tomatoes, 300 g  (54 kcal, 2 P, 11 C, 0 F)
-     · Olive oil or sauce: Ligeresa, 30 g  (53 kcal, 0 P, 2 C, 4 F)
-  Day: 1989 kcal (target 1980, +9, +0.5%) · protein 193 (min 193) · fat 55 (target 57, floor 56) · carbs 183 (target 174) · fibre 21 (floor 28)
-  Carbs: 183 g = 1.6 g/kg (cut reference 2–5 g/kg)
-    why (rest day): A rest day: a little more fat and fewer carbs, so training days can have more (the week's calories are the same).
-  ⚠ HARD CONSTRAINTS NOT MET: fat floor, fibre
+     · Vegetable: Carrots, 150 g  (61 kcal, 1 P, 14 C, 0 F)
+     · Olive oil or sauce: In N Out Sauce, 60 g  (83 kcal, 0 P, 4 C, 6 F)
+     · Protein: Eggs, 180 g  (257 kcal, 22 P, 1 C, 17 F)
+  Day: 1847 kcal (target 1840, +7, +0.4%) · protein 189 (min 180) · fat 54 (target 56, floor 56) · carbs 155 (target 154) · fibre 26 (floor 26)
+  Carbs: 155 g = 1.4 g/kg (cut reference 2–5 g/kg)
+    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (3 sets, 75 min vs your average 3 sets).
+    why (before training): About 46 g of carbs (0.4 g/kg) 1–3 hours before, low in fat and fibre.
+  ⚠ HARD CONSTRAINTS NOT MET: pre-workout carbs
 
+  [planned in 0.09 s: 108 solves, 86 ms solving, 9 repairs]
+── Tuesday 20 Oct · rest day
+  08:00 Breakfast · 356 kcal, 32 g protein, 29 g carbs
+     template: Breakfast (dropped to fit: fruit)
+     · Carb base: Oats, 20 g  (75 kcal, 2 P, 13 C, 1 F)
+     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
+     · Spread: Peanut butter, 20 g  (119 kcal, 4 P, 4 C, 10 F)
+     · Protein: Greek yogurt, nonfat, 250 g  (152 kcal, 25 P, 9 C, 1 F)
+  14:00 Lunch · 618 kcal, 76 g protein, 42 g carbs
+     template: Lunch (dropped to fit: bread (side))
+     · Carb base: Potatoes, flesh and skin, raw, 70 g  (53 kcal, 1 P, 12 C, 0 F)
+     · Protein: Premium Roasted Chicken, 210 g  (241 kcal, 50 P, 1 C, 2 F)
+     · Vegetable: Spinach, 150 g  (34 kcal, 4 P, 5 C, 0 F)
+     · Olive oil or sauce: Tomate Frito, 55 g  (37 kcal, 0 P, 4 C, 1 F)
+     · Protein: Eggs, 120 g  (171 kcal, 15 P, 0 C, 11 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
+  18:00 Merienda · 281 kcal, 36 g protein, 5 g carbs
+     template: Merienda (dropped to fit: carb)
+     · Protein: Queso fresco batido 0%, 130 g  (59 kcal, 10 P, 4 C, 0 F)
+     · Protein: Eggs, 120 g  (171 kcal, 15 P, 0 C, 11 F)
+     · Protein: Tinned tuna in water (drained), 56 g  (50 kcal, 10 P, 0 C, 0 F)
+  21:30 Dinner · 340 kcal, 34 g protein, 22 g carbs
+     template: Dinner (dropped to fit: bread (side))
+     · Carb base: Sweet potato, 60 g  (51 kcal, 0 P, 12 C, 0 F)
+     · Protein: Lean beef mince 5%, 145 g  (198 kcal, 31 P, 0 C, 7 F)
+     · Vegetable: Green beans, 150 g  (46 kcal, 2 P, 10 C, 0 F)
+     · Olive oil or sauce: Olive oil, 5 g  (44 kcal, 0 P, 0 C, 5 F)
+  Day: 1598 kcal (target 1590, +8, +0.5%) · protein 180 (min 180) · fat 54 (target 56, floor 56) · carbs 100 (target 92) · fibre 22 (floor 22)
+  Carbs: 100 g = 0.8 g/kg (cut reference 2–5 g/kg)
+    why (rest day): A rest day: a little more fat and fewer carbs, so training days can have more (the week's calories are the same).
+
+  [planned in 0.06 s: 83 solves, 48 ms solving, 7 repairs]
 ── Wednesday 21 Oct · training 18:00
-  08:00 Breakfast · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch · 681 kcal, 68 g protein, 63 g carbs
+  08:00 Breakfast · 557 kcal, 32 g protein, 70 g carbs
+     template: Breakfast
+     · Carb base: Oats, 60 g  (227 kcal, 7 P, 40 C, 3 F)
+     · Spread: Mermelada de Fresa Diet, 30 g  (17 kcal, 0 P, 4 C, 0 F)
+     · Spread: Peanut butter, 25 g  (149 kcal, 5 P, 5 C, 12 F)
+     · Protein: Greek yogurt, nonfat, 170 g  (103 kcal, 17 P, 6 C, 0 F)
+     · Fruit: Raspberries, 115 g  (59 kcal, 1 P, 13 C, 0 F)
+  14:00 Lunch · 527 kcal, 54 g protein, 35 g carbs
+     template: Lunch (dropped to fit: bread (side))
+     · Carb base: Potatoes, flesh and skin, raw, 70 g  (53 kcal, 1 P, 12 C, 0 F)
+     · Protein: Premium Roasted Chicken, 200 g  (230 kcal, 48 P, 1 C, 2 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
+     · Olive oil or sauce: In N Out Sauce, 55 g  (76 kcal, 0 P, 3 C, 6 F)
+     · Olive oil or sauce: Olive oil, 10 g  (88 kcal, 0 P, 0 C, 10 F)
+  16:30 Merienda (before training) · 327 kcal, 45 g protein, 27 g carbs
+     template: Pre-workout
+     · Carb: Dates, 20 g  (57 kcal, 0 P, 14 C, 0 F)
+     · Protein: Turkey breast, 190 g  (216 kcal, 44 P, 0 C, 4 F)
+     · Fruit: Banana, raw, 55 g  (53 kcal, 0 P, 12 C, 0 F)
+  21:00 Dinner (after training) · 448 kcal, 48 g protein, 37 g carbs
+     template: Post-workout
+     · Protein: Lean beef mince 5%, 190 g  (260 kcal, 40 P, 0 C, 9 F)
+     · Carb base: Pasta, 20 g  (74 kcal, 2 P, 14 C, 0 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
+     · Olive oil or sauce: Tomate Frito, 50 g  (34 kcal, 0 P, 4 C, 1 F)
+  Day: 1861 kcal (target 1840, +21, +1.1%) · protein 180 (min 180) · fat 54 (target 56, floor 56) · carbs 170 (target 154) · fibre 35 (floor 26)
+  Carbs: 170 g = 1.4 g/kg (cut reference 2–5 g/kg)
+    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (3 sets, 75 min vs your average 3 sets).
+    why (before training): About 46 g of carbs (0.4 g/kg) 1–3 hours before, low in fat and fibre.
+  ⚠ HARD CONSTRAINTS NOT MET: pre-workout carbs
+
+  [planned in 0.11 s: 165 solves, 98 ms solving, 11 repairs]
+── Thursday 22 Oct · rest day
+  08:00 Breakfast · 307 kcal, 36 g protein, 20 g carbs
+     template: Breakfast (dropped to fit: carb base)
+     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
+     · Spread: Peanut butter, 15 g  (89 kcal, 3 P, 3 C, 7 F)
+     · Protein: Egg whites, 300 g  (156 kcal, 32 P, 2 C, 0 F)
+     · Fruit: Banana, raw, 55 g  (53 kcal, 0 P, 12 C, 0 F)
+  14:00 Lunch · 550 kcal, 71 g protein, 46 g carbs
      template: Lunch
      · Carb base: Sourdough Bread, 53 g  (121 kcal, 5 P, 23 C, 0 F)
-     · Protein: Premium Roasted Chicken, 200 g  (230 kcal, 48 P, 1 C, 2 F)
-     · Vegetable: Spinach, 240 g  (55 kcal, 6 P, 8 C, 0 F)
-     · Bread (side): Wholemeal bread, 60 g  (151 kcal, 7 P, 25 C, 2 F)
+     · Protein: Premium Roasted Chicken, 230 g  (264 kcal, 55 P, 1 C, 3 F)
+     · Vegetable: Spinach, 150 g  (34 kcal, 4 P, 5 C, 0 F)
      · Olive oil or sauce: Tomate Frito, 50 g  (34 kcal, 0 P, 4 C, 1 F)
-     · Olive oil or sauce: Olive oil, 10 g  (88 kcal, 0 P, 0 C, 10 F)
-  16:30 Merienda (before training) · 422 kcal, 45 g protein, 51 g carbs
-     template: Pre-workout
-     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
-     · Protein: Turkey breast, 190 g  (216 kcal, 44 P, 0 C, 4 F)
-     · Fruit: Banana, raw, 55 g  (53 kcal, 0 P, 12 C, 0 F)
-     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
-  21:00 Dinner (after training) · 559 kcal, 48 g protein, 70 g carbs
-     template: Post-workout
-     · Protein: Tinned tuna in water (drained), 168 g  (151 kcal, 31 P, 0 C, 1 F)
-     · Carb base: White rice, 45 g  (164 kcal, 3 P, 36 C, 0 F)
-     · Vegetable: Frozen vegetable mix, 150 g  (108 kcal, 4 P, 20 C, 0 F)
-     · Olive oil or sauce: In N Out Sauce, 50 g  (69 kcal, 0 P, 3 C, 5 F)
-     · Vegetable: Spinach, 290 g  (66 kcal, 8 P, 10 C, 1 F)
-  Day: 2237 kcal (target 2230, +7, +0.3%) · protein 200 (min 193) · fat 55 (target 57, floor 56) · carbs 239 (target 238) · fibre 31 (floor 31)
-  Carbs: 239 g = 2.1 g/kg (cut reference 2–5 g/kg)
-    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (18 sets, 75 min vs your average 18 sets).
-    why (before training): About 55 g of carbs (0.5 g/kg) 1–3 hours before, low in fat and fibre.
-  ⚠ HARD CONSTRAINTS NOT MET: fat floor, fibre
-
-── Thursday 22 Oct · rest day
-  08:00 Breakfast · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch · 558 kcal, 84 g protein, 40 g carbs
-     template: Lunch (dropped to fit: bread (side))
-     · Carb base: Sourdough Bread, 53 g  (121 kcal, 5 P, 23 C, 0 F)
-     · Protein: Premium Roasted Chicken, 290 g  (333 kcal, 69 P, 2 C, 4 F)
-     · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
-     · Olive oil or sauce: Tomate Frito, 50 g  (34 kcal, 0 P, 4 C, 1 F)
-  18:00 Merienda · 427 kcal, 33 g protein, 45 g carbs
-     template: Merienda
-     · Protein: Greek yogurt, nonfat, 170 g  (103 kcal, 17 P, 6 C, 0 F)
-     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
-     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
+     · Pulses (side): Chickpeas, cooked (jar, drained), 100 g  (95 kcal, 5 P, 12 C, 2 F)
+  18:00 Merienda · 272 kcal, 36 g protein, 0 g carbs
+     template: Merienda (dropped to fit: carb)
+     · Protein: Tinned tuna in water (drained), 112 g  (100 kcal, 21 P, 0 C, 1 F)
      · Protein: Eggs, 120 g  (171 kcal, 15 P, 0 C, 11 F)
-  21:30 Dinner · 431 kcal, 37 g protein, 40 g carbs
+  21:30 Dinner · 496 kcal, 35 g protein, 32 g carbs
      template: Dinner (dropped to fit: bread (side))
-     · Carb base: Sweet potato, 130 g  (111 kcal, 2 P, 26 C, 0 F)
-     · Protein: Lean beef mince 5%, 155 g  (212 kcal, 33 P, 0 C, 7 F)
-     · Vegetable: Tomatoes, 300 g  (54 kcal, 2 P, 11 C, 0 F)
+     · Carb base: White rice, 25 g  (91 kcal, 1 P, 20 C, 0 F)
+     · Protein: Salmon, 145 g  (301 kcal, 29 P, 0 C, 19 F)
+     · Vegetable: Broccoli, 150 g  (51 kcal, 4 P, 9 C, 0 F)
      · Olive oil or sauce: Ligeresa, 30 g  (53 kcal, 0 P, 2 C, 4 F)
-  Day: 1992 kcal (target 1980, +12, +0.6%) · protein 193 (min 193) · fat 56 (target 57, floor 56) · carbs 181 (target 174) · fibre 22 (floor 28)
-  Carbs: 181 g = 1.6 g/kg (cut reference 2–5 g/kg)
+  Day: 1627 kcal (target 1590, +37, +2.3%) · protein 180 (min 180) · fat 54 (target 56, floor 56) · carbs 100 (target 92) · fibre 16 (floor 22)
+  Carbs: 100 g = 0.8 g/kg (cut reference 2–5 g/kg)
     why (rest day): A rest day: a little more fat and fewer carbs, so training days can have more (the week's calories are the same).
   ⚠ HARD CONSTRAINTS NOT MET: fibre
 
+  [planned in 0.05 s: 74 solves, 41 ms solving, 6 repairs]
 ── Friday 23 Oct · training 18:00
-  08:00 Breakfast · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch · 592 kcal, 62 g protein, 39 g carbs
+  08:00 Breakfast · 496 kcal, 33 g protein, 58 g carbs
+     template: Breakfast
+     · Carb base: Oats, 50 g  (189 kcal, 6 P, 33 C, 3 F)
+     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
+     · Spread: Peanut butter, 25 g  (149 kcal, 5 P, 5 C, 12 F)
+     · Protein: Queso fresco batido 0%, 250 g  (115 kcal, 20 P, 8 C, 0 F)
+     · Fruit: Raspberries, 65 g  (33 kcal, 0 P, 7 C, 0 F)
+  14:00 Lunch · 534 kcal, 54 g protein, 36 g carbs
      template: Lunch (dropped to fit: bread (side))
-     · Carb base: Sourdough Bread, 53 g  (121 kcal, 5 P, 23 C, 0 F)
+     · Carb base: Potatoes, flesh and skin, raw, 70 g  (53 kcal, 1 P, 12 C, 0 F)
      · Protein: Premium Roasted Chicken, 200 g  (230 kcal, 48 P, 1 C, 2 F)
-     · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
      · Olive oil or sauce: In N Out Sauce, 60 g  (83 kcal, 0 P, 4 C, 6 F)
      · Olive oil or sauce: Olive oil, 10 g  (88 kcal, 0 P, 0 C, 10 F)
-  16:30 Merienda (before training) · 452 kcal, 48 g protein, 55 g carbs
+  16:30 Merienda (before training) · 367 kcal, 45 g protein, 39 g carbs
      template: Pre-workout
-     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
-     · Protein: Turkey breast, 200 g  (228 kcal, 46 P, 0 C, 4 F)
-     · Fruit: Banana, raw, 65 g  (63 kcal, 0 P, 14 C, 0 F)
-     · Spread: Mermelada de Fresa Diet, 30 g  (17 kcal, 0 P, 4 C, 0 F)
-  21:00 Dinner (after training) · 610 kcal, 45 g protein, 94 g carbs
+     · Carb: Dates, 20 g  (57 kcal, 0 P, 14 C, 0 F)
+     · Protein: Turkey breast, 190 g  (216 kcal, 44 P, 0 C, 4 F)
+     · Fruit: Apple, 180 g  (93 kcal, 0 P, 24 C, 0 F)
+  21:00 Dinner (after training) · 464 kcal, 47 g protein, 43 g carbs
      template: Post-workout
-     · Protein: Tinned tuna in water (drained), 112 g  (100 kcal, 21 P, 0 C, 1 F)
-     · Carb base: Pipe Rigate, 80 g  (277 kcal, 9 P, 56 C, 1 F)
-     · Vegetable: Frozen vegetable mix, 160 g  (115 kcal, 5 P, 21 C, 0 F)
-     · Olive oil or sauce: Tomate Frito, 70 g  (48 kcal, 0 P, 5 C, 2 F)
-     · Vegetable: Spinach, 300 g  (69 kcal, 8 P, 10 C, 1 F)
-  Day: 2230 kcal (target 2230, -1, -0.0%) · protein 193 (min 193) · fat 56 (target 57, floor 56) · carbs 244 (target 238) · fibre 31 (floor 31)
-  Carbs: 244 g = 2.1 g/kg (cut reference 2–5 g/kg) · RECOVERY WINDOW (next session < 24 h)
-    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (18 sets, 75 min vs your average 18 sets).
-    why (before training): About 55 g of carbs (0.5 g/kg) 1–3 hours before, low in fat and fibre.
+     · Protein: Lean beef mince 5%, 180 g  (246 kcal, 38 P, 0 C, 9 F)
+     · Carb base: Pipe Rigate, 30 g  (104 kcal, 3 P, 21 C, 0 F)
+     · Vegetable: Artichokes (cooked or jarred, drained), 150 g  (79 kcal, 4 P, 18 C, 0 F)
+     · Olive oil or sauce: Tomate Frito, 50 g  (34 kcal, 0 P, 4 C, 1 F)
+  Day: 1864 kcal (target 1840, +23, +1.3%) · protein 180 (min 180) · fat 53 (target 56, floor 56) · carbs 177 (target 154) · fibre 35 (floor 26)
+  Carbs: 177 g = 1.4 g/kg (cut reference 2–5 g/kg) · RECOVERY WINDOW (next session < 24 h)
+    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (3 sets, 75 min vs your average 3 sets).
+    why (before training): About 46 g of carbs (0.4 g/kg) 1–3 hours before, low in fat and fibre.
     why (recovery window): The next session is 16 h after this one, so the meal after training and the ones after it get more carbs to refill glycogen (within today's calories).
+  ⚠ HARD CONSTRAINTS NOT MET: fat floor
 
+  [planned in 0.01 s: 4 solves, 3 ms solving, 1 repairs]
 ── Saturday 24 Oct · training 11:00
-  08:00 Breakfast (before training) · 574 kcal, 36 g protein, 54 g carbs
-     🔒 Eggs, 240 g
-     🔒 Potatoes, flesh and skin, raw, 300 g
-  14:00 Lunch (after training) · 929 kcal, 80 g protein, 131 g carbs
+  08:00 Breakfast (before training) · 539 kcal, 47 g protein, 76 g carbs
+     template: Pre-workout
+     · Carb: Banana, raw, 55 g  (53 kcal, 0 P, 12 C, 0 F)
+     · Protein: Chicken breast, 200 g  (240 kcal, 45 P, 0 C, 5 F)
+     · Fruit: Apple, 180 g  (93 kcal, 0 P, 24 C, 0 F)
+     · Spread: Mermelada de Fresa Diet, 15 g  (8 kcal, 0 P, 2 C, 0 F)
+     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
+  14:00 Lunch (after training) · 640 kcal, 58 g protein, 70 g carbs
      template: Post-workout
-     · Protein: Premium Roasted Chicken, 250 g  (287 kcal, 60 P, 2 C, 3 F)
-     · Carb base: Potatoes, flesh and skin, raw, 480 g  (369 kcal, 9 P, 84 C, 0 F)
+     · Protein: Turkey breast, 180 g  (205 kcal, 41 P, 0 C, 4 F)
+     · Carb base: Sourdough Bread, 53 g  (121 kcal, 5 P, 23 C, 0 F)
      · Vegetable: Frozen vegetable mix, 320 g  (230 kcal, 10 P, 43 C, 1 F)
-     · Olive oil or sauce: In N Out Sauce, 30 g  (41 kcal, 0 P, 2 C, 3 F)
-  18:00 Merienda · 473 kcal, 36 g protein, 57 g carbs
+     · Olive oil or sauce: In N Out Sauce, 60 g  (83 kcal, 0 P, 4 C, 6 F)
+  18:00 Merienda · 414 kcal, 37 g protein, 41 g carbs
      template: Merienda
-     · Protein: Queso fresco batido 0%, 250 g  (115 kcal, 20 P, 8 C, 0 F)
-     · Carb: Dates, 60 g  (172 kcal, 1 P, 43 C, 0 F)
-     · Spread: Mermelada de Fresa Diet, 25 g  (14 kcal, 0 P, 3 C, 0 F)
-     · Protein: Eggs, 120 g  (171 kcal, 15 P, 0 C, 11 F)
-  21:30 Dinner · 722 kcal, 39 g protein, 87 g carbs
+     · Protein: Tinned tuna in water (drained), 168 g  (151 kcal, 31 P, 0 C, 1 F)
+     · Carb: Dates, 50 g  (144 kcal, 1 P, 36 C, 0 F)
+     · Spread: Peanut butter, 20 g  (119 kcal, 4 P, 4 C, 10 F)
+  21:30 Dinner · 711 kcal, 39 g protein, 77 g carbs
      template: Dinner
-     · Carb base: Sweet potato, 200 g  (172 kcal, 3 P, 40 C, 0 F)
+     · Carb base: Sweet potato, 130 g  (111 kcal, 2 P, 26 C, 0 F)
      · Protein: Salmon, 125 g  (260 kcal, 25 P, 0 C, 16 F)
-     · Vegetable: Frozen vegetable mix, 160 g  (115 kcal, 5 P, 21 C, 0 F)
+     · Vegetable: Frozen vegetable mix, 180 g  (129 kcal, 5 P, 24 C, 0 F)
      · Bread (side): Sourdough Bread, 53 g  (121 kcal, 5 P, 23 C, 0 F)
-     · Olive oil or sauce: Ligeresa, 30 g  (53 kcal, 0 P, 2 C, 4 F)
-  Day: 2699 kcal (target 2697, +2, +0.1%) · protein 193 (min 193) · fat 67 (target 57, floor 56) · carbs 330 (target 354) · fibre 43 (floor 38)
-  Carbs: 330 g = 3.2 g/kg (cut reference 2–5 g/kg)
-    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (18 sets, 75 min vs your average 18 sets).
+     · Olive oil or sauce: Ligeresa, 50 g  (88 kcal, 0 P, 3 C, 8 F)
+  Day: 2307 kcal (target 2307, -1, -0.0%) · protein 182 (min 180) · fat 57 (target 56, floor 56) · carbs 265 (target 271) · fibre 33 (floor 32)
+  Carbs: 265 g = 2.4 g/kg (cut reference 2–5 g/kg)
+    why (training day): A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (3 sets, 75 min vs your average 3 sets).
+    why (before training): About 66 g of carbs (0.6 g/kg) 1–3 hours before, low in fat and fibre.
     why (back-to-back sessions): Yesterday's session ended 16 h before this one: the meals before it lean carb-heavy.
 

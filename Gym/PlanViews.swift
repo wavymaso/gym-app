@@ -45,6 +45,8 @@ struct PlanDayView: View {
             ctx.refreshTrainingWeek()
             inferred = ctx.inferredSchedule(); source = ctx.planSource
             result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan) }
+            // The week view, ready before you open it.
+            _ = await ctx.weekPlans(from: day)
         }
         .sheet(isPresented: $staples) {
             NavigationStack { StaplesView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { staples = false } } } }
@@ -378,16 +380,7 @@ struct WeekPlanView: View {
         .themedList()
         .navigationTitle("Week plan")
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        .task {
-            var uses: [String: Int] = [:], out: [(day: String, plan: DayPlan, foods: [String: PlanFood])] = []
-            for i in 0..<7 {
-                let d = addDays(start, i)
-                guard let r = ctx.dayPlan(d, uses: uses) else { continue }
-                for s in r.plan.slots where !s.eaten { for it in s.items { uses[it.key, default: 0] += 1 } }
-                out.append((d, r.plan, r.foods))
-            }
-            days = out
-        }
+        .task { days = await ctx.weekPlans(from: start) }
     }
 
     private var groceries: [(name: String, aisle: Aisle, amount: String)] {

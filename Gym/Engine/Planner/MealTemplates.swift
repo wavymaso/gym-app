@@ -61,8 +61,8 @@ enum MealTemplates {
     static let lunchCarbs = ["pasta", "white-rice", "potato", "sweet-potato", "pulses", "couscous", "bread"]
     static let sauces = ["olive-oil", "tomato-sauce", "sauce", "mayonnaise", "aioli"]
     static let treats = ["biscuits", "popcorn", "crisps", "chocolate", "ice-cream", "pastry", "rice-cakes-chocolate", "protein-bar"]
-    static let vegetables = ["vegetables", "veg-mix", "spinach", "tomato"]
-    static let fruits = ["banana", "apple", "berries", "dates", "fruit"]
+    static let vegetables = ["vegetables", "veg-mix", "broccoli", "green-beans", "carrots", "peppers", "artichokes", "spinach", "tomato"]
+    static let fruits = ["banana", "apple", "pear", "berries", "raspberries", "dates", "fruit"]
 
     static let defaults: [MealTemplate] = [
         .init(id: "breakfast", meal: .breakfast, name: "Breakfast", slots: [

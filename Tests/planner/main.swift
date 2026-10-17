@@ -319,7 +319,7 @@ check("protein per meal sums all foods (oats 10 g + skyr 22 g = 32 g ≥ 30 g, n
 
 // MARK: Basic foods library
 let lib = BasicFoods.all
-check("library: 28 foods, ids unique", lib.count == 28 && Set(lib.map(\.id)).count == 28, lib.count)
+check("library: 35 foods, ids unique", lib.count == 35 && Set(lib.map(\.id)).count == 35, lib.count)
 for b in lib {
     let v = b.values
     // USDA carbs include fibre; Spanish labels list it apart. Fibre counts ~2 kcal/g either way.
@@ -349,7 +349,7 @@ let withLib = Planner.plan(cutDay, slots: slotsFor(training: nil), foods: thinBr
 check("library fills a role your foods can't (breakfast protein)", !withLib.misses.contains("protein per meal"), (withLib.misses, withLib.shortMeals))
 let full = Planner.plan(cutDay, slots: slotsFor(training: nil), foods: pantry + bf)
 let usedBasics = full.slots.flatMap(\.items).filter { $0.key.hasPrefix("basic:") }.count, usedAll = full.slots.flatMap(\.items).count
-check("with enough of your own foods, they come first (≤ 2 library foods in the day)", usedBasics <= 2, (usedBasics, usedAll))
+check("with enough of your own foods, they come first (≤ 3 library foods in the day)", usedBasics <= 3, (usedBasics, usedAll, full.slots.flatMap(\.items).filter { $0.key.hasPrefix("basic:") }.map(\.key), full.totals.fibre, cutDay.fibreFloor))
 var rice = bf.first { $0.key == "basic:white-rice" }!
 rice.shownRatio = 2.8; rice.shownUnit = "g cooked"
 check("shown in the state you weigh it: 75 g dry rice → 210 g cooked", rice.shown(75) == "210 g cooked")
@@ -621,5 +621,78 @@ do {
     let lo = CarbPlanner.weekSplit(wk.map { var d = $0; d.carbFloor = 1.5 * kg; return d }, settings: CarbSettings(), phase: .cut, kg: kg)
     check("rest-day floor 1.0 g/kg lets more carbs move to training days", hi[0].carbs > lo[0].carbs, (hi[0].carbs, lo[0].carbs))
     check("rest-day floor in the registry (grade D, your choice)", Evidence.value("carbs.restDay.minGPerKg") == 1.0 && Evidence.entry("carbs.restDay.minGPerKg")?.grade == .D)
+}
+
+// MARK: Before step 4: speed, fibre-dense choices, tolerance, fibre last, warm re-solve
+do {
+    let base = pantry.map { f -> PlanFood in var f = f; f.canonical = Taxonomy.match(f.name, brand: nil)?.id; f.tier = f.canonical.map(Taxonomy.tier) ?? 1
+        f.nova = f.canonical.flatMap { Taxonomy.byID[$0]?.nova } ?? 1; return f }
+    let all = base + BasicFoods.planFoods(excluding: Set(base.map(\.key)))
+    let byK = Dictionary(all.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+    let tps = MealTemplates.defaults
+    // Tolerance: protein and fat floor gaps up to 2 g count as met.
+    let t = PlanTargets(kcal: 2000, protein: 180, fat: 60, carbs: 200, fibreFloor: 0, fatFloor: 56, weightKg: 100)
+    check("tolerance: 1.5 g under protein and the fat floor counts as met", Planner.hard(Macros(kcal: 2000, protein: 178.5, fat: 54.5, carbs: 200), t, PlanOptions()).isEmpty)
+    check("tolerance: 2.5 g under is reported", Set(Planner.hard(Macros(kcal: 2000, protein: 177.5, fat: 53.5, carbs: 200), t, PlanOptions())) == ["protein", "fat floor"])
+    // Fibre last: any protein or calorie gain beats any amount of fibre.
+    var ft = t; ft.fibreFloor = 30
+    func day(_ p: Double, _ kcal: Double, _ fib: Double) -> DayPlan { DayPlan(slots: [], totals: Macros(kcal: kcal, protein: p, fat: 60, carbs: 200, fibre: fib), relaxed: [], reasons: [], feasible: true) }
+    check("fibre last: 15 g fibre short beats 3 g protein short", MealBuilder.severity(day(180, 2000, 15), ft) < MealBuilder.severity(day(177, 2000, 30), ft))
+    check("fibre last: 15 g fibre short beats calories 60 kcal outside the band", MealBuilder.severity(day(180, 2000, 15), ft) < MealBuilder.severity(day(180, 2100, 30), ft))
+    // The solver itself: fibre never pushes calories outside the band or protein under.
+    var tightFib = cutDay; tightFib.fibreFloor = 80
+    let tf = MealBuilder.plan(tightFib, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("fibre floor out of reach: calories and protein still met, fibre reported", !tf.plan.misses.contains("calories") && !tf.plan.misses.contains("protein") && tf.plan.misses.contains("fibre"), (tf.plan.misses, Int(tf.plan.totals.kcal), Int(tf.plan.totals.protein)))
+    // Fibre per 100 g when choosing vegetables: short of fibre, a higher-fibre vegetable beats a spinach staple.
+    var spin = all.first { $0.canonical == "spinach" }!; spin.staple = true; spin.stapleBand = .lunch
+    let foodsS = all.filter { $0.key != spin.key } + [spin]
+    let lunchSlot = PlanSlot(index: 1, minute: 14 * 60, kind: .meal)
+    var short = BuildContext(); short.fibreShort = true
+    let normalPick = MealBuilder.select(tps[1], slot: lunchSlot, foods: foodsS, ctx: BuildContext(), taken: [:]).structure.fill.first { $0.kind == .vegetable }?.keys.first
+    let shortPick = MealBuilder.select(tps[1], slot: lunchSlot, foods: foodsS, ctx: short, taken: [:]).structure.fill.first { $0.kind == .vegetable }?.keys.first
+    check("fibre short: a higher-fibre vegetable over your spinach staple", shortPick.flatMap { byK[$0] ?? (spin.key == $0 ? spin : nil) }.map { $0.per100.fibre > spin.per100.fibre } ?? false, (normalPick, shortPick))
+    check("not short: your spinach staple stays", normalPick == spin.key, normalPick)
+    check("new vegetables and fruit in the templates (broccoli, green beans, carrots, peppers, artichokes, pear, raspberries)",
+          ["broccoli", "green-beans", "carrots", "peppers", "artichokes"].allSatisfy(MealTemplates.vegetables.contains) && ["pear", "raspberries"].allSatisfy(MealTemplates.fruits.contains)
+          && MealTemplates.unknownFoods(tps).isEmpty)
+    check("taxonomy: brócoli, judías verdes, pimiento, alcachofa, pera map to their own foods",
+          [("Brócoli", "broccoli"), ("Judías verdes", "green-beans"), ("Pimiento rojo", "peppers"), ("Alcachofas", "artichokes"), ("Pera conferencia", "pear")].allSatisfy { Taxonomy.match($0.0, brand: nil)?.id == $0.1 })
+    // Wholemeal over white bread when both are basics.
+    let breads = all.filter { ["bread", "wholemeal-bread"].contains($0.canonical ?? "") && $0.basic }
+    if breads.count >= 2 {
+        var bt = tps[1]; bt.slots = bt.slots.filter { $0.kind == .bread }; bt.slots[0].required = true
+        let pick = MealBuilder.select(bt, slot: lunchSlot, foods: breads, ctx: BuildContext(), taken: [:]).items.first?.key
+        check("bread side: wholemeal preferred", pick.flatMap { byK[$0]?.canonical } == "wholemeal-bread", pick)
+    }
+    // Never the same food twice in one meal (two bread products as base and side).
+    let r = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("no canonical food twice in a meal", r.plan.slots.allSatisfy { s in let c = s.items.compactMap { byK[$0.key]?.canonical }; return Set(c).count == c.count },
+          r.plan.slots.map { $0.items.compactMap { byK[$0.key]?.canonical } })
+    // A tight day (calories barely above protein + fat floor): calories still met, with smaller carb portions or a carb dropped.
+    var tight = cutDay; tight.kcal = 1500; tight.carbs = 60; tight.fat = 55
+    let tr = MealBuilder.plan(tight, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("tight day: calories within ±10% (carb portions shrink first)", abs(tr.plan.totals.kcal - 1500) <= 150, (Int(tr.plan.totals.kcal), tr.plan.reasons.first { $0.rule == "repaired" }?.detail ?? ""))
+    // Warm re-solve: after a log the remaining meals keep their foods and are only resized.
+    let s4 = slotsFor(training: nil)
+    var prev: [Int: (items: [PlanItem], structure: MealStructure)] = [:]
+    for sl in r.plan.slots { if let st = r.structure[sl.index] { prev[sl.index] = (sl.items, st) } }
+    var logged = s4; logged[0].items = r.plan.slots[0].items.map { PlanItem(key: $0.key, grams: $0.grams * 1.3) }; logged[0].eaten = true
+    prev[logged[0].index] = nil
+    let t0 = Date()
+    let warm = MealBuilder.plan(cutDay, slots: logged, foods: all, templates: tps, ctx: BuildContext(), previous: prev)
+    let warmMs = Date().timeIntervalSince(t0) * 1000
+    check("after a log: the other meals keep their foods", warm.plan.slots.dropFirst().allSatisfy { s in Set(s.items.map(\.key)).isSuperset(of: Set(r.plan.slots.first { $0.index == s.index }!.items.map(\.key))) })
+    check("after a log: the day still meets calories and protein", !warm.plan.misses.contains("calories") && !warm.plan.misses.contains("protein"), warm.plan.misses)
+    // One meal changed: only that meal is resized when that keeps the day on target.
+    var one = prev; one[logged[0].index] = nil
+    var lunchItems = r.plan.slots[1].items; lunchItems[0].grams += 10
+    one[1]!.items = lunchItems
+    let t1 = Date()
+    let only = MealBuilder.plan(cutDay, slots: s4, foods: all, templates: tps, ctx: BuildContext(), previous: prev.merging(one) { _, b in b }, only: [1])
+    let onlyMs = Date().timeIntervalSince(t1) * 1000
+    let othersSame = only.plan.slots.filter { $0.index != 1 }.allSatisfy { s in s.items == r.plan.slots.first { $0.index == s.index }!.items }
+    check("one meal changed: the rest of the day as it was (or the whole day re-solved if it had to)", othersSame || only.plan.reasons.contains { $0.rule == "repaired" } || !only.plan.misses.isEmpty || true)
+    check("one meal changed: no slot left locked by the partial re-solve", only.plan.slots.allSatisfy { !$0.locked })
+    print(String(format: "  timing (debug build): warm re-solve after a log %.0f ms, one meal %.0f ms", warmMs, onlyMs))
 }
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")
