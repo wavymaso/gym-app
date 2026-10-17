@@ -288,7 +288,7 @@ struct WeeklyTable: View {
             if weeks.isEmpty {
                 Text("Weeks you log show up here.").foregroundStyle(.secondary)
             } else {
-                Grid(alignment: .trailing, horizontalSpacing: 14, verticalSpacing: 8) {
+                Grid(alignment: .trailing, horizontalSpacing: Space.l, verticalSpacing: Space.s) {
                     GridRow {
                         Text("Week").gridColumnAlignment(.leading); Text(energy.rawValue); Text("Protein"); Text("Days"); Text("Trend")
                     }

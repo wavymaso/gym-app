@@ -4,10 +4,10 @@
 # per line as "path: exact code fragment  # reason". `tools/lint-design.sh counts` prints the totals.
 cd "$(dirname "$0")/.."
 ALLOW=tools/design-allowlist.txt
-pat='\.font\(\.(largeTitle|title|title2|title3|headline|subheadline|body|callout|footnote|caption|caption2)\b|\.system\(size:|\.number\([0-9]|\.pageTitle\(|\.padding\((\.[a-zA-Z]+, *)?-?[0-9]+(\.[0-9]+)?\)|\bspacing: *[1-9][0-9.]*|cornerRadius: *[0-9]|\.cornerRadius\([0-9]'
+pat='\.font\(\.(largeTitle|title|title2|title3|headline|subheadline|body|callout|footnote|caption|caption2)\b|\.system\(size:|\.number\(|\.pageTitle\(|\.padding\((\.[a-zA-Z]+, *)?-?[0-9]+(\.[0-9]+)?\)|\b([hH]orizontal|[vV]ertical)?[sS]pacing: *(isPhone \? *)?[1-9][0-9.]*|cornerRadius: *[0-9]|\.cornerRadius\([0-9]'
 hits=$(grep -rnE "$pat" --include=*.swift Gym GymWidget | grep -v "^Gym/Design.swift:\|^Gym/Tokens.swift:")
 if [ "$1" = counts ]; then
-  for k in 'font\(\.(largeTitle|title|headline|subheadline|body|callout|footnote|caption)' 'system\(size:|\.number\([0-9]|\.pageTitle\(' 'padding\(' 'spacing:' '[cC]ornerRadius'; do
+  for k in 'font\(\.(largeTitle|title|headline|subheadline|body|callout|footnote|caption)' 'system\(size:|\.number\(|\.pageTitle\(' 'padding\(' 'spacing:' '[cC]ornerRadius'; do
     printf "%-60s %s\n" "$k" "$(echo "$hits" | grep -cE "$k")"
   done
 fi

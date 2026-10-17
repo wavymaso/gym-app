@@ -49,6 +49,9 @@ struct TodayRings: View {
             .padding(Space.xxl)
         }
         .frame(width: isPhone ? 180 : 210, height: isPhone ? 180 : 210)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Calories")
+        .accessibilityValue("\(energy.format(eaten.kcal)) of \(energy.format(target.kcal)), \(energy.format(abs(left))) \(left >= 0 ? "left" : "over")")
     }
 
     private func macroRing(_ m: Macro) -> some View {
@@ -67,6 +70,9 @@ struct TodayRings: View {
             Text(e <= t ? "\(number(t - e)) g left" : "\(number(e - t)) g over").font(.note)
                 .foregroundStyle(e <= t ? Color.secondary : palette.warn).monospacedDigit()
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(m.label)
+        .accessibilityValue("\(number(e)) of \(number(t)) grams, \(e <= t ? "\(number(t - e)) left" : "\(number(e - t)) over")")
     }
 }
 

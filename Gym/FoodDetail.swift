@@ -311,7 +311,7 @@ struct FoodDetailView: View {
 
     private var pad: some View {
         let keys: [[String]] = [["1", "2", "3", "/"], ["4", "5", "6", "␣"], ["7", "8", "9", "⌫"], [".", "0", "L", "A"]]
-        return Grid(horizontalSpacing: 6, verticalSpacing: 6) {
+        return Grid(horizontalSpacing: Space.s, verticalSpacing: Space.s) {
             ForEach(keys, id: \.self) { row in
                 GridRow {
                     ForEach(row, id: \.self) { k in key(k) }

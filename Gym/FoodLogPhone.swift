@@ -129,6 +129,9 @@ struct DayPills: View {
                 Button { animate(Motion.snappy) { day = d } } label: { pill(d, p) }
                     .buttonStyle(.plain)
                     .frame(maxWidth: .infinity)
+                    .accessibilityLabel(date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)) + (d == dayKey() ? ", today" : ""))
+                    .accessibilityValue(t > 0 ? "\(Int(((kcal[d] ?? 0)).rounded())) of \(Int(t)) kcal" : "nothing planned")
+                    .accessibilityAddTraits(d == day ? .isSelected : [])
             }
         }
         .contentShape(Rectangle())
@@ -136,6 +139,10 @@ struct DayPills: View {
             guard abs(g.translation.width) > abs(g.translation.height) else { return }
             animate(Motion.snappy) { day = addDays(day, g.translation.width < 0 ? 7 : -7) }
         })
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Week")
+        .accessibilityAction(named: "Next week") { day = addDays(day, 7) }
+        .accessibilityAction(named: "Previous week") { day = addDays(day, -7) }
         .capType()
     }
 
@@ -218,6 +225,10 @@ struct MacroBarsRow: View {
                     .frame(height: 4)
                 }
                 .frame(width: unit * (m == .calories ? 1.15 : 0.95), alignment: .leading)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(m.label)
+                .accessibilityValue(remaining ? (goal - v >= 0 ? "\(number(conv(goal - v))) left" : "\(number(conv(v - goal))) over")
+                                    : "\(number(conv(v))) of \(number(conv(goal)))")
             }
         }
         }
@@ -238,6 +249,7 @@ struct DayEntries: View {
     @ObservedObject private var sel = FoodSelection.shared
     @State private var targetHour: Int?
     @State private var nextPlanned: (minute: Int, name: String, kcal: Double)?
+    @Environment(\.dynamicTypeSize) private var dynamicSize
     @AppStorage("phoneLogStyle") private var storedStyle: FoodLogView.LogStyle = .timeline
 
     init(day: String, energy: EnergyUnit, style: FoodLogView.LogStyle, showEmptyHours: Bool, selected: Binding<Set<String>>,
@@ -385,14 +397,15 @@ struct DayEntries: View {
                     .accessibilityLabel(m == .copy ? "Copy here" : "Move here")
                 } else {
                     Button { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) } label: {
-                        Image(systemName: "plus").font(.secondaryEmphasis).frame(width: 34, height: 34)
+                        Image(systemName: "plus").font(.secondaryEmphasis).frame(width: 34, height: 34).accessibilityLabel("Add a food at \(String(format: "%02d:00", h))")
                             .background(Color.raisedBackground, in: Circle())
                     }
                     .buttonStyle(.plain)
                 }
                 Spacer(minLength: 4)
-                if !items.isEmpty { HourTotals(n: n, energy: energy) }
+                if !items.isEmpty && !dynamicSize.isAccessibilitySize { HourTotals(n: n, energy: energy) }
             }
+            if !items.isEmpty && dynamicSize.isAccessibilitySize { HourTotals(n: n, energy: energy).padding(.leading, Space.s) }
             ForEach(Array(items.enumerated()), id: \.element.id) { i, e in
                 let showTime = i == 0 || cal.component(.minute, from: e.time) != cal.component(.minute, from: items[i - 1].time)
                 HStack(alignment: .center, spacing: Space.s) {
@@ -432,7 +445,7 @@ struct DayEntries: View {
                         Image(systemName: m.icon).foregroundStyle(m.color).frame(width: 34, height: 34).background(m.color.opacity(0.16), in: Circle())
                         Text(m.label).font(.subsectionTitle)
                         Button { open(.add(m.time(on: day))) } label: {
-                            Image(systemName: "plus").font(.secondaryEmphasis).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle())
+                            Image(systemName: "plus").font(.secondaryEmphasis).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle()).accessibilityLabel("Add a food to \(m.label)")
                         }
                         .buttonStyle(.plain)
                         Spacer(minLength: 4)

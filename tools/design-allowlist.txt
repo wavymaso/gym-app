@@ -24,3 +24,4 @@ Gym/DashboardMF.swift: Divider().padding(.leading, 70)  # divider lines up with 
 Gym/InsightDetails.swift: Divider().padding(.leading, 58)  # divider lines up with the row text after the icon
 Gym/InsightDetails.swift: Divider().padding(.leading, 68)  # divider lines up with the row text after the icon
 Gym/StrategyView.swift: Divider().padding(.leading, 60)  # divider lines up with the row text after the icon
+Gym/Theme.swift: static func number(  # Font.number's definition

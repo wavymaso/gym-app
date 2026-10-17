@@ -64,7 +64,7 @@ struct EntryCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(entry.name), \(Int(entry.nutrients.kcal)) calories, \(Int(entry.nutrients.protein)) grams protein, \(entry.amountText)")
+        .accessibilityLabel("\(entry.name)\(entry.isQuickAdd ? "" : ", \(entry.amountText)"), \(Int(entry.nutrients.kcal)) calories, \(Int(entry.nutrients.protein)) grams protein")
         .accessibilityHint(tap == nil ? "Edit" : "Select")
     }
 
@@ -103,7 +103,7 @@ struct SelectionBar: View {
             Button {
                 if sel.mode != nil { animate(Motion.snappy) { sel.mode = nil } } else { sel.clear() }
             } label: {
-                Image(systemName: sel.mode == nil ? "xmark" : "chevron.left").font(.cardTitle)
+                Image(systemName: sel.mode == nil ? "xmark" : "chevron.left").font(.cardTitle).accessibilityLabel(sel.mode == nil ? "Clear selection" : "Back")
                     .frame(width: 40, height: 40)
                     .background(sel.mode == nil ? Color.primary : Color.clear, in: Circle())
                     .foregroundStyle(sel.mode == nil ? palette.onInverse : .primary)

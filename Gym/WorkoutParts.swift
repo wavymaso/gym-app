@@ -96,7 +96,7 @@ struct RestBar: View {
                 Spacer()
                 Button("−15") { change(ends.addingTimeInterval(-15)) }.buttonStyle(.bordered)
                 Button("+15") { change(ends.addingTimeInterval(15)) }.buttonStyle(.bordered)
-                Button { change(nil) } label: { Image(systemName: "xmark") }.buttonStyle(.bordered)
+                Button { change(nil) } label: { Image(systemName: "xmark") }.buttonStyle(.bordered).accessibilityLabel("Clear")
             }
             .padding(Space.m)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))

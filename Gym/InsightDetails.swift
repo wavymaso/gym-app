@@ -229,7 +229,7 @@ struct InsightDetailView: View {
             Spacer()
             if kind != .energyBalance && kind != .goal && kind != .nutrition {
                 Button { animate(Motion.snappy) { zoomed.toggle() } } label: {
-                    Image(systemName: zoomed ? "arrow.up.and.down.text.horizontal" : "arrow.down.and.line.horizontal.and.arrow.up")
+                    Image(systemName: zoomed ? "arrow.up.and.down.text.horizontal" : "arrow.down.and.line.horizontal.and.arrow.up").accessibilityLabel(zoomed ? "Show from zero" : "Zoom to the data")
                         .font(.cardTitle).frame(width: 46, height: 46).modifier(GlassCapsule())
                 }
                 .buttonStyle(.plain)
@@ -243,13 +243,14 @@ struct InsightDetailView: View {
 
     private func stat(_ label: String, _ value: String, _ unit: String) -> some View {
         VStack(alignment: .leading, spacing: Space.xxs) {
-            Text(label).font(.secondaryText).foregroundStyle(.secondary)
+            Text(label).font(.secondaryText).foregroundStyle(.secondary).numberFit(0.7)
             HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
-                Text(value).font(.numberHero).monospacedDigit().contentTransition(.numericText()).animation(Motion.pick(Motion.snappy), value: value)
+                Text(value).font(.numberHero).monospacedDigit().numberFit().contentTransition(.numericText()).animation(Motion.pick(Motion.snappy), value: value)
                 Text(unit).font(.secondaryText).foregroundStyle(.secondary)
             }
         }
         .frame(minWidth: 150, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Chart
@@ -422,7 +423,7 @@ struct InsightDetailView: View {
         let span = daysBetween(w.from, w.to) + 1
         let fmt: (String) -> String = { date(fromKey: $0).formatted(.dateTime.day().month(.abbreviated).year(w.from.prefix(4) == w.to.prefix(4) && w.to.prefix(4) == dayKey().prefix(4) ? .omitted : .defaultDigits).locale(appLocale)) }
         return HStack(spacing: Space.s) {
-            Button { slide(-max(span / 2, 1), all) } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }
+            Button { slide(-max(span / 2, 1), all) } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }.accessibilityLabel("Earlier")
                 .disabled(w.from <= (all.first?.day ?? w.from))
             VStack(spacing: Space.hairline) {
                 Text("\(fmt(w.from)) – \(fmt(w.to))").font(.secondaryEmphasis).monospacedDigit()
@@ -456,7 +457,7 @@ struct InsightDetailView: View {
                 ForEach(DetailRange.allCases) { r in
                     let on = range == r && window == nil
                     Button { animate(Motion.snappy) { range = r; window = nil } } label: {
-                        Text(r.rawValue).font(.secondaryEmphasis).frame(maxWidth: .infinity, minHeight: 40)
+                        Text(r.rawValue).font(.secondaryEmphasis).numberFit(0.6).frame(maxWidth: .infinity, minHeight: 40)
                             .background(on ? Color.primary : .clear, in: Capsule())
                             .foregroundStyle(on ? palette.onInverse : Color.primary)
                     }
@@ -464,6 +465,7 @@ struct InsightDetailView: View {
                 }
             }
             .padding(Space.xs).modifier(GlassCapsule())
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)      // six short labels: they stop growing here (no wrapping)
             Menu {
                 ForEach(InsightGrouping.allCases) { g in Button(g.label) { grouping = g } }
             } label: {
@@ -712,7 +714,7 @@ struct InsightDetailView: View {
                             }
                             Spacer()
                             Button { editing = w } label: {
-                                Image(systemName: "pencil").font(.secondaryEmphasis).frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle())
+                                Image(systemName: "pencil").font(.secondaryEmphasis).frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle()).accessibilityLabel("Edit weigh-in")
                             }
                             .buttonStyle(.plain)
                         }

@@ -86,7 +86,7 @@ struct DashboardView: View {
 
     private var header: some View {
         Text("\(greeting) · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))")
-            .font(.secondaryEmphasis).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            .font(.secondaryEmphasis).foregroundStyle(.secondary).lineLimit(2)
     }
 
     @ToolbarContentBuilder private var headerButtons: some ToolbarContent {

@@ -168,7 +168,7 @@ struct ShortcutsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button { dismiss() } label: { Image(systemName: "xmark").font(.cardTitle) }.buttonStyle(.plain)
+                Button { dismiss() } label: { Image(systemName: "xmark").font(.cardTitle) }.buttonStyle(.plain).accessibilityLabel("Close")
                 Spacer()
                 Text("Shortcuts").font(.subsectionTitle)
                 Spacer()

@@ -71,7 +71,7 @@ struct AIPanel: View {
                                 .frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                                 .overlay(alignment: .topTrailing) {
                                     Button { photos.remove(at: i) } label: {
-                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(Tokens.onScrim, Tokens.scrim)
+                                        Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(Tokens.onScrim, Tokens.scrim).accessibilityLabel("Remove photo")
                                     }
                                     .buttonStyle(.plain).padding(Space.xs)
                                 }

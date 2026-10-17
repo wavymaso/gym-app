@@ -138,7 +138,7 @@ struct PhotoLogView: View {
                     .frame(maxWidth: .infinity).frame(height: 260).clipped()
                     .clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                 Button { jpeg = nil; self.preview = nil } label: {
-                    Image(systemName: "xmark.circle.fill").font(.sectionTitle).symbolRenderingMode(.palette)
+                    Image(systemName: "xmark.circle.fill").font(.sectionTitle).symbolRenderingMode(.palette).accessibilityLabel("Remove photo")
                         .foregroundStyle(Tokens.onScrim, Tokens.scrim)
                 }
                 .buttonStyle(.plain).padding(Space.m)
@@ -322,7 +322,7 @@ struct PlateRow: View {
         VStack(alignment: .leading, spacing: Space.m) {
             HStack(alignment: .top, spacing: Space.m) {
                 Button { item.included.toggle() } label: {
-                    Image(systemName: item.included ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: item.included ? "checkmark.circle.fill" : "circle").accessibilityLabel(item.included ? "Included, tap to leave out" : "Left out, tap to include")
                         .font(.sectionTitle).foregroundStyle(item.included ? palette.accent : .secondary)
                 }
                 .buttonStyle(.plain)
@@ -345,13 +345,13 @@ struct PlateRow: View {
                     }
                     Button("Search for another…", systemImage: "magnifyingglass", action: swap)
                 } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath").font(.bodyEmphasis)
+                    Image(systemName: "arrow.triangle.2.circlepath").font(.bodyEmphasis).accessibilityLabel("Swap for another food")
                 }
                 .menuStyle(.borderlessButton).fixedSize()
             }
             if item.included {
                 HStack(spacing: Space.m) {
-                    Button { item.grams = max(0, (item.grams - step).rounded()) } label: { Image(systemName: "minus") }
+                    Button { item.grams = max(0, (item.grams - step).rounded()) } label: { Image(systemName: "minus") }.accessibilityLabel("Less")
                         .buttonStyle(.bordered)
                     VStack(spacing: Space.xxs) {
                         Text("\(number(item.grams)) \(item.unit)").font(.numberMedium).monospacedDigit()
@@ -360,7 +360,7 @@ struct PlateRow: View {
                         }
                     }
                     .frame(minWidth: 90)
-                    Button { item.grams = (item.grams + step).rounded() } label: { Image(systemName: "plus") }
+                    Button { item.grams = (item.grams + step).rounded() } label: { Image(systemName: "plus") }.accessibilityLabel("More")
                         .buttonStyle(.bordered)
                     Spacer()
                     VStack(alignment: .trailing, spacing: Space.xxs) {

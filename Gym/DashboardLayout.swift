@@ -126,8 +126,8 @@ struct CustomizeDashboardView: View {
                         HStack {
                             Text(section.kind.label).font(.subsectionTitle).foregroundStyle(.primary).textCase(nil)
                             Spacer()
-                            Button { move(i, -1) } label: { Image(systemName: "arrow.up") }.disabled(i == 0)
-                            Button { move(i, 1) } label: { Image(systemName: "arrow.down") }.disabled(i == layout.sections.count - 1)
+                            Button { move(i, -1) } label: { Image(systemName: "arrow.up") }.disabled(i == 0).accessibilityLabel("Move section up")
+                            Button { move(i, 1) } label: { Image(systemName: "arrow.down") }.disabled(i == layout.sections.count - 1).accessibilityLabel("Move section down")
                         }
                         .buttonStyle(.borderless).font(.bodyEmphasis)
                     }
@@ -175,7 +175,7 @@ struct CustomizeDashboardView: View {
                 .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
             }
             #if os(macOS)
-            Button { layout.sections[i].items.removeAll { $0 == id } } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless)
+            Button { layout.sections[i].items.removeAll { $0 == id } } label: { Image(systemName: "minus.circle").accessibilityLabel("Remove card") }.buttonStyle(.borderless)
             #endif
         }
     }

@@ -30,7 +30,7 @@ struct ProgramEditor: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button { dismiss() } label: { Image(systemName: "xmark") } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel("Close") } }
         }
         .appStyle()
         #if os(macOS)
@@ -101,7 +101,7 @@ struct ProgramEditor: View {
                     for d in order { var x = base; x.kcal = avg; x.protein = min(base.protein, avg / 4); split(&x, share); plan[d] = x }
                 }
                     .buttonStyle(.bordered).buttonBorderShape(.capsule)
-                Button { locked.toggle() } label: { Image(systemName: locked ? "lock.fill" : "lock.open").frame(width: 30, height: 30) }
+                Button { locked.toggle() } label: { Image(systemName: locked ? "lock.fill" : "lock.open").frame(width: 30, height: 30) }.accessibilityLabel(locked ? "Unlock: edit days one by one" : "Lock: edit all days at once")
                     .buttonStyle(.bordered).buttonBorderShape(.circle)
                     .help(locked ? "Every day changes together. Unlock to set days separately." : "Each day on its own")
             }

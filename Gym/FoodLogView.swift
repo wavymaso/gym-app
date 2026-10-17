@@ -106,8 +106,8 @@ struct WeekStrip: View {
                 if day != dayKey() {
                     Button("Today") { animate { day = dayKey() } }.buttonStyle(.bordered).controlSize(.small)
                 }
-                Button { move(-7) } label: { Image(systemName: "chevron.left") }.buttonStyle(.borderless)
-                Button { move(7) } label: { Image(systemName: "chevron.right") }.buttonStyle(.borderless)
+                Button { move(-7) } label: { Image(systemName: "chevron.left") }.buttonStyle(.borderless).accessibilityLabel("Previous week")
+                Button { move(7) } label: { Image(systemName: "chevron.right") }.buttonStyle(.borderless).accessibilityLabel("Next week")
             }
             HStack(spacing: Space.xs) {
                 ForEach(0..<7, id: \.self) { i in
@@ -133,6 +133,9 @@ struct WeekStrip: View {
                     }
                     .buttonStyle(.plain)
                     .opacity(d > dayKey() ? 0.45 : 1)
+                    .accessibilityLabel(date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)) + (d == dayKey() ? ", today" : ""))
+                    .accessibilityValue(t > 0 ? "\(Int((kcal[d] ?? 0).rounded())) of \(Int(t)) kcal" : "")
+                    .accessibilityAddTraits(d == day ? .isSelected : [])
                 }
             }
             .padding(Space.s)
@@ -300,7 +303,7 @@ struct DayLog: View {
                             Button { savingMeal = (meal, items); mealName = meal.label } label: { Label("Save as meal…", systemImage: "square.and.arrow.down") }
                         }
                     } label: {
-                        Image(systemName: "plus").font(.bodyEmphasis).foregroundStyle(palette.accent)
+                        Image(systemName: "plus").font(.bodyEmphasis).foregroundStyle(palette.accent).accessibilityLabel("\(meal.label) options")
                             .frame(width: 32, height: 32).background(palette.accent.opacity(0.14), in: Circle())
                     } primaryAction: {
                         open(.add(meal.time(on: day)))
@@ -549,7 +552,7 @@ struct DaySummary: View {
         let frac = goal > 0 ? eaten / goal : 0
         return VStack(alignment: .leading, spacing: Space.xs) {
             HStack(spacing: Space.xxs) {
-                Text(number(conv(abs(shown)))).font(.number(m == .calories ? 22 : 20, weight: .semibold)).monospacedDigit()
+                Text(number(conv(abs(shown)))).font(.numberMedium).monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .liveNumber(shown).foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
                 if m != .calories { Text(m.short).font(.secondaryEmphasis).foregroundStyle(m.color) }

@@ -398,7 +398,7 @@ struct RecipeView: View {
                             Spacer()
                             TextField("", value: $item.grams, format: .number).multilineTextAlignment(.trailing).frame(width: 70)
                             Text("g").foregroundStyle(.secondary)
-                            Button(role: .destructive) { items.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }
+                            Button(role: .destructive) { items.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }.accessibilityLabel("Remove ingredient")
                                 .buttonStyle(.borderless)
                         }
                     }

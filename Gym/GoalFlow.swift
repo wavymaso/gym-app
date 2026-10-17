@@ -31,7 +31,7 @@ struct EditGoalFlow: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { if step == 0 { dismiss() } else { animate { step -= 1 } } } label: {
-                        Image(systemName: step == 0 ? "xmark" : "chevron.left")
+                        Image(systemName: step == 0 ? "xmark" : "chevron.left").accessibilityLabel(step == 0 ? "Close" : "Back")
                     }
                 }
             }

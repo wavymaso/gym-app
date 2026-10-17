@@ -330,6 +330,9 @@ struct MacroBar: View {
             }
             .frame(height: 10)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(macro.label)
+        .accessibilityValue("\(amount(eaten)) of \(amount(target))")
     }
 
     private func amount(_ v: Double) -> String {

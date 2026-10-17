@@ -17,6 +17,12 @@ struct PlanItemSheet: View {
     private var lo: Double { max(step, food?.minGrams ?? step) }
     private var hi: Double { max(lo, food?.maxGrams ?? 1000) }
 
+    private var portionSpoken: String {
+        let amount: String = food?.shown(grams) ?? "\(Int(grams)) g"
+        guard let m = food?.macros(grams) else { return amount }
+        return "\(amount), \(Int(m.kcal)) calories, \(Int(m.protein)) grams protein"
+    }
+
     var body: some View {
         List {
             Section {
@@ -30,6 +36,16 @@ struct PlanItemSheet: View {
                             if food?.unitName != nil { Text("\(Int(grams)) g").font(.fine).foregroundStyle(.secondary) }
                             if let m = food?.macros(grams) {
                                 Text("\(Int(m.kcal)) kcal · \(Int(m.protein)) P · \(Int(m.carbs)) C · \(Int(m.fat)) F").font(.fine).foregroundStyle(.secondary).monospacedDigit()
+                            }
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Portion")
+                        .accessibilityValue(portionSpoken)
+                        .accessibilityAdjustableAction { d in
+                            switch d {
+                            case .increment: grams = min(hi, ((grams + step) / step).rounded() * step)
+                            case .decrement: grams = max(lo, ((grams - step) / step).rounded() * step)
+                            @unknown default: break
                             }
                         }
                         Spacer()
@@ -70,6 +86,10 @@ struct PlanItemSheet: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Swap for \(o.food.name), \(o.food.shown(o.grams))\(o.food.staple ? ", a staple" : "")")
+                        .accessibilityValue("\(Int(m.kcal)) calories, \(Int(m.protein)) grams protein, \(Int(m.carbs)) carbs, \(Int(m.fat)) fat")
+                        .accessibilityAddTraits(.isButton)
                     }
                 } header: { Text("Swap for") } footer: {
                     Text(kind == .protein ? "Same slot of the meal, matched to this food's protein; the meal is then resized." : "Same slot of the meal, matched to this food's calories; the meal is then resized.")

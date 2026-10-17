@@ -79,34 +79,38 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    @Environment(\.dynamicTypeSize) private var dynamicSize
+
     private var header: some View {
         let unit = profiles.first?.weight ?? .kg
         let done = sets.filter(\.done)
+        let big = dynamicSize.isAccessibilitySize
         return VStack(alignment: .leading, spacing: Space.l) {
-            HStack(alignment: .center) {
+            let row = big ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.m)) : AnyLayout(HStackLayout(alignment: .center))
+            row {
                 TextField("Workout name", text: Binding(get: { workout.name }, set: { workout.name = $0; ctx.commit() }))
-                    .font(.number(isPhone ? 26 : 30)).textFieldStyle(.plain)
-                Spacer()
+                    .font(.numberLarge).textFieldStyle(.plain)
+                if !big { Spacer() }
+                HStack {
                 Menu {
                     Button("Discard workout…", role: .destructive) { confirmDiscard = true }
                 } label: {
-                    Image(systemName: "ellipsis").font(.bodyEmphasis).frame(width: 34, height: 34)
+                    Image(systemName: "ellipsis").font(.bodyEmphasis).frame(width: 34, height: 34).accessibilityLabel("Workout options")
                         .background(Color.raisedBackground, in: Circle())
                 }
                 .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-                Button { ctx.finish(workout) } label: { Text("Finish").font(.cardTitle).padding(.horizontal, Space.s) }
+                Button { ctx.finish(workout) } label: { Text("Finish").font(.cardTitle).lineLimit(1).fixedSize().padding(.horizontal, Space.s) }
                     .buttonStyle(.borderedProminent).tint(palette.accent).foregroundStyle(palette.onAccent).controlSize(.large)
                     .disabled(done.isEmpty)
+                }
             }
-            HStack(spacing: 0) {
+            // Four stats in a row; two by two at the largest text sizes.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m, alignment: .leading), count: big ? 2 : 4), alignment: .leading, spacing: Space.m) {
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
                     stat(clock(workout.duration), "Time", color: palette.accent)
                 }
-                Spacer()
                 stat("\(done.count)/\(sets.count)", "Sets", color: palette.good)
-                Spacer()
                 stat("\(number(unit.fromKg(volume(done.map(\.lift)))))", "Volume \(unit.rawValue)", color: Macro.fat.color)
-                Spacer()
                 stat("\(records.values.filter { !$0.isEmpty }.count)", "PRs", color: Macro.protein.color)
             }
         }
@@ -116,9 +120,10 @@ struct ActiveWorkoutView: View {
 
     private func stat(_ value: String, _ label: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: Space.xxs) {
-            Text(value).font(.numberMedium).monospacedDigit().foregroundStyle(color)
-            Text(label).font(.note).foregroundStyle(.secondary)
+            Text(value).font(.numberMedium).monospacedDigit().foregroundStyle(color).numberFit()
+            Text(label).font(.note).foregroundStyle(.secondary).lineLimit(2)
         }
+        .accessibilityElement(children: .combine)
     }
 
     private func tick(_ row: WorkoutSet) {
@@ -229,7 +234,7 @@ private struct ExerciseBlock: View {
                     } label: { Label("Skip the rest today", systemImage: "forward.end") }
                     .disabled(rows.allSatisfy(\.done))
                     Button("Remove exercise", role: .destructive, action: remove)
-                } label: { Image(systemName: "ellipsis.circle") }
+                } label: { Image(systemName: "ellipsis.circle").accessibilityLabel("Exercise options") }
                 .menuStyle(.borderlessButton).fixedSize()
             }
             if rows[0].group > 0 {
@@ -254,7 +259,7 @@ private struct ExerciseBlock: View {
                 .padding(.horizontal, Space.m).padding(.vertical, Space.s)
                 .background(palette.good.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.s))
             }
-            Grid(alignment: .leading, horizontalSpacing: isPhone ? 10 : 14, verticalSpacing: 8) {
+            Grid(alignment: .leading, horizontalSpacing: isPhone ? Space.m : Space.l, verticalSpacing: Space.s) {
                 GridRow {
                     Text("Set"); Text("Previous"); Text(unit.rawValue); Text("Reps")
                     Text("RIR").frame(width: isPhone ? 34 : 44)
@@ -263,6 +268,7 @@ private struct ExerciseBlock: View {
                 .font(.label).foregroundStyle(.secondary)
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     let working = rows.prefix(i + 1).filter { $0.kindValue.counts }.count
+                    let setName = row.kindValue == .normal ? "Set \(row.side == "R" ? working - 1 : working)\(row.side.isEmpty ? "" : row.side == "L" ? " left" : " right")" : "\(row.kindValue.label) set"
                     GridRow {
                         Menu {
                             ForEach(SetKind.allCases, id: \.self) { k in
@@ -276,15 +282,19 @@ private struct ExerciseBlock: View {
                                 .foregroundStyle(row.kindValue == .warmup ? Macro.fat.color : row.kindValue == .normal ? Color.primary : Macro.protein.color)
                         }
                         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                        .accessibilityLabel(setName).accessibilityHint("Change the set type or delete it")
                         Text(previousText(previous, workingIndex: working - 1, row: row))
+                            .accessibilityLabel("Previous").accessibilityValue(previousText(previous, workingIndex: working - 1, row: row) == "–" ? "none" : previousText(previous, workingIndex: working - 1, row: row))
                             .foregroundStyle(.secondary).monospacedDigit().frame(minWidth: isPhone ? 60 : 90, alignment: .leading)
                             .lineLimit(1).minimumScaleFactor(0.8)
                         DecimalField(value: Binding(get: { unit.fromKg(row.kg) }, set: { row.kg = unit.toKg($0); ctx.commitSoon() }), digits: 2,
                                      step: (unit.fromKg(weightStep(exercise.equipmentValue)) * 100).rounded() / 100, onLog: row.done ? nil : { animate(Motion.snappy) { onDone(row) } })
                             .frame(width: isPhone ? 64 : 70)
+                            .accessibilityLabel("\(setName), weight in \(unit.rawValue)")
                         DecimalField(value: Binding(get: { Double(row.reps) }, set: { row.reps = max(0, Int($0.rounded())); ctx.commitSoon() }), digits: 0,
                                      step: 1, onLog: row.done ? nil : { animate(Motion.snappy) { onDone(row) } })
                             .frame(width: isPhone ? 44 : 50)
+                            .accessibilityLabel("\(setName), reps")
                         if isPhone {
                             // Reps in reserve: one tap picks it (it makes progression and e1RM honest).
                             Menu {
@@ -295,9 +305,11 @@ private struct ExerciseBlock: View {
                                     .frame(width: 34, height: 34).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                             .menuStyle(.button).buttonStyle(.plain)
+                            .accessibilityLabel("\(setName), reps in reserve").accessibilityValue(row.rir.map { number($0) } ?? "not set")
                         } else {
                             DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; ctx.commitSoon() }), digits: 1, emptyBelowZero: true)
                                 .frame(width: 44)
+                                .accessibilityLabel("\(setName), reps in reserve")
                         }
                         HStack(spacing: Space.s) {
                             Button { animate(Motion.snappy) { onDone(row) } } label: {
@@ -307,6 +319,8 @@ private struct ExerciseBlock: View {
                                     .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(row.done ? "\(setName) done" : "Mark \(setName.lowercased()) done")
+                            .accessibilityAddTraits(row.done ? .isSelected : [])
                             if let r = records[row.persistentModelID], !r.isEmpty {
                                 Label(r.joined(separator: " · "), systemImage: "trophy.fill").font(.note).foregroundStyle(Macro.fat.color)
                                     .symbolEffect(.bounce, options: .repeat(2), value: r)

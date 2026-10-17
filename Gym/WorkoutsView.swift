@@ -152,7 +152,7 @@ struct WorkoutsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(CardSurface(cornerRadius: Radius.xl))
         .overlay(alignment: .topTrailing) {
-            Image(systemName: "dumbbell.fill").font(.system(size: 90, weight: .bold)).foregroundStyle(palette.text1.opacity(0.045))
+            Image(systemName: "dumbbell.fill").font(.system(size: 90, weight: .bold)).foregroundStyle(palette.text1.opacity(0.045)).accessibilityHidden(true)
                 .rotationEffect(.degrees(-25)).offset(x: 10, y: 6).allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
@@ -213,9 +213,9 @@ struct WorkoutsView: View {
                 Text("\(count) exercises · \(last.map { relative($0.day) } ?? "not done yet")").font(.note).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { editingRoutine = r } label: { Image(systemName: "pencil").font(.secondaryText) }.buttonStyle(.borderless)
+            Button { editingRoutine = r } label: { Image(systemName: "pencil").font(.secondaryText) }.buttonStyle(.borderless).accessibilityLabel("Edit routine")
             Button { ctx.startWorkout(routine: r) } label: {
-                Image(systemName: "play.fill").font(.secondaryText).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accentFill, in: Circle())
+                Image(systemName: "play.fill").font(.secondaryText).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accentFill, in: Circle()).accessibilityLabel("Start \(r.name)")
             }
             .buttonStyle(.plain)
         }
@@ -237,7 +237,7 @@ struct WorkoutsView: View {
             HStack {
                 Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.small)
                 Spacer()
-                Button { editingRoutine = r } label: { Image(systemName: "pencil") }.buttonStyle(.borderless)
+                Button { editingRoutine = r } label: { Image(systemName: "pencil") }.buttonStyle(.borderless).accessibilityLabel("Edit routine")
             }
         }
         .padding(Space.l)

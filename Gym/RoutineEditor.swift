@@ -32,7 +32,7 @@ struct RoutineEditor: View {
                             HStack {
                                 Text(ctx.exercise(item.exerciseKey)?.name ?? "?").font(.cardTitle)
                                 Spacer()
-                                Button(role: .destructive) { items.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }
+                                Button(role: .destructive) { items.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }.accessibilityLabel("Remove exercise")
                                     .buttonStyle(.borderless)
                             }
                             HStack(spacing: Space.l) {

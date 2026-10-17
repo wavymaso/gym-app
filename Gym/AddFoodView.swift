@@ -89,7 +89,7 @@ struct AddFoodView: View {
                             .submitLabel(.search).autocorrectionDisabled()
                             #endif
                         if !query.isEmpty {
-                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
+                            Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain).accessibilityLabel("Clear search")
                         }
                     }
                     .padding(.horizontal, Space.l).padding(.vertical, Space.m)
@@ -158,7 +158,7 @@ struct AddFoodView: View {
                                 .submitLabel(.search).autocorrectionDisabled()
                                 #endif
                             if !query.isEmpty {
-                                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
+                                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain).accessibilityLabel("Clear search")
                             }
                         }
                         .padding(.horizontal, Space.l).frame(height: 54)

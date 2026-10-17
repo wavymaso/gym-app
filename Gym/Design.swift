@@ -178,6 +178,10 @@ extension View {
         monospacedDigit().contentTransition(.numericText(value: value)).animation(Motion.pick(Motion.snappy), value: value)
     }
 
+    /// A number that must never wrap or truncate (stats, totals): one line, shrinking at the largest
+    /// text sizes instead.
+    func numberFit(_ minScale: CGFloat = 0.5) -> some View { lineLimit(1).minimumScaleFactor(minScale) }
+
     /// A unit after a value: same size, lighter.
     func unitStyle() -> some View { foregroundStyle(.secondary).fontWeight(.medium) }
 
@@ -459,18 +463,29 @@ struct FoodMacroLine: View {
     let carbs: Double
     var amount: String? = nil
     var colored = false
+    @Environment(\.dynamicTypeSize) private var size
 
     var body: some View {
-        HStack(spacing: 0) {
-            (Text(number(kcal)).foregroundStyle(colored ? Color.primary : .secondary)
-             + Text(Image(systemName: "flame.fill")).font(.caption2).foregroundStyle(colored ? palette.calories : .secondary)
+        let macros = (Text(number(kcal)).foregroundStyle(colored ? Color.primary : .secondary)
+             + Text(Image(systemName: "flame.fill")).font(.fine).foregroundStyle(colored ? palette.calories : .secondary)
              + part(protein, "P", palette.protein) + part(fat, "F", palette.fat) + part(carbs, "C", palette.carbs))
-                .fixedSize()
-            if let amount, !amount.isEmpty {
-                Text("  •  \(amount)").foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+        Group {
+            if size.isAccessibilitySize {
+                // The largest sizes: the macros may wrap, the amount goes on its own line.
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    macros.fixedSize(horizontal: false, vertical: true)
+                    if let amount, !amount.isEmpty { Text(amount).foregroundStyle(.secondary) }
+                }
+            } else {
+                HStack(spacing: 0) {
+                    macros.fixedSize()
+                    if let amount, !amount.isEmpty {
+                        Text("  •  \(amount)").foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                    }
+                }
             }
         }
-        .font(.subheadline).monospacedDigit()
+        .font(.secondaryText).monospacedDigit()
     }
 
     private func part(_ v: Double, _ l: String, _ c: Color) -> Text {

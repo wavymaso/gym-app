@@ -191,6 +191,7 @@ struct PlanDayView: View {
         return VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.s) {
                 Text(planClock(s.minute)).font(.numberSmall).monospacedDigit()
+                    .accessibilityLabel("\(label(s.kind)) at \(planClock(s.minute))\(s.eaten ? ", eaten" : s.locked ? ", kept every day" : "")")
                 Text(label(s.kind)).sectionLabelStyle()
                 if s.kind == .preWorkout || s.kind == .postWorkout {
                     Image(systemName: "bolt.fill").font(.fine).foregroundStyle(palette.accent).accessibilityLabel(s.kind == .preWorkout ? "Before training" : "After training")
@@ -224,6 +225,12 @@ struct PlanDayView: View {
                 .opacity(s.eaten ? 1 : 0.6)
                 .contentShape(Rectangle())
                 .onTapGesture { if !s.eaten && !s.locked { selected = ItemRef(slot: s.index, item: it) } }
+                // One item for VoiceOver: the food, its amount and what it does in the meal; tap to swap.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(r.foods[it.key]?.name ?? it.key), \(it.grams > 1 ? (r.foods[it.key]?.shown(it.grams) ?? "\(Int(it.grams)) grams") : "")\(it.isPinned ? ", kept at this portion" : "")")
+                .accessibilityValue(r.foods[it.key].map { "\(Int($0.macros(it.grams).kcal)) calories, \(Int($0.macros(it.grams).protein)) grams protein" } ?? "")
+                .accessibilityAddTraits(!s.eaten && !s.locked ? .isButton : [])
+                .accessibilityHint(!s.eaten && !s.locked ? "Swap, keep or change the portion" : "")
             }
             if let short = r.plan.shortMeals.first(where: { r.plan.slots.indices.contains($0.index) && r.plan.slots[$0.index].index == s.index }) {
                 Label("\(Int(short.protein)) g protein, below this meal's \(Int(short.needed)) g minimum: none of your foods for it has enough. Add a protein staple.",
