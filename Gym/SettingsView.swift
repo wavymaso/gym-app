@@ -12,6 +12,8 @@ struct SettingsView: View {
     #endif
 
     @State private var customizing = false
+    @AppStorage("displayName") private var displayName = ""
+    @State private var editingName = false
 
     /// MacroFactor's More page: you, then short groups of rows; each opens one small page.
     var body: some View {
@@ -80,14 +82,27 @@ struct SettingsView: View {
 
     private func profileHeader(_ p: Profile) -> some View {
         let first = (try? ctx.fetch(FetchDescriptor<FoodEntry>(sortBy: [SortDescriptor(\.day)])).first?.day)
-        let name = UserDefaults.standard.string(forKey: "displayName") ?? ""
+        let name = displayName.trimmingCharacters(in: .whitespaces)
         return HStack(spacing: Space.l) {
-            Text(initials(name)).font(.system(size: 26, weight: .black).width(.expanded)).foregroundStyle(palette.onInverse)
-                .frame(width: 70, height: 70).background(palette.inverseFill, in: Circle())
+            // Your initials, or a plain person symbol until you add a name (never placeholder text).
+            Group {
+                if name.isEmpty { Image(systemName: "person.fill").font(.iconMedium) }
+                else { Text(initials(name)).font(.system(size: 26, weight: .black).width(.expanded)) }
+            }
+            .foregroundStyle(palette.onInverse)
+            .frame(width: 70, height: 70).background(palette.inverseFill, in: Circle())
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Space.xs) {
-                TextField("Your name", text: Binding(get: { UserDefaults.standard.string(forKey: "displayName") ?? "" },
-                                                     set: { UserDefaults.standard.set($0, forKey: "displayName") }))
-                    .font(.subsectionTitle).textFieldStyle(.plain)
+                if editingName {
+                    TextField("Name", text: $displayName).font(.subsectionTitle).textFieldStyle(.plain)
+                        .onSubmit { editingName = false }
+                } else if name.isEmpty {
+                    Button { editingName = true } label: { Label("Add your name", systemImage: "pencil") }
+                        .font(.secondaryEmphasis).buttonStyle(.bordered).buttonBorderShape(.capsule)
+                } else {
+                    Text(name).font(.subsectionTitle).onTapGesture { editingName = true }
+                        .accessibilityHint("Double-tap to change your name").accessibilityAddTraits(.isButton)
+                }
                 if let f = first {
                     Text("Logging since \(date(fromKey: f).formatted(.dateTime.day().month(.wide).year().locale(appLocale)))")
                         .font(.secondaryText).foregroundStyle(.secondary)
@@ -99,9 +114,7 @@ struct SettingsView: View {
     }
 
     private func initials(_ name: String) -> String {
-        let parts = name.split(separator: " ").prefix(2)
-        let s = parts.map { String($0.prefix(parts.count == 1 ? 2 : 1)) }.joined().uppercased()
-        return s.isEmpty ? "ME" : s
+        name.split(separator: " ").prefix(2).map { String($0.prefix(name.split(separator: " ").count == 1 ? 2 : 1)) }.joined().uppercased()
     }
 
     private struct Row: Identifiable {

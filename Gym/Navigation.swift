@@ -207,64 +207,47 @@ struct SidebarToday: View {
 
 /// Shown once after an update: what's new, briefly.
 struct WhatsNewSheet: View {
-    static let version = 17
+    static let version = 18
     @Environment(\.dismiss) private var dismiss
+    @State private var earlier = false
 
+    /// This update.
     private let items: [(String, String, String)] = [
-        ("circle.lefthalf.filled", "A new look: Appearance × Finish", "Automatic, Light, Dark or Black, in Titanium, Silver, Graphite, Gold or Rose Gold. Calm, machined, no glow (More → Theme). Your old theme moved over."),
-        ("arrow.down.to.line", "Scroll to the end", "Every page now scrolls clear of the search and tab bars; the timeline runs to midnight."),
-        ("paintpalette", "Metal themes", "Noir & Gold, Sterling, Rose Gold, Titanium, Bronze: real metal finishes, film grain, serif titles. Colour themes are calmer too."),
-        ("plus.magnifyingglass", "Pinch the charts", "Zoom into any time window on the insight charts; slide it along with the arrows."),
-        ("doc.on.clipboard", "Copy and move like MacroFactor", "Pick foods, tap Copy or Move, then tap any hour (any day) to put them there."),
-        ("lock.shield", "Safer data", "A copy before every update, a check at every launch, weekly backups for 3 months, Face ID lock, keys in the Keychain."),
-        ("stethoscope", "Diagnostics", "More → Diagnostics: version, data health, recent problems."),
-        ("sparkles.rectangle.stack", "Smoother everywhere", "Tabs glide, numbers roll, foods drop into the cart, and every haptic means one thing."),
-        ("arrow.uturn.backward", "Undo instead of “Are you sure?”", "Remove foods, sets, weigh-ins or photos at once; Undo for 5 seconds."),
-        ("hand.tap", "Fewer taps", "Long-press ＋ on a food to log it straight away; −/+ on the keyboard for weights and weigh-ins."),
-        ("sparkles", "AI Plate", "Each dish comes with its ingredients (bun, patty, cheese…), each editable; cooking oil and butter it can't see are estimated and marked ✦."),
-        ("chart.line.uptrend.xyaxis", "Trend and expenditure match MacroFactor", "Trend weight within 0,01 kg of MacroFactor's on your history; expenditure within about 60 kcal."),
-        ("paintpalette.fill", "23 themes", "More → Theme: dark (OLED, Forest, Ember, Crimson, Amethyst, Neon…), light (Sand, Mint, Blush, Arctic, Paper) and Glass (Aurora, Sunset, Ocean, Frost)."),
-        ("figure.arms.open", "New icon", "Front double biceps."),
-        ("target", "Edit Goal", "Strategy → Edit Goal: drag a ruler to your target weight, set the rate, see your budget and end date, then review."),
-        ("calendar", "Edit Program, day by day", "Collaborative or manual: set each day's calories, protein and carb/fat split, or all days at once with the lock."),
-        ("list.bullet.rectangle", "The numbers under every chart", "Detail screens now list each day's value by month, with how it changed."),
-        ("hand.point.up.left", "Touch any chart", "Hold and drag on any graph to see that day's values."),
-        ("chart.bar.xaxis", "Calories & Macros, Scale Weight", "New dashboard cards with full history screens; tap “Calories & macros history” under Nutrition too."),
-        ("target", "Strategy has its own tab", "Countdown to check-in, your program and goal, goal history, and every coaching setting in one place."),
-        ("person.crop.circle", "More, tidied up", "Top right of the Dashboard: your profile, then short groups of settings, each on its own page."),
-        ("hand.point.up.left", "Touch the charts", "Drag on a detail chart to see that day's value."),
-        ("flag.2.crossed", "Phase plan", "Cut → maintenance → bulk, each with an end (date or weight); the check-in offers the next phase (Strategy)."),
-        ("scalemass", "Scales", "Name your other scales; their offsets are worked out so a trip home isn't a weight jump (Strategy → Scales)."),
-        ("eye.slash", "Shadow mode", "The coach calculates check-ins without changing targets, and replays the last 12 weeks (Strategy)."),
-        ("bed.double.fill", "Sleep", "From Apple Health, in the weekly review: a bad-sleep week explains a strength dip."),
-        ("calendar.badge.checkmark", "Weekly review", "On check-in day: logging, protein, rate vs goal, expenditure, sets per muscle, lifts, and what they say together."),
-        ("magnifyingglass", "Search forgives typos", "“platno” finds plátano; Spanish words find USDA foods; foods whose label doesn't add up are flagged."),
-        ("link", "Recipes from Instagram", "Paste a post link, the caption, or photograph a cookbook page: ingredients and macros worked out."),
-        ("gauge.with.dots.needle.33percent", "Calmer, smarter coaching", "Retuned on your 3 years of data; refeeds and water days don't fool it; each check-in says why."),
-        ("dumbbell.fill", "RIR, skip today, your volume ranges", "Reps in reserve on the phone, skip an exercise for one session, and per-muscle set ranges."),
-        ("timer", "Rest timer on your lock screen", "Counts down on the lock screen and Dynamic Island, and alerts you when rest is over."),
-        ("pills.fill", "Supplements", "Tick off creatine and the rest each day and keep the streak (Dashboard → Habits)."),
-        ("figure.strengthtraining.traditional", "Strength retention & deloads", "Your main lifts against body weight while you cut, and a deload when they slip (Training)."),
-        ("arrow.up.circle", "Refeeds & diet breaks", "A weekly high-carb day and planned weeks at maintenance (Strategy). Plus Collaborative mode and smoother check-ins."),
-        ("fork.knife", "Protein per meal", "How evenly your protein is spread, against about 0,4 g per kg per meal."),
-        ("square.stack.3d.up.fill", "A new way to log food", "One sheet: Scan · Search · AI · Quick Add · Library. Add foods to a cart, then Log Foods. The food screen shows its impact on today's targets and has a number pad with units."),
-        ("chart.bar.xaxis", "Dashboard, MacroFactor style", "Swipe the top card for the weekly nutrition grid. Insight cards with sparklines, and Search for a food right above the tab bar."),
-        ("sparkles", "Glass and Maximal", "Settings → Appearance: a Liquid Glass theme, and a Maximal style with glow."),
-        ("camera.fill", "Log a meal with a photo", "Snap your plate (or just describe it): the model on your Mac names the foods and portions, nutrition comes from USDA, barcodes and your own foods. + → Photo."),
-        ("ruler", "Measurements & progress photos", "On the Weight page: waist, arms and more, a tape body-fat estimate, and side-by-side photos."),
-        ("mic.fill", "Siri & Shortcuts", "“Log water in Gym”, “How many calories do I have left in Gym”, weigh in, quick add. Put one on the Action button."),
-        ("plus.circle.fill", "The + button", "Log food, scan a barcode or label, quick add, weigh in, water or train, from anywhere."),
-        ("slider.horizontal.3", "Your dashboard", "Customize it: move sections, pick nutrients, consumed or remaining. Swipe the top widgets."),
-        ("chart.line.uptrend.xyaxis", "Smarter numbers", "Weight trend V2 and expenditure V2: more accurate and quicker to react (Settings → Feature settings)."),
-        ("calendar", "Calorie distribution", "More on training days, fasting days, and an optional weekly budget (Strategy)."),
-        ("square.and.arrow.down", "Saved meals & day notes", "Save a meal to log it in one tap; mark a day as partially logged."),
-        ("link", "Supersets & notes", "Superset exercises, track left and right, and keep notes per exercise."),
-        ("externaldrive", "Backups", "A full backup every day; add a folder like iCloud Drive in Settings."),
+        ("chart.line.uptrend.xyaxis", "One trend everywhere", "The trend you see is the one behind your targets: the coaching engine's trend and its expenditure, on every device."),
+        ("textformat.size", "Calmer pages", "Plain large titles that tuck away as you scroll, one type scale and spacing everywhere, and nothing hidden under the tab bar. Search lives in ＋ and the Food log."),
+        ("clock", "A tidier food log", "Only the hours you logged and your next planned meal; gaps are one thin ＋ Add row (⋯ → Show empty hours for the full day)."),
+        ("calendar.badge.clock", "Plan your meals", "Food log → ⋯ → Plan: swap a food, keep one at a portion, servings in units (2 eggs, 1 bar), and how many meals you ate as planned."),
+        ("questionmark.bubble", "Six questions at the check-in", "Hunger, energy, sleep, training, stress and how hard the plan was: suggestions you accept or decline, never automatic."),
+        ("accessibility", "VoiceOver", "Charts, rings, the day strip, sets and plan meals read out properly."),
+    ]
+
+    /// Earlier updates that still describe the app (removed features are gone from this list).
+    private let earlierItems: [(String, String)] = [
+        ("A new look: Appearance × Finish", "Automatic, Light, Dark or Black, in Titanium, Silver, Graphite, Gold or Rose Gold (More → Theme)."),
+        ("Copy and move like MacroFactor", "Pick foods, tap Copy or Move, then tap any hour on any day."),
+        ("Safer data", "A copy before every update, a check at every launch, backups, Face ID lock, keys in the Keychain."),
+        ("Undo instead of “Are you sure?”", "Remove foods, sets, weigh-ins or photos at once; Undo for 5 seconds."),
+        ("Fewer taps", "Long-press ＋ on a food to log it; −/+ on the keyboard for weights."),
+        ("AI Plate and photo logging", "Snap your plate or describe it: foods and portions, with nutrition from USDA, barcodes and your own foods."),
+        ("Edit goal and program", "Drag a ruler to your target weight, set the rate, see your budget; collaborative or manual day by day."),
+        ("Touch and zoom the charts", "Hold and drag for a day's values; pinch to zoom; every chart lists its numbers by month."),
+        ("Strategy", "Countdown to check-in, program, goal history, phase plan, scales, shadow mode, refeeds and diet breaks."),
+        ("Weekly review", "Logging, protein, rate vs goal, expenditure, sets per muscle, lifts and sleep."),
+        ("Search forgives typos", "“platno” finds plátano; Spanish words find USDA foods; labels that don't add up are flagged."),
+        ("Recipes from links and photos", "Paste a post link or caption, or photograph a cookbook page."),
+        ("Training", "RIR, supersets, notes, per-muscle set ranges, strength retention and deloads, a rest timer on the lock screen."),
+        ("Supplements and protein per meal", "Tick off supplements and keep the streak; see how evenly protein is spread."),
+        ("One sheet to log food", "Scan · Search · AI · Quick Add · Library, with a cart and a number pad."),
+        ("Measurements & progress photos", "Waist, arms and more, a tape body-fat estimate, side-by-side photos."),
+        ("Siri & Shortcuts", "Log water, ask what's left, weigh in, quick add."),
+        ("Your dashboard", "Move sections, pick nutrients, consumed or remaining."),
+        ("Calorie distribution", "More on training days, fasting days, an optional weekly budget."),
+        ("Saved meals, day notes, backups", "Log a saved meal in one tap; mark a day as partly logged; a backup every day."),
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.l) {
-            Text("What's new").font(.numberLarge).padding(.top, Space.xl)
+            Text("What's new").font(.screenTitle).padding(.top, Space.xl)
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.l) {
                     ForEach(items, id: \.1) { icon, title, text in
@@ -276,6 +259,19 @@ struct WhatsNewSheet: View {
                             }
                         }
                     }
+                    DisclosureGroup("Earlier", isExpanded: $earlier) {
+                        VStack(alignment: .leading, spacing: Space.m) {
+                            ForEach(earlierItems, id: \.0) { title, text in
+                                VStack(alignment: .leading, spacing: Space.xxs) {
+                                    Text(title).font(.secondaryEmphasis)
+                                    Text(text).font(.note).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                }
+                                .accessibilityElement(children: .combine)
+                            }
+                        }
+                        .padding(.top, Space.s)
+                    }
+                    .font(.cardTitle).tint(palette.accent)
                 }
             }
             Button { dismiss() } label: { Text("Continue").font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.s) }

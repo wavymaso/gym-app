@@ -49,8 +49,10 @@ Rules:
 ## Algorithms (where they live)
 | What | File | Notes |
 |---|---|---|
-| Weight trend | Trend.swift (`trendSeriesV1`, `trendSeries`) | V1 default: matches MacroFactor's trend |
-| Expenditure | Trend.swift (`classicExpenditure`, `jointExpenditure`, V1 variants) | "classic" default: fitted to MacroFactor |
+| Weight trend | Engine/EngineTrend.swift, Trend.swift (`trendSeries`) | Engine trend by default, on every screen and in the targets; one synced choice (`Profile.trendAlgorithm`, More → Diagnostics → Developer). Classic EMA and V2 kept for comparison |
+| Expenditure | Engine/EngineEnergy.swift via `expenditureEstimates` (Progress.swift) | Engine default, built on the engine trend (A1, 18 Oct 2026); classic, joint (V2) and V1 variants in Trend.swift for comparison |
+| Coaching engine (preview) | Engine/*.swift, EngineAdapter.swift | runs at each check-in next to the current rules; never changes targets |
+| Meal planner | Engine/Planner/*.swift, PlannerApp.swift | templates → food choice → portions and repairs; see CLAUDE.md |
 | Targets, protein, guardrails | Calc.swift (`makeTargets`, `proteinGrams`) | |
 | Weekly check-in | Progress.swift (`CheckInSummary`, `smoothed`, `finishCheckIn`, `dayTargets`) | deadband, cap, confidence |
 | Phases, scales, shadow mode, week plan | Phases.swift | |
@@ -68,13 +70,18 @@ D=~/Library/Containers/com.wavymaso.gym/Data/Library/Application\ Support
 M=$(mktemp -d); cp -p "$D"/default.store* "$M/"
 MFCMP=1 Tests/backtest/run.sh "$M/default.store" "$PWD/.backups/backtest/mf-expenditure.csv"
 ```
-Prints each expenditure algorithm's average error against MacroFactor's own numbers. Never point
-tests at the live store: always a copy.
+Prints each expenditure algorithm's average error against MacroFactor's own numbers. Or simply
+`tools/backtest.sh` (`full`, `cohere`: the trends and the expenditure each one gives; `GAP=1` adds the
+engine − classic gap by month). Never point tests at the live store: always a copy.
 
 ## UI
 - Design system in `Design.swift` (springs, haptics, spacing, radii, type roles, undo toast,
   empty/problem/working states, options pages); documented in `DESIGN.md`.
-- Colours per theme in `Theme.swift` (`Palette`); 23 themes.
+- Colours in `Theme.swift` (`Palette`) from `Tokens.swift`: Appearance (Automatic, Light, Dark,
+  Black) × Finish (Titanium, Silver, Graphite, Gold, Rose Gold).
+- Raw fonts, paddings, spacing and radii are checked by `tools/lint-design.sh` (in `tools/check.sh`).
+- Snapshots: `tools/theme-snapshots.sh` (every theme, seven screens) and `tools/proof-snapshots.sh`
+  (before/after for UI passes).
 - Phone: `GymApp.swift` keeps each tab alive in a ZStack with a spring cross-fade; the custom tab
   bar is in `Navigation.swift`. Mac: `NavigationSplitView`.
 
