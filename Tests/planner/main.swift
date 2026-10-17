@@ -380,8 +380,29 @@ check("a staple protein main is used as a primary protein source", mains.contain
 let tps = MealTemplates.defaults
 check("templates: every food id is a canonical food", MealTemplates.unknownFoods(tps).isEmpty, MealTemplates.unknownFoods(tps))
 check("templates: every default is allowed in its slot", tps.allSatisfy { $0.slots.allSatisfy { $0.allowed.contains($0.defaultFood) } })
-check("templates: every meal has a required protein slot", tps.allSatisfy { $0.slots.contains { $0.kind == .protein && $0.required } })
+check("templates: every meal has a required protein slot (the evening snack is a treat only)", tps.filter { $0.meal != .eveningSnack }.allSatisfy { $0.slots.contains { $0.kind == .protein && $0.required } })
 check("templates: one carb base per meal (bread as a side is separate)", tps.allSatisfy { $0.slots.filter { $0.kind == .carbBase }.count <= 1 })
-check("templates: all six meals", Set(tps.map(\.meal)) == Set(MealTemplate.Meal.allCases))
+check("templates: all seven meals", Set(tps.map(\.meal)) == Set(MealTemplate.Meal.allCases))
+let bfast = tps.first { $0.meal == .breakfast }!
+check("breakfast: chocolate rice cakes allowed (max 3), plain as the alternative; spreads optional, on by default; eggs then skyr",
+      bfast.slots[0].allowed.prefix(2) == ["rice-cakes-chocolate", "rice-cakes"] && bfast.slots[0].maxUnits["rice-cakes-chocolate"] == 3
+      && bfast.slots.first { $0.kind == .spread }.map { !$0.required && $0.defaultOn && $0.maxFoods == 2 } == true
+      && bfast.slots.first { $0.kind == .protein }.map { $0.defaultFood == "eggs" && $0.allowed.prefix(2) == ["eggs", "skyr"] } == true)
+let lunchT = tps.first { $0.meal == .lunch }!, dinnerT = tps.first { $0.meal == .dinner }!
+check("dinner: vegetable and sauce lists the same as lunch", lunchT.slots.first { $0.kind == .vegetable }!.allowed == dinnerT.slots.first { $0.kind == .vegetable }!.allowed
+      && lunchT.slots.first { $0.kind == .fatOrSauce }!.allowed == dinnerT.slots.first { $0.kind == .fatOrSauce }!.allowed)
+check("pulses: optional side at lunch and dinner, and still a carb base", [lunchT, dinnerT].allSatisfy { t in t.slots.contains { $0.kind == .pulses && !$0.required } && t.slots.first { $0.kind == .carbBase }!.allowed.contains("pulses") })
+check("evening snack: one treat", tps.first { $0.meal == .eveningSnack }!.slots.map(\.kind) == [.treat])
+// Pre- and post-workout replace the meal in their window; they never add meals.
+func templatesFor(_ training: (Int, Int)?) -> [MealTemplate.Meal] { slotsFor(training: training).compactMap { MealTemplates.template(for: $0)?.meal } }
+check("rest day: breakfast, lunch, merienda, dinner", templatesFor(nil) == [.breakfast, .lunch, .merienda, .dinner], templatesFor(nil))
+check("18:00 training: merienda becomes pre-workout, dinner post-workout (still 4 meals)", templatesFor((18 * 60, 75)) == [.breakfast, .lunch, .preWorkout, .postWorkout], templatesFor((18 * 60, 75)))
+check("10:00 training: breakfast becomes pre-workout, lunch post-workout", templatesFor((10 * 60, 75)) == [.preWorkout, .postWorkout, .merienda, .dinner], templatesFor((10 * 60, 75)))
+check("19:00 training: merienda pre, dinner post", templatesFor((19 * 60, 75)) == [.breakfast, .lunch, .preWorkout, .postWorkout], templatesFor((19 * 60, 75)))
+for (st, len) in [(7 * 60 + 30, 60), (10 * 60, 75), (13 * 60, 60), (18 * 60, 75), (20 * 60, 60)] {
+    check("training at \(st / 60):\(String(format: "%02d", st % 60)): never more meals than set (4)", slotsFor(training: (st, len)).count == 4)
+    for n in [3, 5] { check("…and with \(n) meals: \(n)", slotsFor(training: (st, len), meals: n).count == n) }
+}
+
 check("templates: round-trip as JSON (editable, saved in settings)", (try? JSONDecoder().decode([MealTemplate].self, from: JSONEncoder().encode(tps))) == tps)
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

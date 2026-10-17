@@ -15,9 +15,16 @@ struct PlannerSettings: Codable, Equatable {
     var stapleWindowDays = 28                        // …in this many days
     var roles: [String: FoodRole] = [:]              // your corrections to a food's role (main, side, condiment, treat)
     var weighAs: [String: WeightState] = [:]         // per food: you weigh it raw or cooked (default raw; sold-cooked foods cooked)
+    var templates: [MealTemplate] = []               // your edited meal templates (empty: the defaults)
+    var treatsEnabled = false                        // an evening snack with one treat a day
     var fibreFloorGrams: Double = 19                 // fixed fibre floor (g/day); 0: scale with calories (registry, 14 g per 1,000 kcal)
     var highDaysFollowTraining = true                // calorie distribution: training days = your training week
     var inferredWeek: [Int: TrainingSlot] = [:]      // last inferred from workouts (kept so targets can use it without a fetch)
+
+    /// Your templates, or the defaults (a template you haven't edited follows the defaults).
+    var mealTemplates: [MealTemplate] {
+        MealTemplates.defaults.map { d in templates.first { $0.id == d.id } ?? d }
+    }
 
     /// The day's fibre floor: your nutrient goal if set, else the fixed floor, else 14 g per 1,000 kcal.
     func fibreFloor(kcal: Double, custom: Double?) -> Double {
@@ -89,5 +96,7 @@ extension PlannerSettings {
         suhoor = (try? c.decodeIfPresent(type(of: suhoor), forKey: .suhoor)) ?? d.suhoor
         trainingCarbBoost = (try? c.decodeIfPresent(type(of: trainingCarbBoost), forKey: .trainingCarbBoost)) ?? d.trainingCarbBoost
         dismissedCarbProposal = (try? c.decodeIfPresent(type(of: dismissedCarbProposal), forKey: .dismissedCarbProposal)) ?? d.dismissedCarbProposal
+        templates = (try? c.decodeIfPresent(type(of: templates), forKey: .templates)) ?? d.templates
+        treatsEnabled = (try? c.decodeIfPresent(type(of: treatsEnabled), forKey: .treatsEnabled)) ?? d.treatsEnabled
     }
 }
