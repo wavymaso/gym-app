@@ -84,6 +84,9 @@ struct DiagnosticsView: View {
                 }
             } header: { Text("Recent problems") }
             Section {
+                NavigationLink("Developer") { DeveloperView() }
+            } footer: { Text("Algorithm choices, for comparing models.") }
+            Section {
                 ShareLink(item: bundle, preview: SharePreview("Gym diagnostics")) { Label("Export diagnostics", systemImage: "square.and.arrow.up") }
             } footer: { Text("A text file with the above, for sending to whoever is helping. No food, weights or photos in it.") }
         }

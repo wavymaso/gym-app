@@ -22,6 +22,16 @@ MainActor.assumeIsolated {
         check("profile has the new settings", p != nil && (p!.fastKcal > 0) && BMREquation(rawValue: p!.bmrEquation) != nil, (p?.fastKcal ?? -1, p?.bmrEquation ?? "?"))
         // Plan adherence log (17 Oct 2026): existing profiles open with an empty log; a day saves and reads back.
         check("profile opens with an empty plan log", p?.planLog.isEmpty ?? false || p?.planLogJSON.isEmpty == false, p?.planLogJSON ?? "")
+        // A1 (18 Oct 2026): the default expenditure is the engine's, built on the trend the screens show.
+        let keepExp = p?.expAlgorithm ?? ""
+        p?.expAlgorithm = ""; dataVersion += 1
+        let live = ctx.expenditureEstimates().last?.kcal, eng = ctx.engineSnapshot()?.expenditure.last?.kcal
+        check("default expenditure is the engine's", live != nil && live == eng, (live ?? -1, eng ?? -1))
+        check("screens show the engine trend by default", TrendAlgorithm.current == .engine && abs((trendSeries(ctx.weightValues, through: dayKey()).last?.trend ?? 0) - (ctx.engineSnapshot()?.trend.last?.trend ?? -1)) < 0.001)
+        p?.expAlgorithm = keepExp
+        // One synced trend choice (18 Oct 2026): existing profiles open on the default (the engine).
+        check("profile opens with the default trend", p?.trendAlgorithm == "" || TrendAlgorithm(rawValue: p?.trendAlgorithm ?? "") != nil, p?.trendAlgorithm ?? "?")
+        p?.trendAlgorithm = "v1"
         p?.planLog = ["2000-01-01": [PlannedMeal(index: 0, minute: 480, name: "Breakfast", foods: ["oats"])]]
         ctx.commit()
     } catch { print("ERROR", error); fails += 1 }
@@ -29,6 +39,7 @@ MainActor.assumeIsolated {
         let c = try ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(url: url))
         let ctx = c.mainContext
         let back = try c.mainContext.fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.name == "migration test" })).first
+        check("trend choice saved and read back", try ctx.fetch(FetchDescriptor<Profile>()).first?.trendAlgorithm == "v1")
         check("plan log saved and read back", try ctx.fetch(FetchDescriptor<Profile>()).first?.planLog["2000-01-01"]?.first?.foods == ["oats"])
         check("micros saved and read back", back?.nutrients.micros?["iron"] == 2.5 && back?.nutrients.micros?["vitD"] == 4, back?.nutrients.micros ?? [:])
         // Taxonomy and raw/cooked fields: existing foods open with defaults, and corrections save and read back.

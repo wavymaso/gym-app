@@ -19,18 +19,18 @@ struct DayValue: Equatable {
     var value: Double
 }
 
-/// Which trend to show: V1 (exponential moving average, past only) or V2 (robust two-sided smoothing).
+/// Which trend: the engine's (default), V1 (exponential moving average, past only) or V2 (robust two-sided
+/// smoothing). One synced choice (Profile.trendAlgorithm), set from More → Diagnostics → Developer; the
+/// same trend is behind every screen and the targets.
 enum TrendAlgorithm: String, CaseIterable, Identifiable {
     case v1, v2, engine
     var id: String { rawValue }
-    /// The coaching engine's model by default (it beat V1 on 1–4 week forecasts: BACKTEST.md). Choices made
-    /// before it existed move over once.
-    static var current: TrendAlgorithm {
-        let d = UserDefaults.standard
-        if !d.bool(forKey: "trendEngineDefault") { d.set(true, forKey: "trendEngineDefault"); if d.string(forKey: "trendAlgorithm") != "v2" { d.removeObject(forKey: "trendAlgorithm") } }
-        return TrendAlgorithm(rawValue: d.string(forKey: "trendAlgorithm") ?? "") ?? .engine
-    }
+    /// The coaching engine's model by default (it beat V1 on 1–4 week forecasts: BACKTEST.md).
+    static var current: TrendAlgorithm { TrendAlgorithm(rawValue: trendChoice) ?? .engine }
 }
+
+/// The profile's trend choice, set by the app (weightValues, the Developer page) so plain code can read it.
+nonisolated(unsafe) var trendChoice = ""
 
 /// Water events by day (refeeds, diet breaks, tagged days), set by the app so the engine trend can use them.
 nonisolated(unsafe) var trendWaterEvents: [String: Set<WaterEvent>] = [:]
@@ -279,10 +279,13 @@ func days(from a: String, through b: String) -> [String] {
 
 /// Which expenditure engine to use.
 enum ExpenditureAlgorithm: String, CaseIterable, Identifiable {
-    case classic, joint, standard, responsive, stable
+    case engine, classic, joint, standard, responsive, stable
     var id: String { rawValue }
+    /// "" (the default) is the engine: its expenditure is built on the same trend the screens show.
+    static func from(_ raw: String) -> ExpenditureAlgorithm { ExpenditureAlgorithm(rawValue: raw) ?? .engine }
     var label: String {
         switch self {
+        case .engine: return "Engine"
         case .classic: return "Standard (MacroFactor-style)"
         case .joint: return "Expenditure V2 (joint model)"
         case .standard: return "Expenditure V1"
@@ -292,6 +295,7 @@ enum ExpenditureAlgorithm: String, CaseIterable, Identifiable {
     }
     var detail: String {
         switch self {
+        case .engine: return "The coaching engine's model: what you ate minus the energy your engine trend says you stored, with a body-composition energy density. Built on the trend you see."
         case .classic: return "Your average intake over 3 weeks minus the change in your trend weight, smoothed. Matches MacroFactor's numbers within about 60 kcal on your history."
         case .joint: return "Tracks your true weight, expenditure and water weight together, day by day. Reacts sooner to real changes, shrugs off water swings and patchy logging."
         case .standard: return "Weight change over 3 weeks against average intake, smoothed."

@@ -69,6 +69,17 @@ extension ModelContext {
         return events
     }
 
+    /// A1 (18 Oct 2026): the engine trend and the engine's expenditure everywhere, one synced choice. Once
+    /// per device: earlier per-device trend choices and the joint/classic expenditure move to the default.
+    func applyEngineSwitch() {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: "engineSwitchA1"), let p = profile else { return }
+        p.expAlgorithm = ""; p.trendAlgorithm = ""; commit()
+        d.removeObject(forKey: "trendAlgorithm"); d.removeObject(forKey: "trendEngineDefault")
+        d.set(true, forKey: "engineSwitchA1")
+        trendChoice = ""; dataVersion += 1
+    }
+
     func engineSnapshot() -> EngineSnapshot? {
         guard let person = enginePerson else { return nil }
         let ds = engineDays()

@@ -466,8 +466,7 @@ struct StrategyView: View {
         }
         category("Accuracy", "How your data is read") {
             rowButton("scalemass", palette.accent, "Scales", p.scaleNames.isEmpty ? "Just one" : "Main + \(p.scaleNames.joined(separator: ", "))") { scaling = true }
-            rowLink("flame", palette.warn, "Expenditure", "Algorithm, starting estimate") { ExpenditureSettingsView() }
-            rowLink("chart.line.uptrend.xyaxis", Color.weightTone, "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() }
+            rowLink("flame", palette.warn, "Expenditure", "Starting estimate, modifiers") { ExpenditureSettingsView() }
             rowLink("leaf", palette.good, "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() }
             rowLink("questionmark.circle", palette.accent, "Why these targets?", "Every check-in's decision and its evidence") { DecisionHistoryView() }
             rowLink("books.vertical", palette.accent, "Evidence", "What the coaching is based on, and how strong it is", last: true) { EvidenceListView() }

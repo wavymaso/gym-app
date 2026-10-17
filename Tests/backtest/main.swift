@@ -92,6 +92,21 @@ if ProcessInfo.processInfo.environment["COHERE"] != nil {
         for (lo, hi, label) in ranges() { line += String(format: " \(label) %.2f kg", avg(mfT.keys.filter { $0 >= lo && $0 < hi }.compactMap { d in m[d].map { abs($0 - mfT[d]!) } })) }
         print(line)
     }
+    if ProcessInfo.processInfo.environment["GAP"] != nil {
+        // The engine − classic gap by month: signed, against the rate (an EMA lags a moving weight by about
+        // (1 − α)/α days, so it sits above the true weight on a cut), and water-event days.
+        print("\nmonth     eng−EMA  eng−MF   |gap|  rate kg/wk  EMA lag est.  residual  water-event days  weigh-ins")
+        let lagDays = (1 - trendSmoothing) / trendSmoothing
+        for (m, ds) in Dictionary(grouping: all, by: { String($0.prefix(7)) }).sorted(by: { $0.key < $1.key }) {
+            let g = ds.compactMap { d in eng[d].flatMap { a in ema[d].map { a - $0 } } }
+            let gm = ds.compactMap { d in eng[d].flatMap { a in mfT[d].map { a - $0 } } }
+            let r = ds.compactMap { engRate[$0] }
+            let rate = avg(r), lag = rate / 7 * lagDays
+            let ev = ds.filter { !(trendWaterEvents[$0] ?? []).isEmpty }.count
+            print(m, String(format: "  %+6.2f  %@  %6.2f   %+6.2f      %+6.2f       %+6.2f   %3d               %d", avg(g), gm.isEmpty ? "   –  " : String(format: "%+6.2f", avg(gm)), avg(g.map(abs)), rate, lag, avg(g) - lag, ev, ds.filter { wmap[$0] != nil }.count))
+        }
+        exit(0)
+    }
     // The app's classic expenditure, with the trend passed in (same maths as classicExpenditure).
     func classic(_ trend: [String: Double], window: Int = 21, density: Double = 5500, alpha: Double = 0.05) -> [String: Double] {
         let ds = days(from: start.day, through: end)
@@ -115,6 +130,7 @@ if ProcessInfo.processInfo.environment["COHERE"] != nil {
     let snap = ctx.engineSnapshot()!
     let en = Dictionary(snap.expenditure.map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
     let enTrend = Dictionary(snap.trend.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+    let enDensity = Dictionary(snap.expenditure.map { ($0.day, $0.density) }, uniquingKeysWith: { a, _ in a })
     let appExp = Dictionary(classicExpenditure(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights).map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
     print(String(format: "\n(check: the copy matches the app's classic expenditure on every day: max diff %.3f kcal)", appExp.keys.map { abs(appExp[$0]! - (c1[$0] ?? .infinity)) }.max() ?? -1))
     print("\n2. Expenditure (classic maths) fed by each trend")
@@ -132,7 +148,8 @@ if ProcessInfo.processInfo.environment["COHERE"] != nil {
             for (i, d) in all.enumerated() where i % 3 == 0 && d >= lo && d < hi && i > 60 {
                 guard let x = e[d], let tp = t[d], let tt = target(addDays(d, 28)) else { continue }
                 guard (1...28).compactMap({ intake[addDays(d, $0)] }).count >= 20 else { continue }
-                errs.append(abs(tp + (1...28).reduce(0.0) { acc, j in intake[addDays(d, j)].map { acc + ($0 - x) / 5500 } ?? acc } - tt))
+                let rho = name.hasPrefix("engine") ? (enDensity[d] ?? 5500) : name.hasPrefix("joint") ? kcalPerKg : 5500   // each model's own kcal/kg
+                errs.append(abs(tp + (1...28).reduce(0.0) { acc, j in intake[addDays(d, j)].map { acc + ($0 - x) / rho } ?? acc } - tt))
             }
             l2 += String(format: "  \(label) %.2f kg (n %d)", avg(errs), errs.count)
         }

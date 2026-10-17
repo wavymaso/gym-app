@@ -9,6 +9,7 @@ extension ModelContext {
         if let hit = weightCache[key] { return hit }
         scaleOffsets = profile?.scaleOffsetMap ?? [:]
         trendWaterEvents = engineWaterEvents()
+        trendChoice = profile?.trendAlgorithm ?? ""
         let v = ((try? fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.day)]))) ?? []).map { DayValue(day: $0.day, value: $0.trendKg) }
         weightCache = [key: v]
         return v
@@ -105,8 +106,13 @@ extension ModelContext {
         guard let s = expenditureStart, s.day <= day else { return [] }
         let p = try? fetch(FetchDescriptor<Profile>()).first
         var r: [ExpenditurePoint]
-        let algorithm = ExpenditureAlgorithm(rawValue: p?.expAlgorithm ?? "") ?? .classic
-        if algorithm == .classic {
+        let algorithm = ExpenditureAlgorithm.from(p?.expAlgorithm ?? "")
+        if algorithm == .engine, let snap = engineSnapshot() {
+            // The engine's expenditure, on the engine trend (the one every screen shows).
+            let prior = EnergySettings().priorSD
+            r = snap.expenditure.filter { $0.day >= s.day && $0.day <= day }
+                .map { ExpenditurePoint(day: $0.day, kcal: $0.kcal, paused: $0.held, confidence: max(0, min(1, 1 - pow($0.sd / prior, 2)))) }
+        } else if algorithm == .classic || algorithm == .engine {
             r = classicExpenditure(start: s.day, end: day, initial: s.kcal, intake: dailyIntake(), weights: weightValues)
         } else if algorithm == .joint {
             var js = JointSettings()

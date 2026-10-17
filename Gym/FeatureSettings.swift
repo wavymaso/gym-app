@@ -37,32 +37,55 @@ struct RadioRow: View {
     }
 }
 
-struct WeightTrendSettingsView: View {
-    @AppStorage("trendAlgorithm") private var algorithm = TrendAlgorithm.engine.rawValue
+/// More → Diagnostics → Developer: the algorithm choices, for comparing models. Users see one trend: the
+/// engine's by default, and the same one is behind the expenditure and the targets. Both choices sync.
+struct DeveloperView: View {
+    @Environment(\.modelContext) private var ctx
+    @Query private var profiles: [Profile]
 
     var body: some View {
         Form {
-            Section {
-                RadioRow(title: "Weight Trend (Engine)", badge: "Recommended",
-                         detail: "Tracks your true weight, its rate and water separately, so refeeds, salty days and travel don't move it. Forecasts your weight 1–4 weeks ahead better than the classic trend on your history.",
-                         selected: algorithm == TrendAlgorithm.engine.rawValue) { set(.engine) }
-                RadioRow(title: "Weight Trend (Classic)",
-                         detail: "Smooths out day-to-day water and food swings using past weigh-ins. Matches MacroFactor's trend weight on your history.",
-                         selected: algorithm == TrendAlgorithm.v1.rawValue) { set(.v1) }
-                RadioRow(title: "Weight Trend V2",
-                         detail: "Robust smoothing that also looks at later weigh-ins, so past values get revised. Smoother, but reads differently from MacroFactor.",
-                         selected: algorithm == TrendAlgorithm.v2.rawValue) { set(.v2) }
-            } header: {
-                Text("Trend algorithm")
-            } footer: {
-                Text("Expenditure still works from the classic trend, so it stays in step with MacroFactor-style numbers; the new engine's expenditure runs in preview at each check-in.")
+            if let p = profiles.first {
+                Section {
+                    ForEach([TrendAlgorithm.engine, .v1, .v2]) { a in
+                        RadioRow(title: a.label, badge: a == .engine ? "Default" : nil, detail: a.detail,
+                                 selected: TrendAlgorithm(rawValue: p.trendAlgorithm) ?? .engine == a) {
+                            animate { p.trendAlgorithm = a == .engine ? "" : a.rawValue; trendChoice = p.trendAlgorithm; ctx.commit() }
+                        }
+                    }
+                } header: { Text("Weight trend") } footer: {
+                    Text("Shown on every screen and used for your targets (rate and protein). Synced to all your devices.")
+                }
+                Section {
+                    ForEach(ExpenditureAlgorithm.allCases) { a in
+                        RadioRow(title: a.label, badge: a == .engine ? "Default" : nil, detail: a.detail,
+                                 selected: ExpenditureAlgorithm.from(p.expAlgorithm) == a) {
+                            p.expAlgorithm = a == .engine ? "" : a.rawValue; ctx.commit()
+                        }
+                    }
+                } header: { Text("Expenditure") } footer: {
+                    Text("Engine (default) works from the engine trend, the same one you see. Standard (MacroFactor-style) works from the classic trend and V2 keeps its own weight estimate, so with those the trend on screen and the one behind your targets differ. For comparison only.")
+                }
+                Section {
+                    Text("At each check-in the new coaching engine's decision is shown next to the current rules (Why → New coaching engine). It never changes targets.")
+                        .foregroundStyle(.secondary)
+                } header: { Text("Coaching engine preview") }
             }
         }
         .themedForm()
-        .navigationTitle("Weight Trend")
+        .navigationTitle("Developer")
     }
+}
 
-    private func set(_ a: TrendAlgorithm) { animate { algorithm = a.rawValue }; dataVersion += 1 }
+extension TrendAlgorithm {
+    var label: String { switch self { case .engine: "Engine"; case .v1: "Classic"; case .v2: "V2 (two-sided)" } }
+    var detail: String {
+        switch self {
+        case .engine: "Tracks your true weight, its rate and water separately, so refeeds, salty days and travel don't move it. Forecasts your weight 1–4 weeks ahead best on your history (BACKTEST.md)."
+        case .v1: "Smooths day-to-day swings with past weigh-ins. Matches MacroFactor's trend weight; lags about 9 days behind a real change."
+        case .v2: "Robust smoothing that also looks at later weigh-ins, so past values get revised."
+        }
+    }
 }
 
 struct ExpenditureSettingsView: View {
@@ -89,16 +112,10 @@ struct ExpenditureSettingsView: View {
                 }
                 Section {
                     editRow("Calculation mode", p.expStaticKcal > 0 ? "Static · \(p.energy.format(p.expStaticKcal))" : "Dynamic") { editing = .mode }
-                    ForEach([ExpenditureAlgorithm.joint, .standard, .responsive, .stable]) { a in
-                        RadioRow(title: a.label, badge: a == .joint ? "Recommended" : nil, detail: a.detail,
-                                 selected: (ExpenditureAlgorithm(rawValue: p.expAlgorithm) ?? .classic) == a) {
-                            p.expAlgorithm = a == .classic ? "" : a.rawValue; ctx.commit()
-                        }
-                    }
                 } header: {
                     Text("Expenditure calculation")
                 } footer: {
-                    Text("Standard is fitted to MacroFactor's own numbers on your 3 years of data (within about 60 kcal). V2 is a different model that tested well in simulations but reads a few hundred kcal off MacroFactor on your history.")
+                    Text("Dynamic: the coaching engine works out your expenditure from what you eat and your weight trend (the same trend you see). Static: your own fixed number.")
                 }
                 Section("Expenditure modifiers") {
                     Toggle(isOn: Binding(get: { p.stepInformed }, set: { p.stepInformed = $0; ctx.commit() })) {
@@ -108,13 +125,13 @@ struct ExpenditureSettingsView: View {
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                     }
-                    Toggle(isOn: Binding(get: { p.predictiveGoal }, set: { p.predictiveGoal = $0; ctx.commit() })) {
+                    if ExpenditureAlgorithm.from(p.expAlgorithm) != .engine { Toggle(isOn: Binding(get: { p.predictiveGoal }, set: { p.predictiveGoal = $0; ctx.commit() })) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Predictive goal adjustment").font(.body.weight(.semibold))
                             Text("When you change goal, expects expenditure to follow your new intake a little over the next two weeks (more food, more movement and digestion).")
                                 .font(.callout).foregroundStyle(.secondary)
                         }
-                    }
+                    } }
                 }
             }
         }

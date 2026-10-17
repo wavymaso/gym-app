@@ -191,7 +191,7 @@ extension Profile: Syncable {
          "energyUnit": energyUnit, "createdAt": t(createdAt), "goalWeightKg": n(goalWeightKg), "highDays": highDays,
          "highDayExtra": highDayExtra, "fastDays": fastDays, "fastKcal": fastKcal,
          "expManualKcal": expManualKcal, "expStartDay": expStartDay, "bmrEquation": bmrEquation, "expStaticKcal": expStaticKcal,
-         "expAlgorithm": expAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
+         "expAlgorithm": expAlgorithm, "trendAlgorithm": trendAlgorithm, "stepInformed": stepInformed, "predictiveGoal": predictiveGoal,
          "nutrientGoals": nutrientGoals, "weeklyBudget": weeklyBudget, "trainingType": trainingType, "calorieFloorKcal": calorieFloorKcal,
          "refeedWeekday": refeedWeekday, "refeedExtraKcal": refeedExtraKcal, "refeedSince": refeedSince,
          "scales": scales, "phaseEnd": phaseEnd, "phaseQueue": phaseQueue, "shadowMode": shadowMode, "recomp": recomp, "plannerJSON": plannerJSON, "planLogJSON": planLogJSON, "shadowLog": shadowLog, "dayPlan": dayPlan, "dietBreakStart": dietBreakStart, "dietBreakEnd": dietBreakEnd]
@@ -203,7 +203,7 @@ extension Profile: Syncable {
         fastDays = d.str("fastDays"); fastKcal = d["fastKcal"] == nil ? 600 : d.num("fastKcal")
         expManualKcal = d.num("expManualKcal"); expStartDay = d.str("expStartDay")
         bmrEquation = d["bmrEquation"] == nil ? "mifflin" : d.str("bmrEquation"); expStaticKcal = d.num("expStaticKcal")
-        expAlgorithm = d.str("expAlgorithm"); stepInformed = d.bool("stepInformed"); predictiveGoal = d.bool("predictiveGoal")
+        expAlgorithm = d.str("expAlgorithm"); trendAlgorithm = d.str("trendAlgorithm"); stepInformed = d.bool("stepInformed"); predictiveGoal = d.bool("predictiveGoal")
         nutrientGoals = d.str("nutrientGoals"); weeklyBudget = d.bool("weeklyBudget")
         if let t = d["trainingType"] as? String, !t.isEmpty { trainingType = t }
         calorieFloorKcal = d.num("calorieFloorKcal")

@@ -32,8 +32,7 @@ struct SettingsView: View {
                         row("target", "Strategy & coaching", "Goal, program, check-ins, phases") { StrategyView() },
                         row("leaf", "Nutrient targets", "Fibre, sugar, vitamins and minerals") { NutrientTargetsView() },
                         row("fork.knife.circle", "My eating profile", "What you usually eat, when, and where days miss") { EatingProfileView() },
-                        row("bolt.fill", "Expenditure", "Algorithm, starting estimate, modifiers") { ExpenditureSettingsView() },
-                        row("chart.line.uptrend.xyaxis", "Weight trend", "How the trend is smoothed") { WeightTrendSettingsView() },
+                        row("bolt.fill", "Expenditure", "Starting estimate, modifiers") { ExpenditureSettingsView() },
                         row("fork.knife", "Food search", usdaKey.isEmpty ? "USDA demo key" : "Your USDA key") { foodSearchPage },
                         row("moon.stars", "Day start", dayStartHour == 0 ? "Midnight" : "\(dayStartHour):00 · late meals count for the day before") { page("Day start") { DayStartSection() } },
                     ])
@@ -73,7 +72,7 @@ struct SettingsView: View {
         #endif
         #if DEBUG
         .navigationDestination(isPresented: Binding(get: { debugSub != nil }, set: { if !$0 { debugSub = nil } })) {
-            if debugSub == "expenditure" { ExpenditureSettingsView() } else if debugSub == "diagnostics" { DiagnosticsView() } else { WeightTrendSettingsView() }
+            if debugSub == "expenditure" { ExpenditureSettingsView() } else if debugSub == "diagnostics" { DiagnosticsView() } else { DeveloperView() }
         }
         #endif
         .sheet(isPresented: $importing) { ImportView() }

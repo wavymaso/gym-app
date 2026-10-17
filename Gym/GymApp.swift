@@ -70,6 +70,7 @@ struct Root: View {
             ctx.applyTaxonomySeeds()
             ctx.applyTaxonomySeeds2()
             ctx.applyFibreSwitch()
+            ctx.applyEngineSwitch()
             if ProcessInfo.processInfo.arguments.contains("-planBench") { await ctx.planBench() }
             Task { await ctx.fillTaxonomyData() }
             #if os(iOS)

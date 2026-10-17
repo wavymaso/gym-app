@@ -26,6 +26,7 @@ import SwiftData
     var bmrEquation: String = "mifflin"
     var expStaticKcal: Double = 0             // > 0: a fixed expenditure ("static" mode)
     var expAlgorithm: String = ""             // "" = the default (see ExpenditureAlgorithm)
+    var trendAlgorithm: String = ""           // "" = the engine (see TrendAlgorithm); one choice for every device
     var stepInformed: Bool = false
     var predictiveGoal: Bool = false
     var nutrientGoals: String = ""           // your own targets: "fiber=35;sodium=1800;iron=10"
