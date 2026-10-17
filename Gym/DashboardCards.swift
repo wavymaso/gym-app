@@ -237,6 +237,7 @@ struct TrainingCard: View {
 struct Sparkline: View {
     let values: [Double]
     let color: Color
+    var label = "Trend"
     var body: some View {
         let lo = values.min() ?? 0, hi = values.max() ?? 1
         Chart(Array(values.enumerated()), id: \.offset) { p in
@@ -248,6 +249,7 @@ struct Sparkline: View {
         .indexTip(count: values.count, title: { i in i == values.count - 1 ? "Latest" : "\(values.count - 1 - i) days ago" }) { i in
             [TipRow(label: "Value", value: number(values[i], digits: values[i] < 200 ? 1 : 0), color: color)]
         }
+        .chartSummary(label, values) { number($0, digits: $0 < 200 ? 1 : 0) }
         .frame(height: 44)
     }
 }

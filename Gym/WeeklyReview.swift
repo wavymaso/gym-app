@@ -73,6 +73,7 @@ struct WeeklyReview: View {
                 .dayTip("Expenditure", days: exp.map(\.day)) { d in
                     exp.filter { $0.day == d }.map { TipRow(label: "Estimate", value: energy.format($0.kcal), color: Color.expenditureTone) }
                 }
+                .chartSummary("Expenditure, last 4 weeks", exp.map(\.kcal)) { energy.format($0) }
                 .frame(height: 90)
                 Text("Expenditure, last 4 weeks. The band is how unsure the estimate still is; it narrows as you log.")
                     .font(.note).foregroundStyle(.secondary)

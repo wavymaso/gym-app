@@ -41,7 +41,7 @@ struct PlanItemSheet: View {
                             .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).disabled(item.isPinned && abs(grams - item.grams) < 0.5)
                         if item.isPinned { Button("Let the plan size it") { act(.unkeep); dismiss() }.buttonStyle(.bordered) }
                     }
-                    .font(.secondaryText.weight(.semibold))
+                    .font(.secondaryEmphasis)
                     Text("A kept food stays at this portion; the rest of the meal (and the day if needed) is resized around it.")
                         .font(.fine).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }

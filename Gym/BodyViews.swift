@@ -205,6 +205,7 @@ struct MeasurementDetail: View {
                     .dayTip("Measurement", days: list.map(\.day)) { d in
                         list.filter { $0.day == d }.map { TipRow(label: site.label, value: unit.formatLength($0.cm), color: palette.accent) }
                     }
+                    .chartSummary(site.label, list.map(\.cm)) { unit.formatLength($0) }
                     .frame(height: 200).listRowBackground(Color.clear)
                 }
                 ForEach(list.reversed()) { m in

@@ -130,7 +130,7 @@ struct NoMatch: View {
 
     private func action(_ t: String, _ icon: String, primary: Bool, _ f: @escaping () -> Void) -> some View {
         Button(action: f) {
-            Label(t, systemImage: icon).font(.secondaryText.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 46)
+            Label(t, systemImage: icon).font(.secondaryEmphasis).frame(maxWidth: .infinity, minHeight: 46)
                 .background(primary ? palette.accentFill : AnyShapeStyle(Color.raisedBackground), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                 .foregroundStyle(primary ? palette.onAccent : .primary)
         }

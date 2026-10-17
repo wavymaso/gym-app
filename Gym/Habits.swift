@@ -117,6 +117,9 @@ struct NutrientTimingCard: View {
                 .indexTip(count: 24, title: { h in String(format: "%02d:00–%02d:00", h, (h + 1) % 24) }) { h in
                     [TipRow(label: "Average", value: "\(number(byHour[h] ?? 0)) kcal", color: Macro.calories.color)]
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Average calories by hour of day")
+                .accessibilityValue(byHour.max { $0.value < $1.value }.map { "Most at \(String(format: "%02d:00", $0.key)), \(number($0.value)) kcal" } ?? "No data yet")
                 .frame(height: 140)
                 HStack {
                     stat(clock(avg(firsts)), "First bite")

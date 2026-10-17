@@ -35,7 +35,7 @@ struct WhyView: View {
             Section("Why") {
                 ForEach(Array(record.reasons.enumerated()), id: \.offset) { _, r in
                     VStack(alignment: .leading, spacing: Space.xxs) {
-                        Text(r.rule.capitalized).font(.secondaryText.weight(.semibold))
+                        Text(r.rule.capitalized).font(.secondaryEmphasis)
                         Text(r.detail).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -132,7 +132,7 @@ struct ShadowEngineCard: View {
                             Text(r.reasons.last?.detail ?? "").font(.secondaryText).foregroundStyle(.secondary).lineLimit(2)
                         }
                         Spacer()
-                        Text("Why?").font(.secondaryText.weight(.semibold)).foregroundStyle(palette.accent)
+                        Text("Why?").font(.secondaryEmphasis).foregroundStyle(palette.accent)
                     }
                     .padding(Space.l).modifier(CardSurface())
                 }

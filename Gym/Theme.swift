@@ -374,6 +374,9 @@ struct MacroDonut: View {
                 Text("protein").font(.fine).foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Calories by macro")
+        .accessibilityValue(parts.map { "\($0.0.label) \(Int(($0.1 / total * 100).rounded())) percent" }.joined(separator: ", "))
     }
 }
 

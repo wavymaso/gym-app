@@ -113,6 +113,15 @@ enum Radius {
     static func inner(_ outer: CGFloat, inset padding: CGFloat) -> CGFloat { max(xs, outer - padding) }
 }
 
+/// "Now 110.8 kg, down 1.2 kg over this range" (or "No data yet").
+func chartSummaryText(_ values: [Double], format: (Double) -> String) -> String {
+    guard let last = values.last, let first = values.first else { return "No data yet" }
+    let d = last - first
+    let size = max(abs(first), abs(last), 1)
+    let dir = abs(d) < size * 0.005 ? "flat" : d > 0 ? "up" : "down"
+    return dir == "flat" ? "Now \(format(last)), about flat over this range" : "Now \(format(last)), \(dir) \(format(abs(d))) over this range"
+}
+
 // MARK: - Type
 
 extension Font {
@@ -143,6 +152,14 @@ extension Font {
 }
 
 extension View {
+    /// Every chart's VoiceOver summary: what it shows, the latest value, and the change over the visible
+    /// range with its direction ("Weight trend. Now 110.8 kg, down 1.2 kg over this range").
+    func chartSummary(_ title: String, _ values: [Double], format: (Double) -> String) -> some View {
+        accessibilityElement(children: .ignore)
+            .accessibilityLabel(title)
+            .accessibilityValue(chartSummaryText(values, format: format))
+    }
+
     /// Every page's title, tabs included: sentence case ("Food log"), large, collapsing to an inline
     /// title on scroll (the system's large titles). On the Mac: the window's title.
     func largeTitle(_ title: String) -> some View {
@@ -253,7 +270,7 @@ struct ProblemCard: View {
                 HStack(spacing: Space.s) {
                     ForEach(Array(actions.enumerated()), id: \.offset) { i, a in
                         Button(a.label, action: a.run)
-                            .font(.secondaryText.weight(.semibold))
+                            .font(.secondaryEmphasis)
                             .padding(.horizontal, Space.m).frame(height: 36)
                             .background(i == 0 ? palette.accentFill : AnyShapeStyle(Color.raisedBackground), in: Capsule())
                             .foregroundStyle(i == 0 ? palette.onAccent : .primary)
@@ -281,7 +298,7 @@ struct WorkingCard: View {
             Image(systemName: "sparkles").font(.title2).foregroundStyle(palette.accent)
                 .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !Motion.reduceMotion)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.secondaryText.weight(.semibold))
+                Text(title).font(.secondaryEmphasis)
                 if let detail { Text(detail).font(.fine).foregroundStyle(.secondary) }
             }
             Spacer()
@@ -321,7 +338,7 @@ struct EmptyState: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let action {
                 Button(action: action.run) {
-                    Text(action.label).font(.secondaryText.weight(.semibold)).padding(.horizontal, Space.xl).frame(height: 44)
+                    Text(action.label).font(.secondaryEmphasis).padding(.horizontal, Space.xl).frame(height: 44)
                         .background(palette.accentFill, in: Capsule()).foregroundStyle(palette.onAccent)
                 }
                 .pressable().padding(.top, Space.xs)

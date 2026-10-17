@@ -159,10 +159,10 @@ struct CoachCard: View {
             }
             ForEach(coach.today.reversed()) { e in
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    Text(e.message.headline).font(.secondaryText.weight(.semibold))
+                    Text(e.message.headline).font(.secondaryEmphasis)
                     Text(e.message.body).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     if let a = e.message.action, a.kind == .openCheckIn || a.kind == .openProposal {
-                        Button(a.label.isEmpty ? "Open check-in" : a.label) { checkingIn = true }.font(.secondaryText.weight(.semibold))
+                        Button(a.label.isEmpty ? "Open check-in" : a.label) { checkingIn = true }.font(.secondaryEmphasis)
                     }
                     Text(e.message.source == "template" ? "From the app's rules" : "Written by \(e.message.source), checked against your numbers")
                         .font(.fine).foregroundStyle(.tertiary)

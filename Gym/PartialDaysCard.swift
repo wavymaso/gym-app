@@ -16,7 +16,7 @@ struct PartialDaysCard: View {
                     ForEach(days.prefix(4), id: \.self) { d in
                         HStack(spacing: Space.s) {
                             VStack(alignment: .leading, spacing: Space.hairline) {
-                                Text(date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))).font(.secondaryText.weight(.semibold))
+                                Text(date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))).font(.secondaryEmphasis)
                                 Text(summary(d)).font(.fine).foregroundStyle(.secondary).monospacedDigit()
                             }
                             Spacer()

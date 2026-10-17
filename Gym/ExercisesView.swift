@@ -89,6 +89,7 @@ struct ExerciseDetail: View {
                         .dayTip("Best set", days: byDay.map(\.day)) { d in
                             byDay.filter { $0.day == d }.map { TipRow(label: "Est. 1RM", value: unit.format($0.value), color: Macro.calories.color) }
                         }
+                        .chartSummary("Estimated 1-rep max", byDay.map { unit.fromKg($0.value) }) { "\(number($0, digits: 1)) \(unit.rawValue)" }
                         .frame(height: 220)
                         Text("The best set of each session, as the weight you could probably lift once.").font(.note).foregroundStyle(.secondary)
                     }

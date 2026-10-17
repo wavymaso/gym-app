@@ -135,6 +135,7 @@ struct StrengthCard: View {
                 .dayTip("Week of", days: weeks, format: .dateTime.day().month(.abbreviated)) { w in
                     [TipRow(label: "Volume", value: "\(number(unit.fromKg(volume[w] ?? 0) / 1000, digits: 1)) t", color: palette.accent)]
                 }
+                .chartSummary("Weekly training volume, last 12 weeks", weeks.map { unit.fromKg(volume[$0] ?? 0) / 1000 }) { "\(number($0, digits: 1)) tonnes" }
                 .frame(height: 130)
                 Divider()
                 ForEach(Array(top), id: \.key) { key, rows in

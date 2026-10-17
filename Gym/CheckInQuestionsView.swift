@@ -11,7 +11,7 @@ struct CheckInQuestionsView: View {
             ForEach(CheckInQuestions.questions, id: \.key) { q in
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack {
-                        Text(q.label).font(.secondaryText.weight(.semibold))
+                        Text(q.label).font(.secondaryEmphasis)
                         Spacer()
                         Text("1 \(q.low) · 5 \(q.high)").font(.fine).foregroundStyle(.secondary)
                     }
@@ -32,7 +32,7 @@ struct CheckInQuestionsView: View {
             }
             if answers.hunger >= Int(Evidence.value("checkin.q.hunger.high")) {
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    Text("When are you hungriest?").font(.secondaryText.weight(.semibold))
+                    Text("When are you hungriest?").font(.secondaryEmphasis)
                     Picker("When are you hungriest?", selection: $answers.hungriest) {
                         Text("Not sure").tag(MealBand?.none)
                         ForEach(MealBand.allCases, id: \.self) { b in Text(b.label).tag(MealBand?.some(b)) }
@@ -75,14 +75,14 @@ struct CheckInProposalsView: View {
                             Text("Evidence: grade \(grade.rawValue)\(grade == .D ? " (a convention, not tested)" : "")").font(.fine).foregroundStyle(.tertiary)
                         }
                         if let d = answers.decisions[p.id] {
-                            Label(d ? "Accepted" : "Declined", systemImage: d ? "checkmark.circle.fill" : "xmark.circle").font(.fine.weight(.semibold))
+                            Label(d ? "Accepted" : "Declined", systemImage: d ? "checkmark.circle.fill" : "xmark.circle").font(.fineLabel)
                                 .foregroundStyle(d ? palette.good : Color.secondary)
                         } else {
                             HStack {
                                 Button("Accept") { accept(p) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                                 Button("No thanks") { answers.decisions[p.id] = false; Haptics.tick() }.buttonStyle(.bordered)
                             }
-                            .font(.secondaryText.weight(.semibold))
+                            .font(.secondaryEmphasis)
                         }
                     }
                     .padding(Space.l).modifier(CardSurface())

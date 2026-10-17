@@ -41,7 +41,7 @@ struct LargeEntriesCard: View {
         let when = String(format: "%02d:%02d", f.minute / 60, f.minute % 60)
         return VStack(alignment: .leading, spacing: Space.s) {
             Text("\(day == nil ? date(fromKey: d).formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)) + ", " : "")\(f.single ? "an entry" : "a meal") at \(when): \(number(energy.fromKcal(f.kcal))) \(energy.rawValue)")
-                .font(.secondaryText.weight(.semibold)).monospacedDigit()
+                .font(.secondaryEmphasis).monospacedDigit()
             ForEach(es.prefix(4), id: \.syncID) { e in
                 HStack {
                     Text(e.name).lineLimit(1)
@@ -60,7 +60,7 @@ struct LargeEntriesCard: View {
                 Button("I'll fix it") { Haptics.tick(); animate(Motion.smooth) { _ = later.insert(f.ids.joined()) } }
                     .buttonStyle(.bordered)
             }
-            .font(.secondaryText.weight(.semibold)).controlSize(.small)
+            .font(.secondaryEmphasis).controlSize(.small)
             Text("To fix it, tap the entry in the food log and change the amount.").font(.fine).foregroundStyle(.secondary)
         }
     }
@@ -84,7 +84,7 @@ struct StaplesView: View {
                 Text("Pick 15–25 foods you eat most weeks. Set how much you usually have and at which meal. The planner builds your meals from these until your log has about two weeks of history; then it learns from what you actually eat.")
                     .font(.note).foregroundStyle(.secondary)
                 HStack {
-                    Text("\(staples.count) picked").font(.secondaryText.weight(.semibold)).monospacedDigit()
+                    Text("\(staples.count) picked").font(.secondaryEmphasis).monospacedDigit()
                     Spacer()
                     Text(staples.count < 15 ? "aim for at least 15" : staples.count > 25 ? "25 is plenty" : "good")
                         .font(.note).foregroundStyle(staples.count < 15 || staples.count > 25 ? palette.warn : palette.good)
@@ -146,7 +146,7 @@ struct StaplesView: View {
 
     private func stapleRow(_ f: Food, _ st: Binding<Staple>) -> some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            Text(f.name).lineLimit(1).font(.secondaryText.weight(.semibold))
+            Text(f.name).lineLimit(1).font(.secondaryEmphasis)
             HStack {
                 Picker("Meal", selection: st.band) { ForEach(MealBand.allCases, id: \.self) { Text($0.label).tag($0) } }
                     .pickerStyle(.menu).labelsHidden().fixedSize()

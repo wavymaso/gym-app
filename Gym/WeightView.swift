@@ -123,7 +123,7 @@ struct WeightChart: View {
             }
             ForEach(series.filter(\.logged), id: \.day) { p in
                 PointMark(x: .value("Day", date(fromKey: p.day)), y: .value("Scale", unit.fromKg(p.scale)))
-                    .foregroundStyle(Color.primary.opacity(0.4)).symbolSize(22)
+                    .foregroundStyle(Color.primary.opacity(0.3)).symbolSize(14)      // weigh-ins: small faint dots, the trend is the line
             }
             ForEach(series, id: \.day) { p in
                 AreaMark(x: .value("Day", date(fromKey: p.day)), yStart: .value("Low", lo), yEnd: .value("Trend", unit.fromKg(p.trend)))
@@ -143,6 +143,7 @@ struct WeightChart: View {
                 + [TipRow(label: "Trend", value: unit.format(p.trend), color: palette.accent)]
         }
         .dateAxis(days: series.map(\.day))
+        .chartSummary("Weight trend", series.map { unit.fromKg($0.trend) }) { "\(number($0, digits: 1)) \(unit.rawValue)" }
         .appStyle()
     }
 }

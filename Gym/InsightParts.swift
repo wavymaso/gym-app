@@ -6,6 +6,7 @@ import SwiftUI
 struct MiniArea: View {
     let values: [Double]
     let color: Color
+    var label = "Trend"
     var body: some View {
         if values.count >= 2 {
             let lo = values.min()!, hi = values.max()!
@@ -15,6 +16,7 @@ struct MiniArea: View {
             }
             .chartXAxis(.hidden).chartYAxis(.hidden)
             .chartYScale(domain: (lo - (hi - lo) * 0.1 - 0.0001)...(hi + 0.0001))
+            .chartSummary(label, values) { number($0, digits: abs($0) < 200 ? 1 : 0) }
         } else {
             Capsule().fill(color.opacity(0.2)).frame(height: 2)
         }

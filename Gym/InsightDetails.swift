@@ -97,6 +97,9 @@ struct InsightDetailView: View {
                 }
                 headline(shown, unit, energy)
                 chart(shown, unit, energy).frame(height: 300)
+                    .chartSummary(kind == .nutrition ? macro.label : kind.title, shown.map(\.value)) { v in
+                        "\(number(v, digits: isEnergy || kind == .nutrition ? 0 : 1)) \(isEnergy ? energy.rawValue : kind == .nutrition ? "g" : unit.rawValue)"
+                    }
                     .contentShape(Rectangle())
                     .simultaneousGesture(kind == .goal ? nil : pinch(all, shown))
                 if kind != .goal { controls }
@@ -303,9 +306,7 @@ struct InsightDetailView: View {
                 }
                 if kind == .weightTrend {
                     ForEach(pts.filter { $0.extra != nil }) { p in
-                        // Weigh-ins stay in the background: faint dots and a hairline; the trend is the story.
-                        LineMark(x: .value("Day", p.when), y: .value("Scale", p.extra!), series: .value("S", "scale"))
-                            .foregroundStyle(color.opacity(0.18)).lineStyle(StrokeStyle(lineWidth: 1))
+                        // Weigh-ins stay in the background: small faint dots, never joined; the trend is the story.
                         PointMark(x: .value("Day", p.when), y: .value("Scale", p.extra!))
                             .foregroundStyle(color.opacity(0.45)).symbolSize(pts.count > 120 ? 6 : 14)
                     }

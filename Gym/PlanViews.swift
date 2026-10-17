@@ -34,14 +34,14 @@ struct PlanDayView: View {
                 totals(r)
                 if adherence.total > 0 { AdherenceCard(summary: adherence) }
                 if !history.isEmpty {
-                    Button { undo() } label: { Label("Undo last change", systemImage: "arrow.uturn.backward") }.font(.secondaryText.weight(.semibold))
+                    Button { undo() } label: { Label("Undo last change", systemImage: "arrow.uturn.backward") }.font(.secondaryEmphasis)
                 }
                 HStack {
                     Button { why = true } label: { Label("Why this plan?", systemImage: "questionmark.circle") }
                     Spacer()
                     Button { week = true } label: { Label("Week & groceries", systemImage: "cart") }
                 }
-                .font(.secondaryText.weight(.semibold))
+                .font(.secondaryEmphasis)
             } else {
                 EmptyState(icon: "calendar.badge.clock", title: "No plan yet", message: "Set up your goal in Strategy first: the planner builds meals to hit those targets.")
             }
@@ -125,7 +125,7 @@ struct PlanDayView: View {
             Label("Pick your staples", systemImage: "basket").font(.cardTitle)
             Text("Your log doesn't have enough food-by-food history yet, so this plan uses your recent foods. Pick 15–25 foods you eat regularly for plans that look like your real meals.")
                 .font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Button("Choose staples") { staples = true }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).font(.secondaryText.weight(.semibold))
+            Button("Choose staples") { staples = true }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).font(.secondaryEmphasis)
         }
         .padding(Space.l).modifier(CardSurface())
     }
@@ -136,7 +136,7 @@ struct PlanDayView: View {
         return HStack {
             VStack(alignment: .leading, spacing: Space.hairline) {
                 Label(t.map { "Training \(planClock($0.start)) · \($0.minutes) min" } ?? "Rest day", systemImage: t == nil ? "bed.double" : "dumbbell")
-                    .font(.secondaryText.weight(.semibold))
+                    .font(.secondaryEmphasis)
                 if let why { Text(why).font(.fine).foregroundStyle(.secondary) }
             }
             Spacer()
@@ -148,7 +148,7 @@ struct PlanDayView: View {
                 Divider()
                 Button("Use my weekly schedule") { override(nil) }
                 Button("Planner settings…") { settings = true }
-            } label: { Text("Change").font(.secondaryText.weight(.semibold)) }
+            } label: { Text("Change").font(.secondaryEmphasis) }
         }
         .padding(Space.m).modifier(CardSurface())
     }
@@ -162,7 +162,7 @@ struct PlanDayView: View {
                 Button("Shift carbs to training") { setBoost(true) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 Button("Not now") { setBoost(false) }.buttonStyle(.bordered)
             }
-            .font(.secondaryText.weight(.semibold))
+            .font(.secondaryEmphasis)
         }
         .padding(Space.l).modifier(CardSurface())
     }
@@ -233,7 +233,7 @@ struct PlanDayView: View {
                 Label("Eaten", systemImage: "checkmark.circle.fill").font(.fine).foregroundStyle(palette.good)
             } else {
                 Button { ctx.eat(s, foods: r.foods, day: day); Haptics.success() } label: {
-                    Text("Eat this meal").font(.secondaryText.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 38)
+                    Text("Eat this meal").font(.secondaryEmphasis).frame(maxWidth: .infinity, minHeight: 38)
                         .background(palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.onAccent)
                 }
                 .pressable()
@@ -291,7 +291,7 @@ struct PlanWhyView: View {
             Section("Rules") {
                 ForEach(Array(plan.reasons.enumerated()), id: \.offset) { _, r in
                     VStack(alignment: .leading, spacing: Space.xxs) {
-                        Text(r.rule.capitalized).font(.secondaryText.weight(.semibold))
+                        Text(r.rule.capitalized).font(.secondaryEmphasis)
                         Text(r.detail).font(.secondaryText).foregroundStyle(.secondary)
                     }
                 }
@@ -323,6 +323,7 @@ struct WeekPlanView: View {
                         .foregroundStyle(training ? palette.carbs : palette.carbs.opacity(0.4))
                         .annotation(position: .top) { Text(training ? "🏋" : "").font(.fine) }
                 }
+                .chartSummary("Carbs per day, next 7 days", days.map(\.plan.totals.carbs)) { "\(Int($0)) g" }
                 .frame(height: 140)
                 Text("Carbs per day; solid bars are training days. Same weekly calories: training days take more carbs, rest days more fat.")
                     .font(.note).foregroundStyle(.secondary)
@@ -330,7 +331,7 @@ struct WeekPlanView: View {
             Section("Next 7 days") {
                 ForEach(days, id: \.day) { d in
                     VStack(alignment: .leading, spacing: Space.xs) {
-                        Text(date(fromKey: d.day).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))).font(.secondaryText.weight(.semibold))
+                        Text(date(fromKey: d.day).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))).font(.secondaryEmphasis)
                         let training = d.plan.slots.contains { $0.kind == .preWorkout || $0.kind == .postWorkout }
                         Text("\(training ? "🏋 " : "")\(Int(d.plan.totals.kcal)) kcal · \(Int(d.plan.totals.protein)) P · \(Int(d.plan.totals.carbs)) C\(d.plan.carbs.map { String(format: " (%.1f g/kg)", $0.gPerKg) } ?? "") · \(d.plan.slots.count) meals\(d.plan.feasible ? "" : " · doesn't fully fit")")
                             .font(.note).foregroundStyle(d.plan.feasible ? Color.secondary : palette.warn).monospacedDigit()

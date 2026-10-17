@@ -51,6 +51,7 @@ struct InsightsView: View {
                         return [TipRow(label: "Eaten", value: energy.format(x.n.kcal), color: Macro.calories.color)]
                             + (d.target(day).map { [TipRow(label: "Target", value: energy.format($0.kcal))] } ?? [])
                     }
+                    .chartSummary("Calories eaten per day", d.logged.map { energy.fromKcal($0.n.kcal) }) { "\(number($0)) \(energy.rawValue)" }
                     .frame(height: 220)
                     legend([("Eaten", Macro.calories.color), ("Target", .primary.opacity(0.6))])
                 }
@@ -74,6 +75,7 @@ struct InsightsView: View {
                         (d.expenditure.first { $0.day == day }.map { [TipRow(label: "Expenditure", value: energy.format($0.kcal), color: Macro.fat.color)] } ?? [])
                         + (d.rollingIntake.first { $0.day == day }.map { [TipRow(label: "Intake (7-day)", value: energy.format($0.value), color: Macro.calories.color)] } ?? [])
                     }
+                    .chartSummary("Expenditure", d.expenditure.map { energy.fromKcal($0.kcal) }) { "\(number($0)) \(energy.rawValue)" }
                     .frame(height: 200)
                     legend([("Expenditure", Macro.fat.color), ("Intake, 7-day average", Macro.calories.color)])
                     Text("When intake sits below expenditure you lose weight, above it you gain. The gap is your daily deficit or surplus.")
@@ -97,6 +99,7 @@ struct InsightsView: View {
                         return [TipRow(label: "Calories", value: energy.format(x.n.kcal), color: Macro.calories.color)]
                             + [Macro.protein, .fat, .carbs].map { TipRow(label: $0.label, value: "\(number($0.value(x.n.targets))) g", color: $0.color) }
                     }
+                    .chartSummary("Calories from protein, fat and carbs per day", d.logged.map { energy.fromKcal($0.n.kcal) }) { "\(number($0)) \(energy.rawValue)" }
                     .frame(height: 200)
                     if let a = d.avg, let t = d.avgTarget {
                         adaptiveStack {
@@ -250,6 +253,7 @@ struct EnergyBalanceCard: View {
                     days.filter { $0.day == day }.map { TipRow(label: $0.balance < 0 ? "Deficit" : "Surplus", value: signedKcal($0.balance, energy),
                                                                color: $0.balance < 0 ? palette.good : palette.warn) }
                 }
+                .chartSummary("Daily energy balance", days.map(\.balance)) { signedKcal($0, energy) }
                 .frame(height: 140)
                 HStack {
                     VStack(alignment: .leading, spacing: Space.hairline) {
