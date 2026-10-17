@@ -18,6 +18,8 @@ struct PlannerSettings: Codable, Equatable {
     var templates: [MealTemplate] = []               // your edited meal templates (empty: the defaults)
     var treatsEnabled = false                        // an evening snack with one treat a day
     var catalogRemoved: [String] = []                // simple foods you'd never buy (canonical ids)
+    var style = "usual"                              // usual (prefer foods you've logged) | basic (whole foods only) | anything
+    var sameProteinTwice = false                     // the same protein at lunch and dinner
     var carbs = CarbSettings()                       // carbohydrate amount and timing around training
     var usualMeals: [UsualMeal] = []                 // combinations you confirmed or edited (they win over learned ones)
     var deletedUsualMeals: [String] = []             // learned combinations you deleted (ids)
@@ -104,6 +106,8 @@ extension PlannerSettings {
         templates = (try? c.decodeIfPresent(type(of: templates), forKey: .templates)) ?? d.templates
         treatsEnabled = (try? c.decodeIfPresent(type(of: treatsEnabled), forKey: .treatsEnabled)) ?? d.treatsEnabled
         catalogRemoved = (try? c.decodeIfPresent(type(of: catalogRemoved), forKey: .catalogRemoved)) ?? d.catalogRemoved
+        style = (try? c.decodeIfPresent(type(of: style), forKey: .style)) ?? d.style
+        sameProteinTwice = (try? c.decodeIfPresent(type(of: sameProteinTwice), forKey: .sameProteinTwice)) ?? d.sameProteinTwice
         carbs = (try? c.decodeIfPresent(type(of: carbs), forKey: .carbs)) ?? d.carbs
         usualMeals = (try? c.decodeIfPresent(type(of: usualMeals), forKey: .usualMeals)) ?? d.usualMeals
         deletedUsualMeals = (try? c.decodeIfPresent(type(of: deletedUsualMeals), forKey: .deletedUsualMeals)) ?? d.deletedUsualMeals

@@ -109,15 +109,18 @@ enum CondimentKind {
 /// to a serving (spreads 30 g, sauces 60 g, oil 15 g, never over 150 kcal), so last week's 500 g of
 /// sauce doesn't become the plan's portion.
 enum Portion {
-    static func bounds(usual: Double, kcal100: Double, role: FoodRole, step: Double, name: String = "", fat: Double = 0) -> (usual: Double, min: Double, max: Double) {
-        var hi = usual * 1.6
+    static func bounds(usual: Double, kcal100: Double, role: FoodRole, step: Double, name: String = "", fat: Double = 0, carbs100: Double = 0) -> (usual: Double, min: Double, max: Double) {
+        var hi = usual * (role.isProteinSource && role != .proteinSnack ? 2.0 : 1.6)
         if role.isAccompaniment { hi = min(usual * 1.25, CondimentKind.cap(name, fat: fat), max(step, 15000 / max(kcal100, 1))) }
         // A treat stays at your portion; a protein snack too when it comes in units (a bar), but a powder can scale.
         if role == .treat || (role == .proteinSnack && step >= usual) { hi = min(hi, usual) }
         let st = role.isAccompaniment ? min(step, 5) : step
         hi = max(st, (hi / st).rounded(.down) * st)
         let u = min(usual, hi)
-        let lo = min(u, max(st, (u * 0.5 / st).rounded() * st))
+        // Carb sides can shrink further (75 g of dry pasta is a normal portion when your usual is 250 g).
+        var lo = min(u, max(st, (u * (role == .carbSide ? 0.3 : 0.5) / st).rounded() * st))
+        // …but a carb base is still a carb base: at least about 25 g of carbs.
+        if role == .carbSide, carbs100 > 0 { lo = min(u, max(lo, (2500 / carbs100 / st).rounded(.up) * st)) }
         return (u, lo, hi)
     }
     static func perDay(_ role: FoodRole, name: String, fat: Double) -> Int {
@@ -136,7 +139,7 @@ extension PlanFood {
         var f = self
         f.role = r
         if r.isAccompaniment { f.step = min(f.step, 5) }
-        let b = Portion.bounds(usual: usual ?? usualGrams, kcal100: per100.kcal, role: r, step: f.step, name: name, fat: per100.fat)
+        let b = Portion.bounds(usual: usual ?? usualGrams, kcal100: per100.kcal, role: r, step: f.step, name: name, fat: per100.fat, carbs100: per100.carbs)
         (f.usualGrams, f.minGrams, f.maxGrams) = (b.usual, b.min, b.max)
         f.maxPerDay = Portion.perDay(r, name: name, fat: per100.fat)
         return f

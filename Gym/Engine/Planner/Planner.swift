@@ -23,6 +23,9 @@ struct PlanFood: Equatable {
     var basic = false                     // from the basic foods library (not one of yours)
     var basicAllowed = true               // allowed in Basic style (NOVA 1–2, or chosen as a basic)
     var staple = false                    // one of your staples (preferred; a protein main staple is a primary protein source)
+    var canonical: String? = nil          // what it is underneath the brand (taxonomy)
+    var stapleBand: MealBand? = nil       // the meal you set it as a staple for
+    var tier = 1                          // 1 whole food, 2 simple staple, 3 convenience (only when in stock)
     var shownRatio = 1.0                  // the plan shows grams × this (you weigh it cooked, values are raw: the cooked ratio)
     var shownUnit = "g"                   // "g", "g cooked", "g raw"
     func shown(_ g: Double) -> String { "\(Int((g * shownRatio).rounded())) \(shownUnit)" }
@@ -51,6 +54,7 @@ struct PlanSlot: Equatable {
     var locked = false                    // you asked to keep it as is: fixed
     var provisional = false               // eaten but not confirmed (looked too big): not counted yet
     var anyBand = false                   // Ramadan: iftar to suhoor, so breakfast foods are fine at night
+    var templateID: String? = nil         // a meal with its own template (the evening snack)
     var fixed: Bool { eaten || locked }
     var band: MealBand { MealBand.of(minute: minute) }
 }
@@ -75,6 +79,7 @@ struct PlanOptions: Equatable {
     var exclusions: Set<String> = []
     var variety = 0.5                     // 0 = repeat freely, 1 = avoid repeats
     var trainingCarbBoost = false         // accepted proposal: even more of the day's carbs around training
+    var sizeOnly = false                  // the foods are chosen (templates): only size them, never add, remove or swap
 }
 
 struct DayPlan: Equatable {
@@ -88,6 +93,7 @@ struct DayPlan: Equatable {
     var kcalBand: Double = 0              // ± kcal the plan was held to
     struct Carbs: Equatable { var gPerKg: Double; var range: ClosedRange<Double>; var rangeIsTarget: Bool; var intra: Double; var recovery: Bool }
     var carbs: Carbs? = nil               // the day's carbs against the range for your phase
+    var structure: [Int: MealStructure] = [:]   // slot index → template used and foods per slot (three-stage planner)
     var reasons: [EngineReason]
     var feasible: Bool                    // all hard constraints met
     var note: String?                     // when the day can't be hit sensibly
@@ -165,7 +171,7 @@ enum Planner {
         // Relaxation order: preferences first (variety → usual slots → timing preferences), then the one
         // hard limit that may widen, the calorie band (±5%, then ±10%), always reported. Protein (day and
         // per meal), the fat floor and the fibre floor never relax.
-        let stages: [(name: String, hard: Bool, apply: (inout Weights) -> Void)] = [
+        let allStages: [(name: String, hard: Bool, apply: (inout Weights) -> Void)] = [
             ("none", false, { _ in }),
             ("variety", false, { $0.variety = 0 }),
             ("usual meal slots", false, { $0.slotPreference = 0; $0.anySlot = true }),
@@ -173,6 +179,9 @@ enum Planner {
             ("calories within ±5%", true, { $0.tolerance = max($0.tolerance, 0.05) }),
             ("calories within ±10%", true, { $0.tolerance = max($0.tolerance, 0.10) }),
         ]
+        // With templates (size only) the preferences are already decided: only the calorie band can relax,
+        // and the per-meal carb targets stay.
+        let stages = options.sizeOnly ? allStages.filter { $0.name == "none" || $0.hard } : allStages
         var w = Weights(tolerance: options.kcalTolerance, variety: options.variety)
         if note != nil { w.minMealKcal = 250 }
         if options.trainingCarbBoost { w.trainingCarbs = 2.5 }
@@ -195,7 +204,10 @@ enum Planner {
         if relaxedHard.contains("calories within ±10%") { tolUsed = max(tolUsed, 0.10) }
         let short = shortMeals(b.slots, t, byKey)
         let totals = b.slots.flatMap(\.items).reduce(Macros()) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) } + Macros()
-        if b.hard.contains("meal realism") { reasons.append(.init(rule: "meal realism", detail: "Some meals couldn't be built the usual way (a main food in each, foods at their usual meals). Adding staples helps.", evidence: [])) }
+        if b.hard.contains("meal realism") {
+            let list = issues(b.slots, byKey: byKey, t: t, checkBands: !options.sizeOnly).map(\.text).filter { !$0.contains("protein of the") }
+            reasons.append(.init(rule: "meal realism", detail: "Not met: \(list.joined(separator: "; ")).", evidence: []))
+        }
         let allTotals = fixedTotal + b.slots.filter { !$0.fixed }.flatMap(\.items).reduce(Macros()) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) }
         _ = totals
         if !relaxed.isEmpty {
@@ -312,36 +324,7 @@ enum Planner {
         // condiments and fats only alongside one; a treat never alone and once a day; at most two protein
         // mains and two carb sides a meal; foods only at their meals; no food in more meals than allowed.
         func violations(_ s: [PlanSlot]) -> Int {
-            var v = 0
-            var count: [String: Int] = [:]
-            for sl in s {
-                for k in Set(sl.items.map(\.key)) { count[k, default: 0] += 1 }
-                guard !sl.fixed else { continue }
-                let roles = sl.items.compactMap { byKey[$0.key]?.role }
-                if !sl.items.isEmpty && !roles.contains(where: \.isCore) { v += 1 }
-                if roles.filter(\.isAccompaniment).count > 2 { v += 1 }
-                if roles.filter({ $0 == .treat }).count > 1 { v += 1 }
-                if roles.filter({ $0 == .proteinMain }).count > 2 { v += 1 }
-                if roles.filter({ $0 == .carbSide }).count > 2 { v += 1 }
-                if roles.contains(.drink) { v += 1 }
-                if sl.items.count > 5 { v += 1 }
-                // The protein minimum for this meal (hard; reported if your foods can't reach it).
-                let p = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).protein ?? 0) }
-                if p < t.minProtein(sl.kind) - 0.5 { v += 1 }
-                // Before training: fat and fibre caps (hard).
-                if sl.kind == .preWorkout {
-                    let fat = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).fat ?? 0) }
-                    let fib = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).fibre ?? 0) }
-                    // Graded: further over counts more, so the search sees every step toward the cap.
-                    if fat > t.preWorkoutMaxFat + 0.5 { v += 1 + Int((fat - t.preWorkoutMaxFat) / 3) }
-                    if fib > t.preWorkoutMaxFibre + 0.5 { v += 1 + Int((fib - t.preWorkoutMaxFibre) / 1.5) }
-                }
-                for it in sl.items { if let f = byKey[it.key], !fits(f, sl) { v += 1 } }
-            }
-            for (k, n) in count { if let f = byKey[k], n > f.maxPerDay { v += n - f.maxPerDay } }
-            let treats = s.filter { !$0.fixed }.flatMap(\.items).filter { byKey[$0.key]?.role == .treat }.count
-            if treats > 1 { v += treats - 1 }
-            return v
+            issues(s, byKey: byKey, t: t, checkBands: !options.sizeOnly).reduce(0) { $0 + $1.weight }
         }
         var curV = violations(slots)
         func total(_ s: [PlanSlot]) -> Macros { s.filter { !$0.fixed }.flatMap(\.items).reduce(fixedTotal) { $0 + (byKey[$1.key]?.macros($1.grams) ?? Macros()) } }
@@ -380,7 +363,7 @@ enum Planner {
                 x += w.spread * pow(max(0, perMeal * 0.7 - mm.protein), 2) * 0.15
                 x += pow(max(0, mm.protein - max(70, perMeal * 1.6)), 2) * 0.3
                 // Carbs where the carb plan puts them (else simply more around training); lighter fat and fibre right before.
-                if let target = t.mealCarbs[sl.index], !sl.fixed { x += w.trainingCarbs * pow(mm.carbs - target, 2) * 0.05 }
+                if let target = t.mealCarbs[sl.index], !sl.fixed { x += w.trainingCarbs * pow(mm.carbs - target, 2) * (sl.kind == .preWorkout || sl.kind == .postWorkout ? 0.25 : 0.08) }
                 else if t.mealCarbs.isEmpty, sl.kind == .preWorkout || sl.kind == .postWorkout { x -= w.trainingCarbs * min(mm.carbs, 120) * 0.15 }
                 if sl.kind == .preWorkout { x += w.preWorkoutFat * (max(0, mm.fat - 15) * 0.8 + max(0, mm.fibre - 6) * 0.8) }
                 if sl.kind == .preSleep, options.preSleepProtein { x += w.preSleep * pow(max(0, Evidence.value("timing.preSleep.casein") - mm.protein), 2) * 0.1 }
@@ -410,6 +393,7 @@ enum Planner {
                         var s2 = slots; s2[i].items[j].grams = g; consider(s2)
                     }
                 }
+                if options.sizeOnly { continue }
                 if slots[i].items.count > 1 {
                     for j in slots[i].items.indices { var s2 = slots; s2[i].items.remove(at: j); consider(s2) }
                 }
@@ -418,13 +402,69 @@ enum Planner {
                     for j in slots[i].items.indices { s2 = slots; s2[i].items[j] = PlanItem(key: f.key, grams: f.usualGrams); consider(s2) }
                 }
             }
+            // Paired moves: one food up a step while another goes down (more oil, less rice), so the
+            // search can trade between macros without passing through a worse day.
+            if bestMove == nil {
+                let pos = slots.indices.flatMap { i in slots[i].fixed ? [] : slots[i].items.indices.map { (i, $0) } }
+                for (ia, ja) in pos {
+                    guard let fa = byKey[slots[ia].items[ja].key] else { continue }
+                    let up = min(fa.maxGrams, slots[ia].items[ja].grams + fa.step)
+                    guard up > slots[ia].items[ja].grams else { continue }
+                    for (ib, jb) in pos where !(ib == ia && jb == ja) {
+                        guard let fb = byKey[slots[ib].items[jb].key] else { continue }
+                        let down = slots[ib].items[jb].grams - fb.step
+                        guard down >= max(fb.step, fb.minGrams) - 1e-9 else { continue }
+                        var s2 = slots; s2[ia].items[ja].grams = up; s2[ib].items[jb].grams = down; consider(s2)
+                    }
+                }
+            }
             guard let m = bestMove else { break }
             slots = m.slots; curV = m.v; cur = m.sc
         }
         for i in slots.indices where !slots[i].fixed { slots[i].items = slots[i].items.map { PlanItem(key: $0.key, grams: ($0.grams * 10).rounded() / 10) } }
         let shortCount = shortMeals(slots, t, byKey).count
+        let realism = issues(slots, byKey: byKey, t: t, checkBands: !options.sizeOnly).filter { !$0.text.contains("protein of the") }
         return (slots, cur, hard(total(slots), t, options, tolerance: w.tolerance) + (shortCount > 0 ? ["protein per meal"] : [])
-                + (curV - shortCount > 0 ? ["meal realism"] : []))
+                + (realism.isEmpty ? [] : ["meal realism"]))
+    }
+
+    /// The realism rules that a plan breaks, each with its meal and weight (the search minimises the
+    /// total; the plan reports the text). `checkBands`: foods only at their usual meals (off when
+    /// templates decide which meal a food belongs to).
+    static func issues(_ s: [PlanSlot], byKey: [String: PlanFood], t: PlanTargets, checkBands: Bool = true) -> [(weight: Int, text: String)] {
+        var out: [(Int, String)] = []
+        var count: [String: Int] = [:]
+        for sl in s {
+            for k in Set(sl.items.map(\.key)) { count[k, default: 0] += 1 }
+            guard !sl.fixed else { continue }
+            let meal = mealName(sl)
+            let roles = sl.items.compactMap { byKey[$0.key]?.role }
+            if !sl.items.isEmpty && !roles.contains(where: \.isCore) { out.append((1, "\(meal): no protein, carb base or dairy")) }
+            if roles.filter(\.isAccompaniment).count > 2 { out.append((1, "\(meal): more than two condiments or fats")) }
+            if roles.filter({ $0 == .treat }).count > 1 { out.append((1, "\(meal): more than one treat")) }
+            if roles.filter({ $0 == .proteinMain }).count > 2 { out.append((1, "\(meal): more than two protein mains")) }
+            if roles.filter({ $0 == .carbSide }).count > 2 { out.append((1, "\(meal): more than two carb sides")) }
+            if roles.contains(.drink) { out.append((1, "\(meal): a drink")) }
+            if sl.items.count > 6 { out.append((1, "\(meal): more than six foods")) }
+            // The protein minimum for this meal (hard; reported if your foods can't reach it).
+            let p = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).protein ?? 0) }
+            // Graded, so the search sees every step toward the minimum.
+            if p < t.minProtein(sl.kind) - 0.5 { out.append((1 + Int((t.minProtein(sl.kind) - p) / 3), "\(meal): \(Int(p)) g protein of the \(Int(t.minProtein(sl.kind))) g minimum")) }
+            // Before training: fat and fibre caps (hard), graded so every step toward the cap counts.
+            if sl.kind == .preWorkout {
+                let fat = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).fat ?? 0) }
+                let fib = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).fibre ?? 0) }
+                if fat > t.preWorkoutMaxFat + 0.5 { out.append((1 + Int((fat - t.preWorkoutMaxFat) / 3), "meal before training: \(Int(fat)) g fat (cap \(Int(t.preWorkoutMaxFat)) g)")) }
+                if fib > t.preWorkoutMaxFibre + 0.5 { out.append((1 + Int((fib - t.preWorkoutMaxFibre) / 1.5), "meal before training: \(Int(fib)) g fibre (cap \(Int(t.preWorkoutMaxFibre)) g)")) }
+            }
+            if checkBands {
+                for it in sl.items { if let f = byKey[it.key], !(sl.anyBand || f.bands.isEmpty || f.bands.contains(sl.band)) { out.append((1, "\(meal): \(f.name) isn't a \(sl.band.label.lowercased()) food")) } }
+            }
+        }
+        for (k, n) in count { if let f = byKey[k], n > f.maxPerDay { out.append((n - f.maxPerDay, "\(f.name) in \(n) meals (at most \(f.maxPerDay))")) } }
+        let treats = s.filter { !$0.fixed }.flatMap(\.items).filter { byKey[$0.key]?.role == .treat }.count
+        if treats > 1 { out.append((treats - 1, "\(treats) treats in the day (one at most)")) }
+        return out
     }
 
     // MARK: From the eating profile

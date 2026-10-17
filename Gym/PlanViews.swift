@@ -153,8 +153,15 @@ struct PlanDayView: View {
                         .buttonStyle(.borderless).accessibilityLabel(s.locked ? "Unlock this meal" : "Keep this meal every day")
                 }
             }
+            if let st = r.plan.structure[s.index] {
+                Text(st.template + (st.dropped.isEmpty ? "" : " · dropped to fit: \(st.dropped.joined(separator: ", "))") + (st.unfilled.isEmpty ? "" : " · ⚠ \(st.unfilled.joined(separator: "; "))"))
+                    .font(.fine).foregroundStyle(st.unfilled.isEmpty ? Color.secondary : palette.warn)
+            }
             ForEach(Array(s.items.enumerated()), id: \.offset) { _, it in
                 HStack {
+                    if let kind = r.plan.structure[s.index]?.fill.first(where: { $0.keys.contains(it.key) })?.kind {
+                        Text(kind.label).font(.fine).foregroundStyle(.tertiary).frame(width: 74, alignment: .leading).lineLimit(1)
+                    }
                     Text(r.foods[it.key]?.name ?? it.key).lineLimit(1)
                     Spacer()
                     Text(it.grams > 1 ? (r.foods[it.key]?.shown(it.grams) ?? "\(Int(it.grams)) g") : "\(Int(r.foods[it.key]?.macros(it.grams).kcal ?? 0)) kcal").monospacedDigit().foregroundStyle(.secondary)

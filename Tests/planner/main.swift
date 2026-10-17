@@ -504,4 +504,70 @@ do {
     check("carb insight: from 20 sessions, finds the pattern in the data", ins.map { $0.preHigh > $0.preLow } == true, ins.map { ($0.preHigh, $0.preLow) } ?? (0, 0))
     check("carb insight: always says it's observational", ins?.text.contains("isn't proof") == true)
 }
+
+// MARK: Three-stage planner (templates → selection → portions)
+do {
+    // The test pantry with canonical foods and tiers, plus the basic library.
+    let canonPantry = (pantry + [food("Barebells protein bar", 349, 36, 13, 31, 2, usual: 55, slots: [:], step: 55, max: 110).with(role: .proteinSnack)]).map { f -> PlanFood in
+        var f = f; f.canonical = Taxonomy.match(f.name, brand: nil)?.id; f.tier = f.canonical.map(Taxonomy.tier) ?? 1
+        f.nova = f.canonical.flatMap { Taxonomy.byID[$0]?.nova } ?? 1; return f }
+    let all = canonPantry + BasicFoods.planFoods(excluding: Set(canonPantry.map(\.key)))
+    let tps = MealTemplates.defaults
+    var bctx = BuildContext()
+    let rest3 = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: bctx)
+    let byK3 = Dictionary(all.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+    var requiredOK = true, allowedOK = true
+    for sl in rest3.plan.slots where !sl.fixed {
+        guard let st = rest3.structure[sl.index], let t = MealTemplates.template(for: sl, in: tps) else { requiredOK = false; continue }
+        for f in st.fill where f.required { if f.keys.isEmpty && st.unfilled.isEmpty { requiredOK = false } }
+        for f in st.fill { for k in f.keys { if let ts = t.slots.first(where: { $0.kind == f.kind }), let c = byK3[k]?.canonical, !ts.allowed.contains(c) { allowedOK = false } } }
+    }
+    check("3-stage: every required slot filled (or reported)", requiredOK)
+    check("3-stage: every food is allowed in its slot", allowedOK)
+    check("3-stage: the solver only sizes the chosen foods", rest3.plan.slots.allSatisfy { sl in Set(sl.items.map(\.key)).isSubset(of: Set((rest3.structure[sl.index]?.fill.flatMap(\.keys) ?? []) + sl.items.filter { _ in false }.map(\.key))) })
+    check("3-stage: no tier 3 food unless in stock", !rest3.plan.slots.flatMap(\.items).contains { byK3[$0.key]?.tier == 3 })
+    bctx.inStock = ["protein-bar"]
+    let stocked = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps.map { t in var t = t; if t.meal == .merienda { t.slots[0].allowed.append("protein-bar") }; return t }, ctx: bctx)
+    check("3-stage: a tier 3 food in stock can be planned, never as a meal's only protein", !stocked.plan.slots.contains { sl in
+        let ps = sl.items.filter { [.proteinMain, .dairy, .proteinSnack].contains(byK3[$0.key]?.role ?? .condiment) }
+        return ps.count == 1 && byK3[ps[0].key]?.tier == 3 })
+    let lunchP = rest3.structure.values.first { $0.template == "Lunch" }?.fill.first { $0.kind == .protein }?.keys.first.flatMap { byK3[$0]?.canonical }
+    let dinnerP = rest3.structure.values.first { $0.template == "Dinner" }?.fill.first { $0.kind == .protein }?.keys.first.flatMap { byK3[$0]?.canonical }
+    check("3-stage: lunch and dinner proteins differ", lunchP != nil && lunchP != dinnerP, (lunchP ?? "-", dinnerP ?? "-"))
+    // Rotation over 7 days.
+    func weekProteins(_ variety: Double) -> [String] {
+        var c = BuildContext(); c.variety = variety
+        var out: [String] = []
+        for _ in 0..<7 {
+            let r = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: c)
+            let ps = r.structure.values.filter { $0.template == "Lunch" || $0.template == "Dinner" }.compactMap { $0.fill.first { $0.kind == .protein }?.keys.first.flatMap { byK3[$0]?.canonical } }
+            out += ps
+            for sl in r.plan.slots { for it in sl.items { if let can = byK3[it.key]?.canonical { c.recent[can, default: 0] += 1; c.recent["family:" + Taxonomy.family(can), default: 0] += 1 } } }
+        }
+        return out
+    }
+    let same = Set(weekProteins(0)).count, varied = Set(weekProteins(1)).count
+    check("rotation: 'different each day' uses more proteins over 7 days than 'same meals daily'", varied > same, (same, varied))
+    check("rotation: at least 4 proteins in a varied week", varied >= 4, varied)
+    // Basic style: never NOVA 3–4 (except the basics you chose).
+    var basicCtx = BuildContext(); basicCtx.basicStyle = true
+    let basic = MealBuilder.plan(cutDay, slots: slotsFor(training: (18 * 60, 75)), foods: all, templates: tps, ctx: basicCtx)
+    check("Basic style: no NOVA 3–4 foods (but tuna, wholemeal bread, queso batido)", !basic.plan.slots.flatMap(\.items).contains { i in
+        guard let f = byK3[i.key] else { return true }
+        return f.nova > 2 && !(f.basic && f.basicAllowed) }, basic.plan.slots.flatMap(\.items).map(\.key))
+    // Optional slots dropped when calories are tight, and said so.
+    let tight = PlanTargets(kcal: 1500, protein: 180, fat: 40, carbs: 100, fibreFloor: 15, fatFloor: 40, weightKg: 100)
+    let tr = MealBuilder.plan(tight, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("tight day: optional slots dropped first", tr.structure.values.contains { !$0.dropped.isEmpty } || tr.plan.feasible, tr.plan.misses)
+    // Units cap: at most 3 chocolate rice cakes at breakfast.
+    var choc = food("Tortitas de arroz integral con chocolate negro", 456, 7, 18, 64, 4.6, usual: 17, slots: [:], step: 17, max: 200).with(role: .treat)
+    choc.canonical = "rice-cakes-chocolate"; choc.tier = 2; choc.staple = true
+    let withChoc = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all + [choc], templates: tps, ctx: BuildContext())
+    let chocGrams = withChoc.plan.slots.flatMap(\.items).filter { $0.key == choc.key }.map(\.grams).max() ?? 0
+    check("chocolate rice cakes: at most 3 at breakfast", chocGrams <= 3 * 17 + 0.01, chocGrams)
+    // Regenerating with an offset gives a different meal.
+    var off = BuildContext(); off.offset = 1
+    let regen = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: off)
+    check("regenerate: a different combination", regen.plan.slots.map { $0.items.map(\.key) } != rest3.plan.slots.map { $0.items.map(\.key) })
+}
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

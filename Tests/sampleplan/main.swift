@@ -8,6 +8,8 @@ MainActor.assumeIsolated {
     let c = try! ModelContainer(for: Schema(allModels), configurations: ModelConfiguration(url: URL(fileURLWithPath: CommandLine.arguments[1])))
     let ctx = c.mainContext
     guard let p = ctx.profile else { print("no profile"); exit(1) }
+    UserDefaults.standard.removeObject(forKey: "fibreSwitch1"); ctx.applyFibreSwitch()
+    let styleArg = CommandLine.arguments.first { $0.hasPrefix("--style=") }.map { String($0.dropFirst(8)) }
     var s = p.planner
     let inferred = ctx.inferredSchedule()
     var weekNote = s.scheduleSet ? "your own week" : inferred.isEmpty ? "none inferred" : "inferred from your workouts"
@@ -20,7 +22,7 @@ MainActor.assumeIsolated {
         weekNote = "EXAMPLE week (you have no logged workouts yet), 75 min sessions"
     }
     let source: String = switch ctx.planSource { case .history: "your eating history"; case .staples: "your staples"; case .recent: "your recent foods (no staples picked, little food-by-food history)" }
-    print("SAMPLE 7-DAY PLAN · foods from \(source) · training: \(weekNote)")
+    print("SAMPLE 7-DAY PLAN · style: \(styleArg ?? p.planner.style) · foods from \(source) · training: \(weekNote)")
     print("Settings: \(s.meals) meals, wake \(s.wake / 60):\(String(format: "%02d", s.wake % 60)), bed \(s.sleep / 60):\(String(format: "%02d", s.sleep % 60)), pre-workout snack, pre-sleep protein off\n")
     // The role audit: every food the planner can use, what it was taken for, and its limits.
     print("FOOD ROLES (correct any in Food log → Plan → Change → Planner settings → Food roles)")
@@ -44,7 +46,7 @@ MainActor.assumeIsolated {
     var uses: [String: Int] = [:]
     for i in 0..<7 {
         let d = addDays(start, i)
-        guard let r = ctx.dayPlan(d, uses: uses), let t = ctx.dayTargets(on: d) else { print("\(d): no targets"); continue }
+        guard let r = ctx.dayPlan(d, uses: uses, style: styleArg), let t = ctx.dayTargets(on: d) else { print("\(d): no targets"); continue }
         for sl in r.plan.slots { for it in sl.items { uses[it.key, default: 0] += 1 } }
         let tr = r.settings.training(on: d, inferred: inferred)
         let wd = date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(Locale(identifier: "en_GB")))
@@ -56,7 +58,19 @@ MainActor.assumeIsolated {
             let target = r.plan.slots.firstIndex(of: sl).flatMap { _ in r.plan.slots.isEmpty ? nil : nil } ?? 0
             _ = target
             print(String(format: "  %02d:%02d %@%@ · %d kcal, %d g protein, %d g carbs%@", sl.minute / 60 % 24, sl.minute % 60, sl.band.label, kind, Int(m.kcal), Int(m.protein), Int(m.carbs), short as NSString))
-            for it in sl.items { print("     \(r.foods[it.key]?.name ?? it.key), \(Int(it.grams)) g") }
+            if let st = r.plan.structure[sl.index] {
+                print("     template: \(st.template)\(st.dropped.isEmpty ? "" : " (dropped to fit: \(st.dropped.joined(separator: ", ")))")\(st.unfilled.isEmpty ? "" : " ⚠ NOT FILLED: \(st.unfilled.joined(separator: "; "))")")
+                for f in st.fill where !f.keys.isEmpty {
+                    for k in f.keys {
+                        guard let it = sl.items.first(where: { $0.key == k }), let pf = r.foods[k] else { continue }
+                        let mm = pf.macros(it.grams)
+                        print("     · \(f.kind.label): \(pf.name), \(pf.shown(it.grams))  (\(Int(mm.kcal)) kcal, \(Int(mm.protein)) P, \(Int(mm.carbs)) C, \(Int(mm.fat)) F)")
+                    }
+                }
+                for it in sl.items where !st.fill.contains(where: { $0.keys.contains(it.key) }) { print("     · \(r.foods[it.key]?.name ?? it.key), \(Int(it.grams)) g") }
+            } else {
+                for it in sl.items { print("     \(sl.locked ? "🔒 " : "")\(r.foods[it.key]?.name ?? it.key), \(r.foods[it.key]?.shown(it.grams) ?? "\(Int(it.grams)) g")") }
+            }
         }
         let tot = r.plan.totals
         let kg = trendSeries(ctx.weightValues, through: d).last?.trend ?? 80
@@ -76,6 +90,7 @@ MainActor.assumeIsolated {
         if !r.plan.relaxed.isEmpty { print("  Preferences relaxed: \(r.plan.relaxed.joined(separator: ", "))") }
         if !r.plan.relaxedHard.isEmpty { print("  HARD LIMIT WIDENED: \(r.plan.relaxedHard.joined(separator: " → "))") }
         if !r.plan.misses.isEmpty { print("  ⚠ HARD CONSTRAINTS NOT MET: \(r.plan.misses.joined(separator: ", "))") }
+        for reason in r.plan.reasons where ["meal realism", "slot not filled"].contains(reason.rule) { print("    · \(reason.detail)") }
         for m in r.plan.shortMeals { print("    · \(Planner.mealName(r.plan.slots[m.index])): \(Int(m.protein)) g protein of the \(Int(m.needed)) g minimum (no protein food for that meal)") }
         print("")
     }

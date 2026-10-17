@@ -174,6 +174,16 @@ enum Taxonomy {
                                   "energy-drink", "soft-drink", "juice"]
         return three.contains(id) ? 3 : two.contains(id) ? 2 : 1
     }
+    /// The protein family (chicken breast, thigh and roast chicken are all chicken): for "not the same
+    /// protein at lunch and dinner" and rotation.
+    static func family(_ id: String) -> String {
+        if id.hasPrefix("chicken") { return "chicken" }
+        if ["beef", "beef-mince", "burger"].contains(id) { return "beef" }
+        if ["eggs", "egg-whites"].contains(id) { return "eggs" }
+        if ["skyr", "yogurt", "queso-fresco-batido", "cottage-cheese"].contains(id) { return "dairy" }
+        return id
+    }
+
     /// Planned only when you've marked it in stock (tier 3, and whey).
     static func needsStock(_ id: String) -> Bool { tier(id) == 3 || id == "protein-shake" }
 

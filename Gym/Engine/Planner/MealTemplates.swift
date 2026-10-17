@@ -112,6 +112,7 @@ enum MealTemplates {
     /// The template for a planned meal: the pre- and post-workout templates replace the meal in that
     /// window (they never add meals); otherwise by the time of day.
     static func template(for slot: PlanSlot, in ts: [MealTemplate] = defaults) -> MealTemplate? {
+        if let id = slot.templateID { return ts.first { $0.id == id } }
         let meal: MealTemplate.Meal
         switch slot.kind {
         case .preWorkout: meal = .preWorkout

@@ -107,6 +107,7 @@ enum BasicFoods {
             var f = PlanFood(key: b.key, name: b.name, per100: (v.kcal, v.protein, v.fat, v.carbs, v.fibre), step: step, usualGrams: b.portion,
                              usualSlots: [:], frequency: 0, bands: b.bands).with(role: b.role, usual: b.portion)
             f.nova = b.nova; f.basic = true; f.basicAllowed = b.inBasicStyle
+            f.canonical = b.canonical; f.tier = b.canonical.map(Taxonomy.tier) ?? 1
             return f
         }
     }

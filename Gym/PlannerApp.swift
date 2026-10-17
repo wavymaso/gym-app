@@ -23,7 +23,7 @@ extension ModelContext {
             guard t.role != .drink else { return nil }
             var g = t.role == f.role ? f : f.with(role: t.role)
             g.bands.formUnion(Taxonomy.bands(t.canonical))
-            g.nova = t.nova
+            g.nova = t.nova; g.canonical = t.canonical; g.tier = t.canonical.map(Taxonomy.tier) ?? (t.role == .treat ? 3 : 2)
             return g
         }
         // Staples: your portion and meal, strongly preferred, and they stand for their canonical food
@@ -34,12 +34,12 @@ extension ModelContext {
         for s in st {
             if let i = mine.firstIndex(where: { $0.key == s.key }) {
                 var f = mine[i].with(role: mine[i].role, usual: s.grams)
-                f.bands.insert(s.band); f.frequency += 20; f.staple = true
+                f.bands.insert(s.band); f.frequency += 20; f.staple = true; f.stapleBand = s.band
                 mine[i] = f
             } else if var f = Planner.foods(fromStaples: [s], catalog: catalog).first, let food = food(key: s.key) {
                 let t = taxonomy(of: food)
                 guard t.role != .drink else { continue }
-                f = f.with(role: t.role, usual: s.grams); f.bands.formUnion(Taxonomy.bands(t.canonical)); f.nova = t.nova; f.frequency = 20; f.staple = true
+                f = f.with(role: t.role, usual: s.grams); f.bands.formUnion(Taxonomy.bands(t.canonical)); f.nova = t.nova; f.frequency = 20; f.staple = true; f.stapleBand = s.band
                 mine.append(f)
             }
         }
@@ -49,8 +49,19 @@ extension ModelContext {
         }
         // The basic foods library, always there to fill a role (those you've logged are your own foods now).
         let basics = BasicFoods.planFoods(excluding: Set(mine.map(\.key))).filter { b in !(BasicFoods.byKey[b.key]?.canonical.map(stapleCanon.contains) ?? false) }
+        // The simple foods catalogue fills canonical foods neither yours nor the library cover.
+        let covered = Set((mine + basics).compactMap(\.canonical))
+        let removed = Set(profile?.planner.catalogRemoved ?? [])
+        let simple = SimpleFoods.bundled.filter { $0.tier <= 2 && $0.availableAtMyStores && !covered.contains($0.id) && !removed.contains($0.id) && $0.role != .drink }.map { sf -> PlanFood in
+            let v = sf.values
+            let portion = sf.serving ?? (sf.role.isAccompaniment ? 15 : sf.role == .vegetable ? 150 : 100)
+            var f = PlanFood(key: "simple:\(sf.id)", name: sf.name, per100: (v.kcal, v.protein, v.fat, v.carbs, v.fibre), step: v.kcal > 500 ? 5 : 10, usualGrams: portion,
+                             usualSlots: [:], frequency: 0, bands: Taxonomy.bands(sf.id)).with(role: sf.role, usual: portion)
+            f.canonical = sf.id; f.tier = sf.tier; f.nova = Taxonomy.byID[sf.id]?.nova ?? 3; f.basic = true; f.basicAllowed = (Taxonomy.byID[sf.id]?.nova ?? 3) <= 2
+            return f
+        }
         let weigh = profile?.planner.weighAs ?? [:]
-        return (mine + basics).map { f in
+        return (mine + basics + simple).map { f in
             var f = f
             let food = food(key: f.key)
             let b = BasicFoods.byKey[f.key]
@@ -67,6 +78,14 @@ extension ModelContext {
     /// A basic library food as one of your foods (made the first time you log it).
     func materializeBasic(_ key: String) -> Food? {
         if let f = food(key: key) { return f }
+        if key.hasPrefix("simple:"), let sf = SimpleFoods.bundled.first(where: { "simple:\($0.id)" == key }) {
+            let v = sf.values
+            let f = Food(key: key, name: sf.name, source: "basic", per100: Nutrients(kcal: v.kcal, protein: v.protein, fat: v.fat, carbs: v.carbs, fiber: v.fibre))
+            f.foodGroup = "-"; f.nova = Taxonomy.byID[sf.id]?.nova ?? 0
+            f.override = Taxonomy.Override(canonical: sf.id, role: sf.role, nova: nil)
+            insert(f)
+            return f
+        }
         guard let b = BasicFoods.byKey[key] else { return nil }
         let v = b.values
         let f = Food(key: key, name: b.name, source: "basic", per100: Nutrients(kcal: v.kcal, protein: v.protein, fat: v.fat, carbs: v.carbs, fiber: v.fibre),
@@ -76,10 +95,19 @@ extension ModelContext {
         return f
     }
 
+    /// A food's unit, when it comes in pieces (an egg, a bar, a slice, a scoop, a tin, a rice cake): the
+    /// planner's portion step. A "1 serving (100 g)" isn't a piece.
+    static func unitGrams(_ f: Food) -> Double? {
+        guard let s = f.servings.first, s.grams > 0, s.name.hasPrefix("1 ") else { return nil }
+        let n = s.name.lowercased()
+        let piece = ["egg", "huevo", "bar", "barrita", "slice", "rebanada", "loncha", "scoop", "cacito", "tin", "lata", "tortita", "rice cake", "unidad", "unit", "piece", "pieza", "pot", "tarrina", "yogur", "pack"]
+        return piece.contains(where: { n.contains($0) }) || s.grams <= 60 ? s.grams : nil
+    }
+
     /// Your foods' names and values for the planner.
     func planCatalog() -> [String: (name: String, per100: (Double, Double, Double, Double, Double), unitGrams: Double?)] {
         let foods = (try? fetch(FetchDescriptor<Food>())) ?? []
-        func unit(_ f: Food) -> Double? { f.servings.first.flatMap { $0.name.hasPrefix("1 ") && $0.grams <= 150 && $0.grams > 0 ? $0.grams : nil } }
+        func unit(_ f: Food) -> Double? { ModelContext.unitGrams(f) }
         return Dictionary(foods.map { f in (f.key, (name: f.name, per100: (f.per100.kcal, f.per100.protein, f.per100.fat, f.per100.carbs, f.per100.fiber ?? 0), unitGrams: unit(f))) },
                           uniquingKeysWith: { a, _ in a })
     }
@@ -94,7 +122,7 @@ extension ModelContext {
     /// Before the taxonomy (name and macro rules only).
     func planFoodsGuessed() -> [PlanFood] {
         let foods = ((try? fetch(FetchDescriptor<Food>())) ?? [])
-        func unit(_ f: Food) -> Double? { f.servings.first.flatMap { $0.name.hasPrefix("1 ") && $0.grams <= 150 && $0.grams > 0 ? $0.grams : nil } }
+        func unit(_ f: Food) -> Double? { ModelContext.unitGrams(f) }
         let catalog = Dictionary(foods.map { f in (f.key, (name: f.name, per100: (f.per100.kcal, f.per100.protein, f.per100.fat, f.per100.carbs, f.per100.fiber ?? 0), unitGrams: unit(f))) },
                                  uniquingKeysWith: { a, _ in a })
         let profile = eatingProfile()
@@ -110,6 +138,14 @@ extension ModelContext {
                             step: step, usualGrams: max(g, step), usualSlots: [:], frequency: Double(f.useCount) + (f.isFavorite ? 3 : 0), bands: bands)
                 .with(role: role, usual: max(g, step))
         }
+    }
+
+    /// You asked (17 Oct): once staples are picked, the fibre floor goes from a fixed 19 g to 14 g per 1,000 kcal. Once.
+    func applyFibreSwitch() {
+        guard !UserDefaults.standard.bool(forKey: "fibreSwitch1"), let p = profile, p.planner.staples.count >= 10 else { return }
+        var s = p.planner
+        if s.fibreFloorGrams == 19 { s.fibreFloorGrams = 0; p.planner = s; commit() }
+        UserDefaults.standard.set(true, forKey: "fibreSwitch1")
     }
 
     /// Keep the stored inferred week current (targets read it). Call after workouts change.
@@ -137,7 +173,8 @@ extension ModelContext {
     /// The plan for a day: today's (or that day's) targets, meal times around training, what's
     /// already eaten fixed, your locked meals kept.
     /// `uses`: how often each food was planned on the days before (the week view), so a week has some variety.
-    func dayPlan(_ day: String, uses: [String: Int] = [:]) -> (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)? {
+    func dayPlan(_ day: String, uses: [String: Int] = [:], style: String? = nil, offset: Int = 0) -> (plan: DayPlan, foods: [String: PlanFood], settings: PlannerSettings)? {
+        let style = style ?? profile?.planner.style ?? "usual"
         guard let p = profile, let t = dayTargets(on: day) else { return nil }
         let s = p.planner
         var foods = planFoods().map { f in var f = f; f.uses7 = uses[f.key] ?? 0; return f }
@@ -173,7 +210,21 @@ extension ModelContext {
         // Carbs per meal: around the session, the recovery window, your preferred carb meals.
         let carb = carbMeals(day, dayCarbs: t.carbs, slots: slots, kg: kg, session: training, fasted: fasted, settings: s)
         targets.mealCarbs = carb.perSlot
-        var plan = Planner.plan(targets, slots: slots, foods: foods, options: PlanOptions(preSleepProtein: s.preSleepProtein, exclusions: Set(s.exclusions), variety: s.variety, trainingCarbBoost: s.trainingCarbBoost))
+        let opts = PlanOptions(preSleepProtein: s.preSleepProtein, exclusions: Set(s.exclusions), variety: s.variety, trainingCarbBoost: s.trainingCarbBoost)
+        // The three-stage planner: templates, then your foods into their slots, then portions.
+        if s.treatsEnabled, !slots.contains(where: { $0.templateID == "evening-snack" }) {
+            slots.append(PlanSlot(index: slots.count, minute: s.sleep - 60, kind: .meal, templateID: "evening-snack"))
+        }
+        var bctx = BuildContext()
+        bctx.patterns = mealPatterns(); bctx.usualMeals = usualMeals(); bctx.variety = s.variety; bctx.inStock = Set(s.inStock)
+        bctx.removed = Set(s.catalogRemoved); bctx.sameProteinTwice = s.sameProteinTwice; bctx.treats = s.treatsEnabled
+        bctx.basicStyle = style == "basic"; bctx.offset = offset
+        let canonOf = Dictionary(foods.compactMap { f in f.canonical.map { (f.key, $0) } }, uniquingKeysWith: { a, _ in a })
+        for (k, n) in uses { if let c = canonOf[k] { bctx.recent[c, default: 0] += n; bctx.recent["family:" + Taxonomy.family(c), default: 0] += n } }
+        if style == "anything" { bctx.wholeFood = 0.3 }
+        let built = MealBuilder.plan(targets, slots: slots, foods: foods, templates: s.mealTemplates, ctx: bctx, options: opts)
+        var plan = built.plan
+        plan.structure = built.structure
         plan.reasons += carbReasons(day, t: t, kg: kg, training: training) + carb.reasons
         plan.carbs = .init(gPerKg: t.carbs / kg, range: CarbPlanner.range(phase).range, rangeIsTarget: CarbPlanner.range(phase).target, intra: carb.intra, recovery: carb.recovery)
         return (plan, Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a }), s)
