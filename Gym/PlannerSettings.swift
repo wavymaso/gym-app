@@ -9,7 +9,10 @@ struct PlannerSettings: Codable, Equatable {
     var schedule: [Int: TrainingSlot] = [:]          // weekday → session (yours, once you edit it)
     var scheduleSet = false                          // false: the week inferred from your workouts
     var healthSessions: [String: TrainingSlot] = [:] // workouts from Apple Health (day → first session), last 6 weeks
-    var staples: [Staple] = []                       // cold start: foods you eat regularly
+    var staples: [Staple] = []                       // foods you eat regularly (manual, or confirmed suggestions)
+    var dismissedStaples: [String] = []              // suggestions you said no to
+    var stapleMinDays = 6                            // suggest a staple when logged on this many days…
+    var stapleWindowDays = 28                        // …in this many days
     var roles: [String: FoodRole] = [:]              // your corrections to a food's role (main, side, condiment, treat)
     var weighAs: [String: WeightState] = [:]         // per food: you weigh it raw or cooked (default raw; sold-cooked foods cooked)
     var fibreFloorGrams: Double = 19                 // fixed fibre floor (g/day); 0: scale with calories (registry, 14 g per 1,000 kcal)
@@ -51,5 +54,40 @@ extension Profile {
     var planner: PlannerSettings {
         get { (try? JSONDecoder().decode(PlannerSettings.self, from: Data(plannerJSON.utf8))) ?? PlannerSettings() }
         set { plannerJSON = String(decoding: (try? JSONEncoder().encode(newValue)) ?? Data(), as: UTF8.self) }
+    }
+}
+
+extension PlannerSettings {
+    /// Tolerant: settings saved by an older version (missing fields) keep what they have and take the
+    /// default for the rest, instead of resetting everything. A field that can't be read takes its default.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = PlannerSettings()
+        self = d
+        meals = (try? c.decodeIfPresent(type(of: meals), forKey: .meals)) ?? d.meals
+        wake = (try? c.decodeIfPresent(type(of: wake), forKey: .wake)) ?? d.wake
+        sleep = (try? c.decodeIfPresent(type(of: sleep), forKey: .sleep)) ?? d.sleep
+        schedule = (try? c.decodeIfPresent(type(of: schedule), forKey: .schedule)) ?? d.schedule
+        scheduleSet = (try? c.decodeIfPresent(type(of: scheduleSet), forKey: .scheduleSet)) ?? d.scheduleSet
+        healthSessions = (try? c.decodeIfPresent(type(of: healthSessions), forKey: .healthSessions)) ?? d.healthSessions
+        staples = (try? c.decodeIfPresent(type(of: staples), forKey: .staples)) ?? d.staples
+        dismissedStaples = (try? c.decodeIfPresent(type(of: dismissedStaples), forKey: .dismissedStaples)) ?? d.dismissedStaples
+        stapleMinDays = (try? c.decodeIfPresent(type(of: stapleMinDays), forKey: .stapleMinDays)) ?? d.stapleMinDays
+        stapleWindowDays = (try? c.decodeIfPresent(type(of: stapleWindowDays), forKey: .stapleWindowDays)) ?? d.stapleWindowDays
+        roles = (try? c.decodeIfPresent(type(of: roles), forKey: .roles)) ?? d.roles
+        weighAs = (try? c.decodeIfPresent(type(of: weighAs), forKey: .weighAs)) ?? d.weighAs
+        fibreFloorGrams = (try? c.decodeIfPresent(type(of: fibreFloorGrams), forKey: .fibreFloorGrams)) ?? d.fibreFloorGrams
+        highDaysFollowTraining = (try? c.decodeIfPresent(type(of: highDaysFollowTraining), forKey: .highDaysFollowTraining)) ?? d.highDaysFollowTraining
+        inferredWeek = (try? c.decodeIfPresent(type(of: inferredWeek), forKey: .inferredWeek)) ?? d.inferredWeek
+        overrides = (try? c.decodeIfPresent(type(of: overrides), forKey: .overrides)) ?? d.overrides
+        fastedMorning = (try? c.decodeIfPresent(type(of: fastedMorning), forKey: .fastedMorning)) ?? d.fastedMorning
+        preSleepProtein = (try? c.decodeIfPresent(type(of: preSleepProtein), forKey: .preSleepProtein)) ?? d.preSleepProtein
+        exclusions = (try? c.decodeIfPresent(type(of: exclusions), forKey: .exclusions)) ?? d.exclusions
+        variety = (try? c.decodeIfPresent(type(of: variety), forKey: .variety)) ?? d.variety
+        locks = (try? c.decodeIfPresent(type(of: locks), forKey: .locks)) ?? d.locks
+        iftar = (try? c.decodeIfPresent(type(of: iftar), forKey: .iftar)) ?? d.iftar
+        suhoor = (try? c.decodeIfPresent(type(of: suhoor), forKey: .suhoor)) ?? d.suhoor
+        trainingCarbBoost = (try? c.decodeIfPresent(type(of: trainingCarbBoost), forKey: .trainingCarbBoost)) ?? d.trainingCarbBoost
+        dismissedCarbProposal = (try? c.decodeIfPresent(type(of: dismissedCarbProposal), forKey: .dismissedCarbProposal)) ?? d.dismissedCarbProposal
     }
 }

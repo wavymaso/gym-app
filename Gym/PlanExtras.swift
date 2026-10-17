@@ -74,6 +74,9 @@ struct StaplesView: View {
     @State private var staples: [Staple] = []
     @State private var loaded = false
     @State private var search = ""
+    @State private var suggestions: [StapleSuggestions.Suggestion] = []
+    @State private var minDays = 6
+    @State private var window = 28
 
     var body: some View {
         List {
@@ -87,6 +90,26 @@ struct StaplesView: View {
                         .font(.caption).foregroundStyle(staples.count < 15 || staples.count > 25 ? palette.warn : palette.good)
                 }
             }
+            Section {
+                if suggestions.isEmpty {
+                    Text("Nothing logged on \(minDays) or more of the last \(window) days yet. Foods you log often will show up here.").font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(suggestions, id: \.key) { s in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(s.name).lineLimit(1)
+                            Text("\(s.days) of the last \(window) days · usually \(Int(s.grams)) g at \(s.band.label.lowercased())").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button { confirm(s) } label: { Image(systemName: "checkmark.circle.fill") }.buttonStyle(.borderless).foregroundStyle(palette.good)
+                            .accessibilityLabel("Add \(s.name) as a staple")
+                        Button { dismissSuggestion(s) } label: { Image(systemName: "xmark.circle") }.buttonStyle(.borderless).foregroundStyle(.secondary)
+                            .accessibilityLabel("Not a staple")
+                    }
+                }
+                Stepper("Suggest after \(minDays) days", value: $minDays, in: 2...20).onChange(of: minDays) { _, _ in saveThresholds() }
+                Stepper("Look back \(window / 7) weeks", value: $window, in: 14...84, step: 7).onChange(of: window) { _, _ in saveThresholds() }
+            } header: { Text("Suggested from your log") } footer: { Text("Your own picks always win over suggestions.") }
             if !staples.isEmpty {
                 Section("Your staples") {
                     ForEach($staples) { $st in
@@ -114,7 +137,10 @@ struct StaplesView: View {
         .searchable(text: $search, prompt: "Find a food")
         .themedList()
         .navigationTitle("Staples")
-        .onAppear { if !loaded, let p = ctx.profile { staples = p.planner.staples; loaded = true } }
+        .onAppear {
+            if !loaded, let p = ctx.profile { staples = p.planner.staples; minDays = p.planner.stapleMinDays; window = p.planner.stapleWindowDays; loaded = true }
+            suggestions = ctx.stapleSuggestions()
+        }
         .onDisappear(perform: save)
     }
 
@@ -140,6 +166,29 @@ struct StaplesView: View {
         }
         Haptics.tick()
         animate(Motion.snappy) { staples.append(Staple(key: f.key, grams: max(5, g.rounded()), band: band)) }
+    }
+
+    private func confirm(_ s: StapleSuggestions.Suggestion) {
+        Haptics.tap()
+        animate(Motion.snappy) {
+            staples.append(Staple(key: s.key, grams: s.grams, band: s.band, suggested: true))
+            suggestions.removeAll { $0.key == s.key }
+        }
+        save()
+    }
+
+    private func dismissSuggestion(_ s: StapleSuggestions.Suggestion) {
+        guard let p = ctx.profile else { return }
+        var st = p.planner
+        st.dismissedStaples.append(s.key); p.planner = st; ctx.commit(); Haptics.tick()
+        animate(Motion.snappy) { suggestions.removeAll { $0.key == s.key } }
+    }
+
+    private func saveThresholds() {
+        guard let p = ctx.profile else { return }
+        var st = p.planner
+        st.stapleMinDays = minDays; st.stapleWindowDays = window; p.planner = st; ctx.commit()
+        suggestions = ctx.stapleSuggestions()
     }
 
     private func save() {

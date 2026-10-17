@@ -26,10 +26,31 @@ extension ModelContext {
             g.nova = t.nova
             return g
         }
+        // Staples: your portion and meal, strongly preferred, and they stand for their canonical food
+        // (Roosterz chicken as a staple is your chicken: the library's chicken steps aside, other chickens rank lower).
+        let st = profile?.planner.staples ?? []
+        var mine = own
+        let catalog = planCatalog()
+        for s in st {
+            if let i = mine.firstIndex(where: { $0.key == s.key }) {
+                var f = mine[i].with(role: mine[i].role, usual: s.grams)
+                f.bands.insert(s.band); f.frequency += 20; f.staple = true
+                mine[i] = f
+            } else if var f = Planner.foods(fromStaples: [s], catalog: catalog).first, let food = food(key: s.key) {
+                let t = taxonomy(of: food)
+                guard t.role != .drink else { continue }
+                f = f.with(role: t.role, usual: s.grams); f.bands.formUnion(Taxonomy.bands(t.canonical)); f.nova = t.nova; f.frequency = 20; f.staple = true
+                mine.append(f)
+            }
+        }
+        let stapleCanon = Set(st.compactMap { s in food(key: s.key).flatMap { taxonomy(of: $0).canonical } })
+        for i in mine.indices where !mine[i].staple {
+            if let f = food(key: mine[i].key), let c = taxonomy(of: f).canonical, stapleCanon.contains(c) { mine[i].frequency *= 0.3 }
+        }
         // The basic foods library, always there to fill a role (those you've logged are your own foods now).
-        let basics = BasicFoods.planFoods(excluding: Set(own.map(\.key)))
+        let basics = BasicFoods.planFoods(excluding: Set(mine.map(\.key))).filter { b in !(BasicFoods.byKey[b.key]?.canonical.map(stapleCanon.contains) ?? false) }
         let weigh = profile?.planner.weighAs ?? [:]
-        return (own + basics).map { f in
+        return (mine + basics).map { f in
             var f = f
             let food = food(key: f.key)
             let b = BasicFoods.byKey[f.key]
@@ -55,6 +76,21 @@ extension ModelContext {
         return f
     }
 
+    /// Your foods' names and values for the planner.
+    func planCatalog() -> [String: (name: String, per100: (Double, Double, Double, Double, Double), unitGrams: Double?)] {
+        let foods = (try? fetch(FetchDescriptor<Food>())) ?? []
+        func unit(_ f: Food) -> Double? { f.servings.first.flatMap { $0.name.hasPrefix("1 ") && $0.grams <= 150 && $0.grams > 0 ? $0.grams : nil } }
+        return Dictionary(foods.map { f in (f.key, (name: f.name, per100: (f.per100.kcal, f.per100.protein, f.per100.fat, f.per100.carbs, f.per100.fiber ?? 0), unitGrams: unit(f))) },
+                          uniquingKeysWith: { a, _ in a })
+    }
+
+    /// Staple suggestions from your log (frequency), not yet staples or dismissed.
+    func stapleSuggestions() -> [StapleSuggestions.Suggestion] {
+        guard let s = profile?.planner else { return [] }
+        return StapleSuggestions.suggest(loggedFoods(days: max(s.stapleWindowDays, 28) + 1), today: dayKey(), window: s.stapleWindowDays, minDays: s.stapleMinDays,
+                                         staples: Set(s.staples.map(\.key)), dismissed: Set(s.dismissedStaples))
+    }
+
     /// Before the taxonomy (name and macro rules only).
     func planFoodsGuessed() -> [PlanFood] {
         let foods = ((try? fetch(FetchDescriptor<Food>())) ?? [])
@@ -63,7 +99,6 @@ extension ModelContext {
                                  uniquingKeysWith: { a, _ in a })
         let profile = eatingProfile()
         if profile.enoughData { return Planner.foods(from: profile, catalog: catalog) }
-        if let st = self.profile?.planner.staples, !st.isEmpty { return Planner.foods(fromStaples: st, catalog: catalog) }
         return foods.filter { $0.useCount > 0 || $0.isFavorite }.sorted { $0.key < $1.key }.map { f in
             let g = f.lastAmount.map { f.grams($0, unit: f.lastUnit ?? f.baseUnit) } ?? f.servings.first?.grams ?? 100
             let kcal100 = f.per100.kcal

@@ -349,4 +349,30 @@ check("with enough of your own foods, they come first (≤ 2 library foods in th
 var rice = bf.first { $0.key == "basic:white-rice" }!
 rice.shownRatio = 2.8; rice.shownUnit = "g cooked"
 check("shown in the state you weigh it: 75 g dry rice → 210 g cooked", rice.shown(75) == "210 g cooked")
+
+do {
+// MARK: Staple suggestions
+let mk: (String, String, Int, Double) -> LoggedFood = { key, day, minute, g in
+    LoggedFood(day: day, weekday: weekdayOfKey(day), minute: minute, key: key, name: key, grams: g, kcal: 0, protein: 0, fat: 0, carbs: 0, fibre: 0)
+}
+let tday = "2026-10-17"
+var slogs: [LoggedFood] = []
+for i in 1...10 { slogs.append(mk("chicken", addDaysKey(tday, -i * 2), 14 * 60, i % 2 == 0 ? 200 : 250)) }        // 10 days, lunch
+for i in 1...5 { slogs.append(mk("yogurt", addDaysKey(tday, -i), 8 * 60, 170)) }                                   // 5 days: below 6
+for i in 1...7 { slogs.append(mk("bread", addDaysKey(tday, -i), i <= 4 ? 8 * 60 : 18 * 60, 60)); slogs.append(mk("bread", addDaysKey(tday, -i), 8 * 60 + 5, 30)) }
+for i in 1...8 { slogs.append(mk("old", addDaysKey(tday, -40 - i), 12 * 60, 100)) }                              // outside the window
+slogs.append(mk("chicken", tday, 14 * 60, 999))                                                                    // today doesn't count
+let sg = StapleSuggestions.suggest(slogs, today: tday)
+check("suggested: logged on ≥ 6 of the last 28 days, most frequent first", sg.map(\.key) == ["chicken", "bread"], sg.map(\.key))
+check("median portion and usual meal", sg.first?.grams == 225 && sg.first?.band == .lunch, sg.first.map { ($0.grams, $0.band) } ?? (0, .lunch))
+check("two entries in one meal are one portion (bread 60 + 30 = 90)", sg.first { $0.key == "bread" }?.grams == 90 && sg.first { $0.key == "bread" }?.band == .breakfast,
+      sg.first { $0.key == "bread" }.map { ($0.grams, $0.band) } ?? (0, .lunch))
+check("configurable: 5 days in 2 weeks also suggests yogurt", StapleSuggestions.suggest(slogs, today: tday, window: 14, minDays: 5).map(\.key).contains("yogurt"))
+check("already a staple or dismissed: not suggested", StapleSuggestions.suggest(slogs, today: tday, staples: ["chicken"], dismissed: ["bread"]).isEmpty)
+// Staples count at the canonical level: a staple protein main is preferred over other foods of its role.
+var stapleChicken = pantry.first { $0.key == "chicken breast" }!; stapleChicken.staple = true
+let withStaple = Planner.plan(cutDay, slots: slotsFor(training: nil), foods: pantry.filter { $0.key != "chicken breast" } + [stapleChicken] + bf)
+let mains = Set(withStaple.slots.flatMap(\.items).filter { i in (pantry + bf).first { $0.key == i.key }?.role == .proteinMain }.map(\.key))
+check("a staple protein main is used as a primary protein source", mains.contains("chicken breast"), mains)
+}
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

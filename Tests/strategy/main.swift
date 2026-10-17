@@ -182,5 +182,16 @@ check(milk.otherWeightUnit == nil, "liquids: no raw/cooked")
 
 }
 
+do {
+    // Planner settings from an older version (fields missing) keep what they have.
+    let old = #"{"meals":5,"exclusions":["off:1"],"overrides":{"2026-10-17":{"start":1140,"minutes":75}},"staples":[{"key":"k","grams":100,"band":"lunch"}],"roles":{"x":"main"}}"#
+    let ps = try? JSONDecoder().decode(PlannerSettings.self, from: Data(old.utf8))
+    check(ps?.meals == 5 && ps?.exclusions == ["off:1"] && ps?.overrides["2026-10-17"]?.start == 1140 && ps?.staples.first?.suggested == false
+          && ps?.roles["x"] == .proteinMain && ps?.fibreFloorGrams == 19 && ps?.weighAs.isEmpty == true, "old planner settings keep their values; new fields default")
+    let broken = #"{"meals":"four","exclusions":["off:2"]}"#
+    let pb = try? JSONDecoder().decode(PlannerSettings.self, from: Data(broken.utf8))
+    check(pb?.meals == 4 && pb?.exclusions == ["off:2"], "a field that can't be read takes its default, the rest are kept")
+}
+
 print(failed == 0 ? "ALL PASSED" : "\(failed) FAILED")
 exit(failed == 0 ? 0 : 1)

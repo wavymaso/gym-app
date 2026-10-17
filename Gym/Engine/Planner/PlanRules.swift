@@ -145,7 +145,15 @@ struct Staple: Codable, Equatable, Identifiable {
     var key: String
     var grams: Double
     var band: MealBand
+    var suggested = false            // confirmed from a frequency suggestion (manual ones win)
     var id: String { key }
+
+    init(key: String, grams: Double, band: MealBand, suggested: Bool = false) { self.key = key; self.grams = grams; self.band = band; self.suggested = suggested }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: CodingKeys.self)
+        key = try c.decode(String.self, forKey: .key); grams = try c.decode(Double.self, forKey: .grams); band = try c.decode(MealBand.self, forKey: .band)
+        suggested = try c.decodeIfPresent(Bool.self, forKey: .suggested) ?? false
+    }
 }
 
 // MARK: Large entries

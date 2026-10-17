@@ -22,6 +22,7 @@ struct PlanFood: Equatable {
     var nova = 0                          // NOVA group (0: unknown)
     var basic = false                     // from the basic foods library (not one of yours)
     var basicAllowed = true               // allowed in Basic style (NOVA 1–2, or chosen as a basic)
+    var staple = false                    // one of your staples (preferred; a protein main staple is a primary protein source)
     var shownRatio = 1.0                  // the plan shows grams × this (you weigh it cooked, values are raw: the cooked ratio)
     var shownUnit = "g"                   // "g", "g cooked", "g raw"
     func shown(_ g: Double) -> String { "\(Int((g * shownRatio).rounded())) \(shownUnit)" }
@@ -353,6 +354,7 @@ enum Planner {
                         x -= w.slotPreference * 6 * min(usual, 3)
                         x += w.slotPreference * (usual == 0 ? 8 : 0)
                         if f.basic { x += 6 }               // the library fills gaps; your own foods come first
+                        if f.staple { x -= f.role == .proteinMain ? 8 : 4 }
                         x += pow((it.grams - f.usualGrams) / max(f.usualGrams, 30), 2) * 4
                         x += w.variety * Double(f.uses7) * 1.5
                     }
