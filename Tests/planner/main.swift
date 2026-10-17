@@ -375,4 +375,13 @@ let withStaple = Planner.plan(cutDay, slots: slotsFor(training: nil), foods: pan
 let mains = Set(withStaple.slots.flatMap(\.items).filter { i in (pantry + bf).first { $0.key == i.key }?.role == .proteinMain }.map(\.key))
 check("a staple protein main is used as a primary protein source", mains.contains("chicken breast"), mains)
 }
+
+// MARK: Meal templates
+let tps = MealTemplates.defaults
+check("templates: every food id is a canonical food", MealTemplates.unknownFoods(tps).isEmpty, MealTemplates.unknownFoods(tps))
+check("templates: every default is allowed in its slot", tps.allSatisfy { $0.slots.allSatisfy { $0.allowed.contains($0.defaultFood) } })
+check("templates: every meal has a required protein slot", tps.allSatisfy { $0.slots.contains { $0.kind == .protein && $0.required } })
+check("templates: one carb base per meal (bread as a side is separate)", tps.allSatisfy { $0.slots.filter { $0.kind == .carbBase }.count <= 1 })
+check("templates: all six meals", Set(tps.map(\.meal)) == Set(MealTemplate.Meal.allCases))
+check("templates: round-trip as JSON (editable, saved in settings)", (try? JSONDecoder().decode([MealTemplate].self, from: JSONEncoder().encode(tps))) == tps)
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")
