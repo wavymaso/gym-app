@@ -80,6 +80,7 @@ struct PhoneFoodLog: View {
 
     @ToolbarContentBuilder private var headerButtons: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
+            Button { sheet = .add(nil) } label: { Label("Search for a food", systemImage: "magnifyingglass") }
             Button { picking = true } label: { Label("Pick a day", systemImage: "calendar") }
             Button { details = true } label: { Label("Day details", systemImage: "slider.horizontal.3") }
             Menu {

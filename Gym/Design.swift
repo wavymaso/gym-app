@@ -98,8 +98,9 @@ enum Space {
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
     static let xxxl: CGFloat = 48
-    /// Under the last item of a scroll view on the phone: clears the tab bar and the + button.
-    static let tabBarClearance: CGFloat = 96
+    /// Under the last item of every scroll view on the phone: the tab bar floats over the content (a
+    /// material), so this is its height with the + button, plus room to spare.
+    static let tabBarClearance: CGFloat = 104
 }
 
 enum Radius {

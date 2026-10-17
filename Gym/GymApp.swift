@@ -226,8 +226,8 @@ struct MainView: View {
         ZStack {
             ForEach(PhoneTab.allCases.filter { visited.contains($0) || $0 == tab }, id: \.self) { t in
                 tabStack(t)
-                    // Room to scroll the last row clear of the search bar and tab bar.
-                    .contentMargins(.bottom, t == .training || t == .more ? 96 : 156, for: .scrollContent)
+                    // The same room under the last row of every page: clears the tab bar and the + button.
+                    .contentMargins(.bottom, Space.tabBarClearance, for: .scrollContent)
                     .opacity(tab == t ? 1 : 0)
                     .scaleEffect(tab == t || Motion.reduceMotion ? 1 : 0.985)
                     .offset(x: tab == t || Motion.reduceMotion ? 0 : (t.order < tab.order ? -20 : 20))
@@ -243,11 +243,7 @@ struct MainView: View {
         .onChange(of: morePath) { _, p in NavState.morePath = p }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
-                if tab == .food && !selection.ids.isEmpty {
-                    SelectionBar()
-                } else if tab == .dashboard || tab == .food || tab == .strategy {
-                    FoodSearchBar(search: { quick = .food }, scan: { quick = .scan })
-                }
+                if tab == .food && !selection.ids.isEmpty { SelectionBar() }
                 PhoneTabBar(tab: $tab) { plus = true }
             }
         }

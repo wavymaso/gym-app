@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 // MacroFactor's dashboard fundamentals, in our colours: the weekly nutrition grid, small insight
-// cards with a sparkline, the "Search for a food" bar and the + Shortcuts sheet.
+// cards with a sparkline and the + Shortcuts sheet.
 
 /// Monday to Sunday × calories, protein, fat, carbs: a bar per day against its target (the tick).
 struct WeekGrid: View {
@@ -155,30 +155,6 @@ struct SparkCard: View {
         } else {
             Text("Not enough data yet").font(.note).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-}
-
-/// "Search for a food" above the tab bar (phone), like MacroFactor.
-struct FoodSearchBar: View {
-    let search: () -> Void
-    let scan: () -> Void
-
-    var body: some View {
-        HStack(spacing: Space.m) {
-            Button(action: search) {
-                HStack(spacing: Space.m) {
-                    Image(systemName: "magnifyingglass").font(.cardTitle)
-                    Text("Search for a food").foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            Button(action: scan) { Image(systemName: "barcode.viewfinder").font(.subsectionTitle) }.buttonStyle(.plain)
-        }
-        .padding(.horizontal, Space.l).frame(height: 50)
-        .modifier(GlassCapsule())
-        .padding(.horizontal, Space.l).padding(.bottom, Space.s)
     }
 }
 

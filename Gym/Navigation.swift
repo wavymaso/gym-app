@@ -104,6 +104,7 @@ struct PhoneTabBar: View {
             }
             .pressable()
             .frame(maxWidth: .infinity)
+            .accessibilityLabel("Add: food, weight, workout and more")
             item(.strategy, "Strategy", "target")
             item(.training, "Training", "dumbbell")
         }
@@ -126,12 +127,14 @@ struct PhoneTabBar: View {
                             Capsule().fill(palette.accent.opacity(0.16)).matchedGeometryEffect(id: "pill", in: pill)
                         }
                     }
-                Text(title).font(.fineLabel).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(.label).lineLimit(1).minimumScaleFactor(0.85)
             }
             .foregroundStyle(tab == t ? palette.accent : Color.secondary)
             .frame(maxWidth: .infinity).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title).accessibilityAddTraits(tab == t ? [.isSelected, .isButton] : .isButton)
+        .accessibilityShowsLargeContentViewer()     // the bar stops growing at xLarge: long-press shows it big, like the system's
     }
 }
 
