@@ -101,7 +101,7 @@ extension ModelContext {
         guard let s = f.servings.first, s.grams > 0, s.name.hasPrefix("1 ") else { return nil }
         let n = s.name.lowercased()
         let piece = ["egg", "huevo", "bar", "barrita", "slice", "rebanada", "loncha", "scoop", "cacito", "tin", "lata", "tortita", "rice cake", "unidad", "unit", "piece", "pieza", "pot", "tarrina", "yogur", "pack"]
-        return piece.contains(where: { n.contains($0) }) || s.grams <= 60 ? s.grams : nil
+        return piece.contains(where: { n.contains($0) }) || s.grams <= 25 ? s.grams : nil      // a 50 g "serving" of dates isn't a piece
     }
 
     /// Your foods' names and values for the planner.
@@ -208,7 +208,9 @@ extension ModelContext {
         var targets = PlanTargets(kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs, fibreFloor: fibreGoal,
                                   fatFloor: min(t.fat, max(40, Evidence.value("fat.min.gPerKg") * kg)), weightKg: kg)
         // Carbs per meal: around the session, the recovery window, your preferred carb meals.
-        let carb = carbMeals(day, dayCarbs: t.carbs, slots: slots, kg: kg, session: training, fasted: fasted, settings: s)
+        // What's left after eaten and locked meals is shared out (a locked breakfast's carbs are already spent).
+        let fixedCarbs = slots.filter(\.fixed).flatMap(\.items).reduce(0.0) { acc, it in acc + (foods.first { $0.key == it.key }?.macros(it.grams).carbs ?? 0) }
+        let carb = carbMeals(day, dayCarbs: max(0, t.carbs - fixedCarbs), slots: slots, kg: kg, session: training, fasted: fasted, settings: s)
         targets.mealCarbs = carb.perSlot
         let opts = PlanOptions(preSleepProtein: s.preSleepProtein, exclusions: Set(s.exclusions), variety: s.variety, trainingCarbBoost: s.trainingCarbBoost)
         // The three-stage planner: templates, then your foods into their slots, then portions.

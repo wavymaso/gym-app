@@ -123,6 +123,18 @@ enum Portion {
         if role == .carbSide, carbs100 > 0 { lo = min(u, max(lo, (2500 / carbs100 / st).rounded(.up) * st)) }
         return (u, lo, hi)
     }
+    /// The most of a food in one meal, whatever your usual portion (one 250 g tub of queso batido). When a
+    /// meal's minimum can't be met within it, the planner adds a second food from the slot instead.
+    static let absoluteMax: [String: Double] = [
+        "queso-fresco-batido": 250, "skyr": 250, "yogurt": 250, "cottage-cheese": 250, "milk": 400, "protein-shake": 60,
+        "eggs": 240, "egg-whites": 300, "tuna-tinned": 168, "salmon": 250, "white-fish": 300, "prawns": 250,
+        "chicken": 300, "chicken-breast": 300, "chicken-thigh": 300, "turkey": 300, "beef": 300, "beef-mince": 250, "pork": 250, "ham": 150,
+        "white-rice": 150, "pasta": 150, "couscous": 120, "oats": 100, "potato": 500, "sweet-potato": 450, "bread": 120, "wholemeal-bread": 120,
+        "rice-cakes": 60, "pulses": 250, "nuts": 40, "peanut-butter": 32, "olive-oil": 15, "oil": 15, "banana": 240, "dates": 80,
+    ]
+    /// Vegetables at lunch and dinner: at least this much.
+    static let vegetableMin = 150.0
+
     static func perDay(_ role: FoodRole, name: String, fat: Double) -> Int {
         switch role {
         case .treat, .proteinSnack: return 1

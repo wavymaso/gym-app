@@ -46,7 +46,9 @@ MainActor.assumeIsolated {
     var uses: [String: Int] = [:]
     for i in 0..<7 {
         let d = addDays(start, i)
+        let t0 = Date()
         guard let r = ctx.dayPlan(d, uses: uses, style: styleArg), let t = ctx.dayTargets(on: d) else { print("\(d): no targets"); continue }
+        if ProcessInfo.processInfo.environment["PLAN_TIME"] != nil { print(String(format: "  [planned in %.2f s]", Date().timeIntervalSince(t0))) }
         for sl in r.plan.slots { for it in sl.items { uses[it.key, default: 0] += 1 } }
         let tr = r.settings.training(on: d, inferred: inferred)
         let wd = date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(Locale(identifier: "en_GB")))

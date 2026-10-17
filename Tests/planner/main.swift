@@ -570,4 +570,56 @@ do {
     let regen = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: off)
     check("regenerate: a different combination", regen.plan.slots.map { $0.items.map(\.key) } != rest3.plan.slots.map { $0.items.map(\.key) })
 }
+
+// MARK: Repairs (fill the slot that fixes a miss before reporting it) and portion limits
+do {
+    let base = pantry.map { f -> PlanFood in var f = f; f.canonical = Taxonomy.match(f.name, brand: nil)?.id; f.tier = f.canonical.map(Taxonomy.tier) ?? 1
+        f.nova = f.canonical.flatMap { Taxonomy.byID[$0]?.nova } ?? 1; return f }
+    let all = base + BasicFoods.planFoods(excluding: Set(base.map(\.key)))
+    let byK = Dictionary(all.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+    let tps = MealTemplates.defaults
+    func repaired(_ r: (plan: DayPlan, structure: [Int: MealStructure]), _ what: String) -> Bool { r.plan.reasons.contains { $0.rule == "repaired" && $0.detail.contains(what) } }
+    // Fat floor: the templates' defaults are lean; a high floor makes the builder add oil or peanut butter.
+    var fatT = cutDay; fatT.fatFloor = 58; fatT.fat = 62
+    let fatR = MealBuilder.plan(fatT, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("repair: fat floor → oil or peanut butter tried first", repaired(fatR, "oil") || repaired(fatR, "peanut butter"), fatR.plan.reasons.first { $0.rule == "repaired" }?.detail ?? "none")
+    check("repair: fat floor met, or reported (never silently missed)", !fatR.plan.misses.contains("fat floor") || fatR.plan.reasons.contains { $0.rule == "can't fully fit" && $0.detail.contains("fat floor") }, (fatR.plan.misses, Int(fatR.plan.totals.fat)))
+    // A reachable floor is met after the repair.
+    var fatT2 = cutDay; fatT2.fatFloor = 54; fatT2.fat = 58
+    let fatR2 = MealBuilder.plan(fatT2, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("repair: a reachable fat floor is met", !fatR2.plan.misses.contains("fat floor"), (fatR2.plan.misses, Int(fatR2.plan.totals.fat)))
+    // Fibre: a high floor → vegetables, pulses or fruit added.
+    var fibT = cutDay; fibT.fibreFloor = 60
+    let fibR = MealBuilder.plan(fibT, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    check("repair: fibre → vegetables, pulses or fruit added", repaired(fibR, "fibre"), fibR.plan.reasons.first { $0.rule == "repaired" }?.detail ?? "none")
+    check("repair: fibre met (or reported)", !fibR.plan.misses.contains("fibre") || fibR.plan.reasons.contains { $0.rule == "can't fully fit" }, (fibR.plan.misses, Int(fibR.plan.totals.fibre)))
+    // Protein per meal: a merienda whose dairy is capped (one tub) gets a second protein instead of more of it.
+    var mer = tps; mer[2].slots[0].allowed = ["queso-fresco-batido", "tuna-tinned"]; mer[2].slots[0].defaultFood = "queso-fresco-batido"
+    var heavy = cutDay; heavy.weightKg = 140          // minimum 42 g at merienda
+    let prR = MealBuilder.plan(heavy, slots: slotsFor(training: nil), foods: all, templates: mer, ctx: BuildContext())
+    let merienda = prR.plan.slots.first { MealTemplates.template(for: $0, in: mer)?.meal == .merienda }!
+    let qb = merienda.items.first { byK[$0.key]?.canonical == "queso-fresco-batido" }
+    check("portion cap: queso batido at most one 250 g tub", (qb?.grams ?? 0) <= 250.01, qb?.grams ?? 0)
+    check("repair: merienda short of protein → a second protein, minimum met", prR.plan.shortMeals.isEmpty && merienda.items.filter { [.proteinMain, .dairy].contains(byK[$0.key]?.role ?? .condiment) }.count >= 2,
+          (prR.plan.shortMeals, merienda.items.map(\.key)))
+    // Pre-workout carbs: the meal before training reaches ~its target (a carb added if needed), or says why.
+    let fri = slotsFor(training: (18 * 60, 75))
+    var preT = cutDay; preT.mealCarbs = CarbPlanner.meals(dayCarbs: 260, slots: fri, kg: 107, session: (18 * 60, 75), factor: 1, hoursToNext: nil, wake: 420, fasted: false).perSlot
+    let preR = MealBuilder.plan(preT, slots: fri, foods: all, templates: tps, ctx: BuildContext())
+    let pre = preR.plan.slots.first { $0.kind == .preWorkout }!
+    let preCarbs = pre.items.reduce(0.0) { $0 + (byK[$1.key]?.macros($1.grams).carbs ?? 0) }
+    check("pre-workout carbs: ≥ 85% of the target, or reported", preCarbs >= preT.mealCarbs[pre.index]! * 0.85 - 0.5 || preR.plan.misses.contains("pre-workout carbs"), (Int(preCarbs), Int(preT.mealCarbs[pre.index]!)))
+    check("pre-workout target: the lower of 0.75 g/kg and 30% of the day", abs(preT.mealCarbs[pre.index]! - min(0.75 * 107, 0.3 * 260)) < 0.5, preT.mealCarbs[pre.index]!)
+    // Vegetables: at least 150 g at lunch and dinner.
+    let r0 = MealBuilder.plan(cutDay, slots: slotsFor(training: nil), foods: all, templates: tps, ctx: BuildContext())
+    let veg = r0.plan.slots.filter { [.lunch, .dinner].contains(MealTemplates.template(for: $0, in: tps)?.meal ?? .breakfast) }.flatMap { $0.items.filter { byK[$0.key]?.role == .vegetable } }
+    check("vegetables: at least 150 g at lunch and dinner", !veg.isEmpty && veg.allSatisfy { $0.grams >= 149.9 }, veg.map(\.grams))
+    // Rest-day carb floor 1.0 g/kg: more can move to training days than with 1.5.
+    let kg = 107.0
+    let wk = (0..<7).map { i in CarbDay(key: "d\(i)", kcal: 2000, protein: 193, fat: 70, carbs: (2000 - 772 - 630) / 4, fatFloor: 54, carbFloor: ([0, 2, 4].contains(i) ? 1.5 : 1.0) * kg, training: [0, 2, 4].contains(i)) }
+    let hi = CarbPlanner.weekSplit(wk, settings: CarbSettings(), phase: .cut, kg: kg)
+    let lo = CarbPlanner.weekSplit(wk.map { var d = $0; d.carbFloor = 1.5 * kg; return d }, settings: CarbSettings(), phase: .cut, kg: kg)
+    check("rest-day floor 1.0 g/kg lets more carbs move to training days", hi[0].carbs > lo[0].carbs, (hi[0].carbs, lo[0].carbs))
+    check("rest-day floor in the registry (grade D, your choice)", Evidence.value("carbs.restDay.minGPerKg") == 1.0 && Evidence.entry("carbs.restDay.minGPerKg")?.grade == .D)
+}
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

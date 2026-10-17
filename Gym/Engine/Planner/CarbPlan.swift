@@ -99,7 +99,8 @@ enum CarbPlanner {
             // Before: about 0.5–1 g/kg, smaller when training early, none when fasted; never more than 40% of the day.
             if let pre = slots.firstIndex(where: { $0.kind == .preWorkout && !$0.fixed }) {
                 let early = s.start - wake < 120
-                let g = min(left * 0.4, kg * (early ? 0.35 : settings.preGPerKg) * min(1.2, max(0.8, factor)))
+                // The lower of ~0.75 g/kg and 30% of the day's carbs (smaller for an early session).
+                let g = min(left, dayCarbs * 0.3, kg * (early ? 0.35 : settings.preGPerKg) * min(1.2, max(0.8, factor)))
                 per[slots[pre].index] = g; left -= g
                 reasons.append(.init(rule: "before training", detail: early ? "An early session: a small, quick carb meal before (\(Int(g)) g: banana, rice cakes or dates)."
                                      : "About \(Int(g)) g of carbs (\(String(format: "%.1f", g / kg)) g/kg) 1–3 hours before, low in fat and fibre.",

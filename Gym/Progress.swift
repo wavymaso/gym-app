@@ -349,7 +349,7 @@ extension ModelContext {
             let session = p.fastDaySet.contains(wd) ? nil : s.training(on: d, inferred: s.inferredWeek)
             let size = session.map { sessionSize($0) } ?? (sets: 0, minutes: 0, averageSets: 1, averageMinutes: 1)
             return CarbDay(key: d, kcal: b.kcal, protein: b.protein, fat: b.fat, carbs: b.carbs, fatFloor: min(b.fat, max(40, Evidence.value("fat.min.gPerKg") * kg)),
-                           carbFloor: Evidence.value("carbs.min.gPerKg") * kg, training: session != nil,
+                           carbFloor: Evidence.value(session != nil ? "carbs.min.gPerKg" : "carbs.restDay.minGPerKg") * kg, training: session != nil,
                            sessionFactor: CarbPlanner.sessionFactor(sets: size.sets, minutes: size.minutes, averageSets: size.averageSets, averageMinutes: size.averageMinutes))
         }
         let split = Dictionary(CarbPlanner.weekSplit(week, settings: s.carbs, phase: phase, kg: kg).map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })

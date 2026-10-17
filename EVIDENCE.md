@@ -56,6 +56,7 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `carbs.preWorkout.gPerKg` | Eat an easily digestible carbohydrate meal about 2 hours before training; the amount isn't specified in the research. We plan about 0.5–1 g/kg, lower in fat and fibre. | 0.75 g/kg | 0.5–1 | D |
 | `timing.glycogen.hours` | Muscle glycogen is restored within 24 hours when the diet has at least 8 g of carbohydrate per kg; with under 4 hours between sessions, 1.2 g/kg/h of carbohydrate is advised. | 24 hours | 4–24 | C |
 | `timing.recovery.within24h` | When the next session is less than about 24 hours away, put more of the day's carbs into the post-workout meal and the meals before the next session. | 24 hours | 12–24 | D |
+| `carbs.restDay.minGPerKg` | On rest days carbs can go as low as 1.0 g per kg, so more of the week's carbs can move to training days. | 1 g/kg/day | 0.8–1.5 | D |
 | `carbs.dayShift.share` | On training days, carbs go up and fat toward its floor; on rest days fat goes up and carbs down; the week's calories stay the same. | 0.5 share of the shift | 0.25–1 | D |
 | `carbs.intra.minMinutes` | Carbohydrate during a session (dates, banana, a sports drink) only for sessions longer than about 90 minutes, and only if you turn it on. | 90 minutes | 60–120 | D |
 | `timing.fastedTraining` | Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions. | — | — | C |
@@ -453,6 +454,14 @@ When the next session is less than about 24 hours away, put more of the day's ca
 - **Studied in:** —
 - **Note:** Our rule, built on glycogen restoration; the share shifted is a setting. A preference within the calories, never above them.
 - Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `carbs.restDay.minGPerKg` (grade D, unverified)
+
+On rest days carbs can go as low as 1.0 g per kg, so more of the week's carbs can move to training days.
+
+- **Studied in:** —
+- **Note:** Your choice (17 Oct 2026). The day's calories and protein are unchanged; only the fat/carb split moves.
 - The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
 
 ### `carbs.dayShift.share` (grade D, unverified)

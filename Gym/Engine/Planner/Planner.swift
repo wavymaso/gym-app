@@ -80,6 +80,7 @@ struct PlanOptions: Equatable {
     var variety = 0.5                     // 0 = repeat freely, 1 = avoid repeats
     var trainingCarbBoost = false         // accepted proposal: even more of the day's carbs around training
     var sizeOnly = false                  // the foods are chosen (templates): only size them, never add, remove or swap
+    var quick = false                     // a shorter search (trying out a repair)
 }
 
 struct DayPlan: Equatable {
@@ -194,6 +195,8 @@ enum Planner {
             // Relaxing only helps if it fixes something: keep the earliest stage with the fewest misses.
             if best == nil || r.hard.count < best!.hard.count { best = r; bestStage = si }
             if r.hard.isEmpty { break }
+            // Widening the calorie band only helps when calories are what's missed.
+            if options.sizeOnly && !r.hard.contains("calories") { break }
         }
         let b = best!
         relaxed = Array(relaxed.prefix(bestStage))
@@ -335,9 +338,10 @@ enum Planner {
             // Aim at the target: every kcal away costs, and going outside the band costs far more.
             let band = max(t.kcal * w.tolerance, 40)
             x += pow(max(0, abs(m.kcal - t.kcal) - band), 2) * 5 + pow(m.kcal - t.kcal, 2) * 0.4
-            x += pow(max(0, t.protein - m.protein), 2) * 40
-            x += pow(max(0, t.fatFloor - m.fat), 2) * 40
-            if t.fibreFloor > 0 { x += pow(max(0, t.fibreFloor - m.fibre), 2) * 20 }
+            // Floors: quadratic, plus a linear part so small shortfalls (half a gram) still get closed.
+            x += pow(max(0, t.protein - m.protein), 2) * 40 + max(0, t.protein - m.protein) * 60
+            x += pow(max(0, t.fatFloor - m.fat), 2) * 40 + max(0, t.fatFloor - m.fat) * 50
+            if t.fibreFloor > 0 { x += pow(max(0, t.fibreFloor - m.fibre), 2) * 20 + max(0, t.fibreFloor - m.fibre) * 25 }
             // Soft: carbs and fat near target, not wildly over protein.
             x += pow(m.carbs - t.carbs, 2) * 0.05 + pow(m.fat - t.fat, 2) * 0.3 + pow(max(0, m.protein - t.protein * 1.15), 2) * 0.05
             let openSlots = s.filter { !$0.fixed }
@@ -374,7 +378,7 @@ enum Planner {
         cur = score(slots)
         // Moves until nothing improves: each round tries every resize, removal, addition and swap in
         // every meal and takes the best (ties: the first, so it stays deterministic).
-        for _ in 0..<120 {
+        for _ in 0..<(options.quick ? 40 : 120) {
             var bestMove: (slots: [PlanSlot], v: Int, sc: Double)?
             func consider(_ s2: [PlanSlot]) {
                 let v2 = violations(s2)
@@ -411,7 +415,7 @@ enum Planner {
                     let up = min(fa.maxGrams, slots[ia].items[ja].grams + fa.step)
                     guard up > slots[ia].items[ja].grams else { continue }
                     for (ib, jb) in pos where !(ib == ia && jb == ja) {
-                        guard let fb = byKey[slots[ib].items[jb].key] else { continue }
+                        guard let fb = byKey[slots[ib].items[jb].key], fb.role != fa.role else { continue }
                         let down = slots[ib].items[jb].grams - fb.step
                         guard down >= max(fb.step, fb.minGrams) - 1e-9 else { continue }
                         var s2 = slots; s2[ia].items[ja].grams = up; s2[ib].items[jb].grams = down; consider(s2)

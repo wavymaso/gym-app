@@ -124,6 +124,18 @@ enum MealBuilder {
                      options: PlanOptions = PlanOptions()) -> (plan: DayPlan, structure: [Int: MealStructure]) {
         var foods = all.filter { !options.exclusions.contains($0.key) }
         func basicOK(_ f: PlanFood) -> Bool { !ctx.basicStyle || ((f.staple || f.basic) && ((1...2).contains(f.nova) || (f.basic && f.basicAllowed))) }
+        // Portion limits: an absolute maximum per food in a meal (one tub of queso batido) and at least
+        // 150 g of vegetables.
+        for i in foods.indices {
+            if let c = foods[i].canonical, let mx = Portion.absoluteMax[c] {
+                foods[i].maxGrams = max(foods[i].step, min(foods[i].maxGrams, mx))
+                foods[i].usualGrams = min(foods[i].usualGrams, foods[i].maxGrams); foods[i].minGrams = min(foods[i].minGrams, foods[i].maxGrams)
+            }
+            if foods[i].role == .vegetable {
+                foods[i].minGrams = max(foods[i].minGrams, Portion.vegetableMin); foods[i].maxGrams = max(foods[i].maxGrams, 2 * Portion.vegetableMin)
+                foods[i].usualGrams = max(foods[i].usualGrams, Portion.vegetableMin)
+            }
+        }
         // Template limits on units (3 chocolate rice cakes) become portion caps.
         for t in templates { for ts in t.slots { for (c, n) in ts.maxUnits { for i in foods.indices where foods[i].canonical == c { foods[i].maxGrams = min(foods[i].maxGrams, Double(n) * foods[i].step) } } } }
         var slots = input
@@ -152,80 +164,137 @@ enum MealBuilder {
             structure[slots[i].index] = st
             for it in items { mark(it.key, slots[i].band) }
         }
-        // Stage 3: size only. If it doesn't fit, drop optional slots (sauce, bread, second spread, fruit)
-        // one at a time; if calories are short, add an off-by-default side (pulses). Keep the best.
+        // Stage 3: size only, then repair. When a hard constraint is missed, first fill the optional slot that
+        // fixes it, re-solve, and keep the change only if the day gets closer: oil or peanut butter for the
+        // fat floor; vegetables, pulses or fruit for fibre; a second protein for a meal short of its
+        // minimum; a carb (fruit, jam, dates…) for the meal before training; and when the day runs over,
+        // optional items out (bread, spread, fruit, sauce). Misses are reported only if nothing fixes them.
         var o = options; o.sizeOnly = true
-        var best = Planner.plan(targets, slots: slots, foods: foods, options: o)
-        var bestStructure = structure
-        let dropOrder: [TemplateSlot.Kind] = [.bread, .spread, .fruit, .treat, .fatOrSauce]
-        var tries = 0
-        // Drop one optional bread side or spread (the one in the meal with the most carbs), to make room.
-        func dropBreadOrSpread() -> Bool {
-            let cands = slots.indices.compactMap { i -> (Int, String, TemplateSlot.Kind, Double)? in
-                // Never from the meals around training: their fruit and jam are the carbs before and after.
-                guard !slots[i].fixed, slots[i].kind != .preWorkout, slots[i].kind != .postWorkout, let st = structure[slots[i].index] else { return nil }
-                for kind in [TemplateSlot.Kind.bread, .spread] { if let f = st.fill.last(where: { $0.kind == kind && !$0.keys.isEmpty }), let k = f.keys.last {
-                    let carbs = best.slots.first { $0.index == slots[i].index }?.items.reduce(0.0) { a, it in a + (foods.first { $0.key == it.key }?.macros(it.grams).carbs ?? 0) } ?? 0
-                    return (i, k, kind, carbs) } }
-                return nil
-            }
-            guard let (i, k, kind, _) = cands.max(by: { $0.3 < $1.3 }) else { return false }
-            slots[i].items.removeAll { $0.key == k }
+        func solve(quick: Bool = false) -> DayPlan { var q = o; q.quick = quick; return Planner.plan(targets, slots: slots, foods: foods, options: q) }
+        var best = solve()
+        // Repairs start from the sized plan (a warm start): one change then settles in a few steps.
+        var bestSlots = best.slots.count == slots.count ? best.slots : slots, bestStructure = structure
+        var coldSlots = slots                    // the same plan at usual portions (for a cold start)
+        slots = bestSlots
+        func meal(_ i: Int) -> MealTemplate? { MealTemplates.template(for: slots[i], in: templates) }
+        func canon(_ key: String) -> String? { byKey[key]?.canonical }
+        func usedCount(_ key: String) -> Int { slots.reduce(0) { $0 + ($1.items.contains { $0.key == key } ? 1 : 0) } }
+        // Your best food for a slot kind in a meal, among `allowed`, not already there or used up today.
+        func pick(_ i: Int, allowed: [String], rank: (PlanFood) -> Double) -> PlanFood? {
+            foods.filter { f in guard let c = f.canonical, allowed.contains(c), basicOK(f), !ctx.removed.contains(c) else { return false }
+                if Taxonomy.needsStock(c) && !ctx.inStock.contains(c) { return false }
+                return !slots[i].items.contains { $0.key == f.key } && usedCount(f.key) < f.maxPerDay }
+                .max { (rank($0) + ($0.staple ? 2 : 0) + log1p($0.frequency) - ($0.basic ? 0.5 : 0), $1.key) < (rank($1) + ($1.staple ? 2 : 0) + log1p($1.frequency) - ($1.basic ? 0.5 : 0), $0.key) }
+        }
+        // A repair only uses a slot the meal's template has, with foods it allows there.
+        func slotFor(_ i: Int, _ kinds: [TemplateSlot.Kind], _ wanted: [String]) -> (kind: TemplateSlot.Kind, allowed: [String])? {
+            for k in kinds { if let ts = meal(i)?.slots.first(where: { $0.kind == k }) {
+                let a = wanted.filter { ts.allowed.contains($0) }
+                if !a.isEmpty { return (k, a) } } }
+            return nil
+        }
+        func add(_ i: Int, _ f: PlanFood, _ kind: TemplateSlot.Kind) {
+            slots[i].items.append(PlanItem(key: f.key, grams: f.usualGrams))
+            if var st = structure[slots[i].index] { st.fill.append(.init(kind: kind, keys: [f.key], required: false)); st.dropped.removeAll { $0 == kind.label.lowercased() }; structure[slots[i].index] = st }
+        }
+        func remove(_ i: Int, _ key: String, _ kind: TemplateSlot.Kind) {
+            slots[i].items.removeAll { $0.key == key }
             if var st = structure[slots[i].index] {
                 st.dropped.append(kind.label.lowercased())
-                if let j = st.fill.lastIndex(where: { $0.kind == kind && $0.keys.contains(k) }) { st.fill[j].keys.removeAll { $0 == k } }
+                if let j = st.fill.lastIndex(where: { $0.keys.contains(key) }) { st.fill[j].keys.removeAll { $0 == key } }
                 structure[slots[i].index] = st
             }
-            return true
         }
-        // A carb base squeezed under half your usual portion: drop the bread side or spread instead.
-        let squeezed = best.slots.contains { sl in !sl.fixed && sl.items.contains { it in
-            guard let f = foods.first(where: { $0.key == it.key }), f.role == .carbSide, structure[sl.index]?.fill.first(where: { $0.kind == .carbBase })?.keys.contains(it.key) == true else { return false }
-            return it.grams < f.usualGrams * 0.5 } }
-        if squeezed, dropBreadOrSpread() {
-            let r = Planner.plan(targets, slots: slots, foods: foods, options: o)
-            if severity(r, targets) <= severity(best, targets) + 2 { best = r; bestStructure = structure }
+        func preCarbsShort(_ p: DayPlan) -> Double {
+            guard let sl = p.slots.first(where: { $0.kind == .preWorkout && !$0.fixed }), let t = targets.mealCarbs[sl.index] else { return 0 }
+            let c = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).carbs ?? 0) }
+            return max(0, t * 0.85 - c)
         }
-        while !best.feasible && tries < 8 {
-            tries += 1
-            let over = best.totals.kcal > targets.kcal + max(40, targets.kcal * options.kcalTolerance)
-            var changed = false
-            if over {
-                for kind in dropOrder {
-                    guard let (idx, key) = slots.indices.lazy.compactMap({ i -> (Int, String)? in
-                        guard !slots[i].fixed, slots[i].kind != .preWorkout, slots[i].kind != .postWorkout,
-                              let st = structure[slots[i].index], let f = st.fill.last(where: { $0.kind == kind && !$0.required && !$0.keys.isEmpty }) else { return nil }
-                        // Oil stays while fat is at or under its floor.
-                        if kind == .fatOrSauce, best.totals.fat <= targets.fatFloor + 3, f.keys.allSatisfy({ k in foods.first { $0.key == k }?.role == .fatSource }) { return nil }
-                        return (i, f.keys.last!)
-                    }).first else { continue }
-                    slots[idx].items.removeAll { $0.key == key }
-                    if var st = structure[slots[idx].index] {
-                        st.dropped.append(kind.label.lowercased())
-                        if let j = st.fill.lastIndex(where: { $0.kind == kind && $0.keys.contains(key) }) { st.fill[j].keys.removeAll { $0 == key } }
-                        structure[slots[idx].index] = st
+        func score(_ p: DayPlan) -> Double { severity(p, targets) + preCarbsShort(p) / 4 }
+        var repairsTried: [String] = []
+        for _ in 0..<12 {
+            var candidates: [(String, () -> Void)] = []
+            let open = slots.indices.filter { !slots[$0].fixed }
+            let mainMeals = open.filter { slots[$0].kind != .preWorkout && [MealTemplate.Meal.lunch, .dinner, .postWorkout].contains(meal($0)?.meal ?? .breakfast) }
+            let lightMeals = open.filter { [MealTemplate.Meal.breakfast, .merienda].contains(meal($0)?.meal ?? .lunch) }
+            // Over calories: optional items out (never around training, never the oil while fat is at its floor).
+            if best.totals.kcal > targets.kcal + max(40, targets.kcal * options.kcalTolerance) {
+                for i in open where slots[i].kind != .preWorkout && slots[i].kind != .postWorkout {
+                    for f in structure[slots[i].index]?.fill ?? [] where !f.required && [.bread, .spread, .fruit, .treat, .fatOrSauce].contains(f.kind) {
+                        for k in f.keys {
+                            if byKey[k]?.role == .fatSource, best.totals.fat <= targets.fatFloor + 3 { continue }
+                            candidates.append(("drop \(f.kind.label)", { remove(i, k, f.kind) }))
+                        }
                     }
-                    changed = true; break
-                }
-            } else {
-                // Short of the fat floor: olive oil (or another fat) on lunch, dinner or the meal after training.
-                // Short of fibre or calories: pulses as a side.
-                let wantFat = best.misses.contains("fat floor"), wantFibre = best.misses.contains("fibre") || best.totals.kcal < targets.kcal - max(40, targets.kcal * options.kcalTolerance)
-                for (kind, canon) in [(TemplateSlot.Kind.fatOrSauce, wantFat ? "olive-oil" : ""), (.pulses, wantFibre ? "pulses" : "")] where !canon.isEmpty && !changed {
-                    guard let i = slots.indices.first(where: { i in !slots[i].fixed && slots[i].kind != .preWorkout
-                                && MealTemplates.template(for: slots[i], in: templates)?.slots.contains { $0.kind == kind && $0.allowed.contains(canon) } == true
-                                && !slots[i].items.contains { it in foods.first { $0.key == it.key }?.canonical == canon } }),
-                          let add = foods.filter({ $0.canonical == canon && basicOK($0) }).sorted(by: { ($0.basic ? 1 : 0, $0.key) < ($1.basic ? 1 : 0, $1.key) }).first else { continue }
-                    slots[i].items.append(PlanItem(key: add.key, grams: add.usualGrams))
-                    if var st = structure[slots[i].index] { st.fill.append(.init(kind: kind, keys: [add.key], required: false)); st.dropped.removeAll { $0 == kind.label.lowercased() }; structure[slots[i].index] = st }
-                    if kind == .fatOrSauce { _ = dropBreadOrSpread() }      // oil needs room in the calories
-                    changed = true
                 }
             }
-            guard changed else { break }
-            let r = Planner.plan(targets, slots: slots, foods: foods, options: o)
-            if r.feasible || severity(r, targets) < severity(best, targets) { best = r; bestStructure = structure }
+            // A carb base squeezed under half its usual portion: the bread side or spread goes instead.
+            for sl in best.slots where !sl.fixed && sl.kind != .preWorkout && sl.kind != .postWorkout {
+                guard let i = slots.firstIndex(where: { $0.index == sl.index }), let st = structure[sl.index],
+                      let base = st.fill.first(where: { $0.kind == .carbBase })?.keys.first, let it = sl.items.first(where: { $0.key == base }),
+                      let f = byKey[base], it.grams < f.usualGrams * 0.5 else { continue }
+                for fl in st.fill where [.bread, .spread].contains(fl.kind) { for k in fl.keys { candidates.append(("drop \(fl.kind.label) for the carb base", { remove(i, k, fl.kind) })) } }
+            }
+            // Fat floor: olive oil at lunch, dinner or after training; peanut butter (or nuts) at breakfast or merienda.
+            if best.misses.contains("fat floor") {
+                for i in mainMeals { if let sl = slotFor(i, [.fatOrSauce], ["olive-oil", "oil"]), let f = pick(i, allowed: sl.allowed, rank: { _ in 0 }) { candidates.append(("oil for the fat floor", { add(i, f, sl.kind) })) } }
+                for i in lightMeals { if let sl = slotFor(i, [.spread], ["peanut-butter", "nuts"]), let f = pick(i, allowed: sl.allowed, rank: { $0.per100.protein / 10 }) { candidates.append(("peanut butter for the fat floor", { add(i, f, sl.kind) })) } }
+            }
+            // Fibre: vegetables or pulses at lunch and dinner, fruit at breakfast and merienda.
+            if best.misses.contains("fibre") {
+                for i in mainMeals {
+                    if let sl = slotFor(i, [.vegetable], MealTemplates.vegetables), let f = pick(i, allowed: sl.allowed, rank: { $0.per100.fibre }) { candidates.append(("vegetables for fibre", { add(i, f, sl.kind) })) }
+                    if let sl = slotFor(i, [.pulses], ["pulses"]), let f = pick(i, allowed: sl.allowed, rank: { $0.per100.fibre }) { candidates.append(("pulses for fibre", { add(i, f, sl.kind) })) }
+                }
+                for i in lightMeals {
+                    if let sl = slotFor(i, [.fruit, .carb], MealTemplates.fruits), let f = pick(i, allowed: sl.allowed, rank: { $0.per100.fibre * 100 / max($0.per100.kcal, 1) }) { candidates.append(("fruit for fibre", { add(i, f, sl.kind) })) }
+                }
+            }
+            // A meal short of its protein minimum (or the day short of protein): a second protein from that meal's protein slot.
+            let short = Set(best.shortMeals.map { best.slots[$0.index].index })
+            for i in open where short.contains(slots[i].index) || (best.misses.contains("protein") && slots[i].kind != .preWorkout) {
+                guard let ts = meal(i)?.slots.first(where: { $0.kind == .protein }) else { continue }
+                let have = Set(slots[i].items.compactMap { canon($0.key).map(Taxonomy.family) })
+                if let f = pick(i, allowed: ts.allowed.filter { !have.contains(Taxonomy.family($0)) }, rank: { 8 * $0.per100.protein * 4 / max($0.per100.kcal, 1) }) {
+                    candidates.append(("a second protein", { add(i, f, .protein) }))
+                }
+            }
+            // The meal before training short of its carbs: a carb from its template (fruit, jam, dates, rice cakes…).
+            if preCarbsShort(best) > 0, let i = open.first(where: { slots[$0].kind == .preWorkout }), let t = meal(i) {
+                for ts in t.slots where [.carb, .fruit, .spread].contains(ts.kind) {
+                    if let f = pick(i, allowed: ts.allowed, rank: { $0.per100.carbs / 10 - $0.per100.fat - $0.per100.fibre }) { candidates.append(("a carb before training", { add(i, f, ts.kind) })) }
+                }
+            }
+            // Try each; keep the best improvement.
+            var improved: (score: Double, slots: [PlanSlot], structure: [Int: MealStructure], plan: DayPlan, name: String)?
+            let base = score(best)
+            // Warm start first (fast); if nothing helps, the same repairs from usual portions (a cold start
+            // can find a different balance).
+            for start in [bestSlots, coldSlots] {
+                for (name, apply) in candidates {
+                    slots = start; structure = bestStructure
+                    apply()
+                    let r = solve()
+                    let sc = score(r)
+                    if sc < (improved?.score ?? base) - 0.01 { improved = (sc, slots, structure, r, name) }
+                }
+                if improved != nil { break }
+            }
+            slots = bestSlots; structure = bestStructure
+            guard var m = improved else { break }
+            // The chosen repair gets the full search.
+            slots = m.slots; structure = m.structure
+            let full = solve()
+            if score(full) <= m.score { m.plan = full }
+            best = m.plan; coldSlots = m.slots; bestSlots = m.plan.slots.count == m.slots.count ? m.plan.slots : m.slots; bestStructure = m.structure; slots = bestSlots; structure = m.structure
+            repairsTried.append(m.name)
+            if best.feasible && preCarbsShort(best) == 0 { break }
         }
+        if preCarbsShort(best) > 0 {
+            best.misses.append("pre-workout carbs")
+            best.reasons.append(.init(rule: "pre-workout carbs", detail: "The meal before training is \(Int(preCarbsShort(best) / 0.85)) g short of its carb target with the foods allowed in it.", evidence: ["carbs.preWorkout.gPerKg"]))
+        }
+        if !repairsTried.isEmpty { best.reasons.append(.init(rule: "repaired", detail: "To meet the targets: \(repairsTried.joined(separator: ", ")).", evidence: [])) }
         structure = bestStructure
         // Report what the structure couldn't do.
         for (i, st) in structure where !st.unfilled.isEmpty {
