@@ -25,10 +25,10 @@ MainActor.assumeIsolated {
     // The role audit: every food the planner can use, what it was taken for, and its limits.
     print("FOOD ROLES (correct any in Food log → Plan → Change → Planner settings → Food roles)")
     let corrected = p.planner.roles
-    for role in [FoodRole.main, .side, .condiment, .treat] {
-        let list = ctx.planFoods().filter { $0.role == role }.sorted { $0.name < $1.name }
+    for role in FoodRole.allCases {
+        let list = ctx.planFoods().filter { $0.role == role && !$0.basic }.sorted { $0.name < $1.name }
         guard !list.isEmpty else { continue }
-        print("  \(["main": "MAINS", "side": "SIDES", "condiment": "CONDIMENTS", "treat": "TREATS"][role.rawValue]!)")
+        print("  \(role.label.uppercased())")
         for f in list {
             let meals = f.bands.isEmpty ? "any meal" : f.bands.sorted().map(\.label).joined(separator: "/")
             print(String(format: "    %-46@ %3.0f–%3.0f g a meal, up to %d× a day, %@ · %3.0f kcal %4.1f g protein per 100 g%@", f.name as NSString,
@@ -53,7 +53,9 @@ MainActor.assumeIsolated {
             let m = sl.items.reduce(Macros()) { $0 + (r.foods[$1.key]?.macros($1.grams) ?? Macros()) }
             let kind = ["meal": "", "preWorkout": " (before training)", "postWorkout": " (after training)", "preSleep": " (before bed)"][sl.kind.rawValue] ?? ""
             let short = r.plan.shortMeals.contains { $0.index == r.plan.slots.firstIndex(of: sl) } ? "  ⚠ below the \(Int(PlanTargets(kcal: 0, protein: 0, fat: 0, carbs: 0, weightKg: trendSeries(ctx.weightValues, through: d).last?.trend ?? 80).minProtein(sl.kind))) g minimum" : ""
-            print(String(format: "  %02d:%02d %@%@ · %d kcal, %d g protein%@", sl.minute / 60 % 24, sl.minute % 60, sl.band.label, kind, Int(m.kcal), Int(m.protein), short as NSString))
+            let target = r.plan.slots.firstIndex(of: sl).flatMap { _ in r.plan.slots.isEmpty ? nil : nil } ?? 0
+            _ = target
+            print(String(format: "  %02d:%02d %@%@ · %d kcal, %d g protein, %d g carbs%@", sl.minute / 60 % 24, sl.minute % 60, sl.band.label, kind, Int(m.kcal), Int(m.protein), Int(m.carbs), short as NSString))
             for it in sl.items { print("     \(r.foods[it.key]?.name ?? it.key), \(Int(it.grams)) g") }
         }
         let tot = r.plan.totals
@@ -64,6 +66,13 @@ MainActor.assumeIsolated {
         print(String(format: "  Day: %d kcal (target %d, %@%d, %+.1f%%) · protein %d (min %d) · fat %d (target %d, floor %d) · carbs %d (target %d) · fibre %d (floor %d)",
                      Int(tot.kcal.rounded()), Int(t.kcal.rounded()), (dk >= 0 ? "+" : "") as NSString, Int(dk.rounded()), dk / t.kcal * 100, Int(tot.protein.rounded()), Int(t.protein.rounded()), Int(tot.fat.rounded()), Int(t.fat.rounded()), Int(fatFloor.rounded()),
                      Int(tot.carbs.rounded()), Int(t.carbs.rounded()), Int(tot.fibre.rounded()), Int(fibreFloor.rounded())))
+        if let c = r.plan.carbs {
+            print(String(format: "  Carbs: %d g = %.1f g/kg (%@ %d–%d g/kg)%@%@", Int(tot.carbs.rounded()), c.gPerKg, (c.rangeIsTarget ? "target" : "cut reference") as NSString, Int(c.range.lowerBound), Int(c.range.upperBound),
+                         (c.recovery ? " · RECOVERY WINDOW (next session < 24 h)" : "") as NSString, (c.intra > 0 ? " · \(Int(c.intra)) g during training" : "") as NSString))
+        }
+        for reason in r.plan.reasons where ["training day", "rest day", "before training", "recovery window", "back-to-back sessions", "fasted training", "carbs during training"].contains(reason.rule) {
+            print("    why (\(reason.rule)): \(reason.detail)")
+        }
         if !r.plan.relaxed.isEmpty { print("  Preferences relaxed: \(r.plan.relaxed.joined(separator: ", "))") }
         if !r.plan.relaxedHard.isEmpty { print("  HARD LIMIT WIDENED: \(r.plan.relaxedHard.joined(separator: " → "))") }
         if !r.plan.misses.isEmpty { print("  ⚠ HARD CONSTRAINTS NOT MET: \(r.plan.misses.joined(separator: ", "))") }

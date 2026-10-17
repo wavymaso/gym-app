@@ -4,7 +4,11 @@ import Foundation
 // belong (breakfast foods at breakfast), what a "main" is (oil and jam only go with one), your
 // staples, and the check for entries big enough to be a typo.
 
-struct TrainingSlot: Codable, Equatable { var start: Int; var minutes: Int }
+struct TrainingSlot: Codable, Equatable {
+    var start: Int
+    var minutes: Int
+    var routine: String? = nil        // the routine you do that day (its working sets size the day's carbs)
+}
 
 // MARK: Training week
 

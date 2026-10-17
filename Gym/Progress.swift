@@ -306,6 +306,7 @@ private var expenditureCache: [String: [ExpenditurePoint]] = [:]
 private var weightCache: [String: [DayValue]] = [:]
 private var intakeCache: [String: [String: Double]] = [:]
 private var dayTargetCache: [String: Targets?] = [:]
+private var carbWeekCache: [String: [String: CarbDay]] = [:]
 
 /// When your trend reaches your goal weight at the current weekly rate (nil if it's moving the other way or too slowly).
 func goalDate(trendKg: Double, goalKg: Double, weeklyKg: Double) -> Date? {
@@ -324,9 +325,54 @@ extension ModelContext {
         let key = "\(ObjectIdentifier(container).hashValue)|\(dataVersion)|\(dayKey())|\(day)"
         if let hit = dayTargetCache[key] { return hit }
         if dayTargetCache.count > 400 { dayTargetCache = [:] }
-        let v = dayTargetsUncached(on: day)
+        let v = carbSplit(dayTargetsUncached(on: day), on: day)
         dayTargetCache[key] = v
         return v
+    }
+
+    /// Training and rest days: the same calories and protein, fat and carbs shifted within the week
+    /// (CarbPlanner.weekSplit). Off when you set your own day-by-day plan, during a diet break, or when
+    /// the shift is 0 (and not bulking).
+    private func carbSplit(_ t: Targets?, on day: String) -> Targets? {
+        guard let t, let p = try? fetch(FetchDescriptor<Profile>()).first else { return t }
+        let s = p.planner
+        let phase: Phase = activeProgram.map { $0.goalValue == .lose ? .cut : $0.goalValue == .gain ? .bulk : .maintain } ?? .maintain
+        guard s.carbs.dayShift > 0 || phase != .cut, !p.inDietBreak(day), activeProgram?.mode == "coached" || p.weekPlan.isEmpty else { return t }
+        let n = dayNumber(day), monday = dayKey(number: n - ((n + 3) % 7 + 7) % 7)
+        let wk = "\(monday)|\(dataVersion)"
+        if let hit = carbWeekCache[wk], let d = hit[day] { return Targets(kcal: t.kcal, protein: t.protein, fat: d.fat, carbs: d.carbs) }
+        let kg = weightValues.last?.value ?? 80
+        let week: [CarbDay] = (0..<7).compactMap { i in
+            let d = addDays(monday, i)
+            guard let b = dayTargetsUncached(on: d) else { return nil }
+            let wd = Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d))
+            let session = p.fastDaySet.contains(wd) ? nil : s.training(on: d, inferred: s.inferredWeek)
+            let size = session.map { sessionSize($0) } ?? (sets: 0, minutes: 0, averageSets: 1, averageMinutes: 1)
+            return CarbDay(key: d, kcal: b.kcal, protein: b.protein, fat: b.fat, carbs: b.carbs, fatFloor: min(b.fat, max(40, Evidence.value("fat.min.gPerKg") * kg)),
+                           carbFloor: Evidence.value("carbs.min.gPerKg") * kg, training: session != nil,
+                           sessionFactor: CarbPlanner.sessionFactor(sets: size.sets, minutes: size.minutes, averageSets: size.averageSets, averageMinutes: size.averageMinutes))
+        }
+        let split = Dictionary(CarbPlanner.weekSplit(week, settings: s.carbs, phase: phase, kg: kg).map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+        if carbWeekCache.count > 20 { carbWeekCache = [:] }
+        carbWeekCache[wk] = split
+        guard let d = split[day] else { return t }
+        return Targets(kcal: t.kcal, protein: t.protein, fat: d.fat.rounded(), carbs: d.carbs.rounded())
+    }
+
+    /// A session's size: the routine's working sets if one is set for that day, else your average logged
+    /// session (last 6 weeks), else 18 sets; duration from the training week.
+    func sessionSize(_ t: TrainingSlot) -> (sets: Double, minutes: Double, averageSets: Double, averageMinutes: Double) {
+        let from = Calendar.current.date(byAdding: .day, value: -42, to: Date())!
+        let ws = ((try? fetch(FetchDescriptor<Workout>(predicate: #Predicate { $0.start >= from }))) ?? []).filter { $0.end != nil }
+        let doneSets = ws.map { w -> Double in let k = w.key; return Double(((try? fetch(FetchDescriptor<WorkoutSet>(predicate: #Predicate { $0.workoutKey == k && $0.done }))) ?? []).count) }
+        let avgSets = doneSets.isEmpty ? 18 : max(1, doneSets.reduce(0, +) / Double(doneSets.count))
+        let avgMin = ws.isEmpty ? 75 : max(20, ws.map { Double($0.duration) / 60 }.reduce(0, +) / Double(ws.count))
+        var sets = avgSets
+        if let r = t.routine {
+            let ex = (try? fetch(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == r }))) ?? []
+            if !ex.isEmpty { sets = Double(ex.reduce(0) { $0 + $1.sets }) }
+        }
+        return (sets, Double(t.minutes), avgSets, avgMin)
     }
 
     private func dayTargetsUncached(on day: String) -> Targets? {

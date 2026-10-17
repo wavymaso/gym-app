@@ -60,6 +60,9 @@ struct PlanTargets: Equatable {
     var fibreFloor: Double = 0
     var fatFloor: Double = 40
     var weightKg: Double = 80
+    var mealCarbs: [Int: Double] = [:]    // carb target per meal (slot index → g), from the carb plan
+    var preWorkoutMaxFat = 12.0           // g (template: pre-workout)
+    var preWorkoutMaxFibre = 6.0
     /// Protein every meal must reach (g): ~0.3 g/kg, ~0.4 g/kg before and after training (registry).
     var mealProtein: Double { (weightKg * Evidence.value("protein.perMeal.min.gPerKg")).rounded() }
     var trainingMealProtein: Double { (weightKg * Evidence.value("protein.perMeal.gPerKg")).rounded() }
@@ -83,6 +86,8 @@ struct DayPlan: Equatable {
     var misses: [String] = []             // hard constraints still not met
     var shortMeals: [ShortMeal] = []      // meals your foods can't bring to their protein minimum
     var kcalBand: Double = 0              // ± kcal the plan was held to
+    struct Carbs: Equatable { var gPerKg: Double; var range: ClosedRange<Double>; var rangeIsTarget: Bool; var intra: Double; var recovery: Bool }
+    var carbs: Carbs? = nil               // the day's carbs against the range for your phase
     var reasons: [EngineReason]
     var feasible: Bool                    // all hard constraints met
     var note: String?                     // when the day can't be hit sensibly
@@ -272,7 +277,9 @@ enum Planner {
             // basic foods library, at least a couple per role so any role can be filled.
             let usual = foods.filter { affinity($0, s) > 0 && !$0.basic }.sorted { (affinity($0, s), $1.key) > (affinity($1, s), $0.key) }
             var list = Array(usual.prefix(8))
-            for f in foods where !f.basic && !list.contains(f) && list.count < 16 { list.append(f) }
+            // Before training: low-fat, low-fibre foods first (the meal has fat and fibre caps).
+            let others = s.kind == .preWorkout ? foods.sorted { ($0.per100.fat + $0.per100.fibre * 2, $0.key) < ($1.per100.fat + $1.per100.fibre * 2, $1.key) } : foods
+            for f in others where !f.basic && !list.contains(f) && list.count < 16 { list.append(f) }
             var perRole: [FoodRole: Int] = [:]
             for f in list { perRole[f.role, default: 0] += 1 }
             for f in foods where f.basic && !list.contains(f) && (perRole[f.role] ?? 0) < 3 { list.append(f); perRole[f.role, default: 0] += 1 }
@@ -321,6 +328,14 @@ enum Planner {
                 // The protein minimum for this meal (hard; reported if your foods can't reach it).
                 let p = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).protein ?? 0) }
                 if p < t.minProtein(sl.kind) - 0.5 { v += 1 }
+                // Before training: fat and fibre caps (hard).
+                if sl.kind == .preWorkout {
+                    let fat = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).fat ?? 0) }
+                    let fib = sl.items.reduce(0.0) { $0 + (byKey[$1.key]?.macros($1.grams).fibre ?? 0) }
+                    // Graded: further over counts more, so the search sees every step toward the cap.
+                    if fat > t.preWorkoutMaxFat + 0.5 { v += 1 + Int((fat - t.preWorkoutMaxFat) / 3) }
+                    if fib > t.preWorkoutMaxFibre + 0.5 { v += 1 + Int((fib - t.preWorkoutMaxFibre) / 1.5) }
+                }
                 for it in sl.items { if let f = byKey[it.key], !fits(f, sl) { v += 1 } }
             }
             for (k, n) in count { if let f = byKey[k], n > f.maxPerDay { v += n - f.maxPerDay } }
@@ -364,8 +379,9 @@ enum Planner {
                 // Protein spread (registry: 20–40 g per meal), and no 200 g-protein dinners.
                 x += w.spread * pow(max(0, perMeal * 0.7 - mm.protein), 2) * 0.15
                 x += pow(max(0, mm.protein - max(70, perMeal * 1.6)), 2) * 0.3
-                // Carbs around training; lighter fat and fibre right before.
-                if sl.kind == .preWorkout || sl.kind == .postWorkout { x -= w.trainingCarbs * min(mm.carbs, 120) * 0.15 }
+                // Carbs where the carb plan puts them (else simply more around training); lighter fat and fibre right before.
+                if let target = t.mealCarbs[sl.index], !sl.fixed { x += w.trainingCarbs * pow(mm.carbs - target, 2) * 0.05 }
+                else if t.mealCarbs.isEmpty, sl.kind == .preWorkout || sl.kind == .postWorkout { x -= w.trainingCarbs * min(mm.carbs, 120) * 0.15 }
                 if sl.kind == .preWorkout { x += w.preWorkoutFat * (max(0, mm.fat - 15) * 0.8 + max(0, mm.fibre - 6) * 0.8) }
                 if sl.kind == .preSleep, options.preSleepProtein { x += w.preSleep * pow(max(0, Evidence.value("timing.preSleep.casein") - mm.protein), 2) * 0.1 }
             }

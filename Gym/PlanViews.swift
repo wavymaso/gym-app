@@ -1,3 +1,4 @@
+import Charts
 import SwiftData
 import SwiftUI
 
@@ -106,10 +107,10 @@ struct PlanDayView: View {
     private var carbProposalCard: some View {
         VStack(alignment: .leading, spacing: Space.s) {
             Label("Strength is dropping on training days", systemImage: "chart.line.downtrend.xyaxis").font(.cardTitle)
-            Text("The coaching engine flagged falling strength while losing fast. The planner can put more of the day's carbs before and after training (same daily totals). Evidence for exact timing is weak, so this is your call.")
+            Text("The coaching engine flagged falling strength while losing fast. Proposal: shift more carbs to training days and around sessions (rest days take a little more fat; the week's calories are the same). Evidence for timing is modest outside long, high-volume sessions, so this is your call.")
                 .font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
-                Button("Move carbs around training") { setBoost(true) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
+                Button("Shift carbs to training") { setBoost(true) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 Button("Not now") { setBoost(false) }.buttonStyle(.bordered)
             }
             .font(.secondaryText.weight(.semibold))
@@ -120,7 +121,7 @@ struct PlanDayView: View {
     private func setBoost(_ on: Bool) {
         guard let p = ctx.profile else { return }
         var s = p.planner
-        if on { s.trainingCarbBoost = true } else { s.dismissedCarbProposal = dayKey() }
+        if on { s.trainingCarbBoost = true; s.carbs.dayShift = max(s.carbs.dayShift, 0.5) } else { s.dismissedCarbProposal = dayKey() }
         p.planner = s; ctx.commit(); version += 1; Haptics.tap()
     }
 
@@ -142,8 +143,11 @@ struct PlanDayView: View {
             HStack(spacing: Space.s) {
                 Text(planClock(s.minute)).font(.numberSmall).monospacedDigit()
                 Text(label(s.kind)).font(.label).foregroundStyle(.secondary).textCase(.uppercase)
+                if s.kind == .preWorkout || s.kind == .postWorkout {
+                    Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(palette.accent).accessibilityLabel(s.kind == .preWorkout ? "Before training" : "After training")
+                }
                 Spacer()
-                Text("\(number(energy.fromKcal(m.kcal))) \(energy.rawValue) · \(Int(m.protein)) g P").font(.fine).foregroundStyle(.secondary).monospacedDigit()
+                Text("\(number(energy.fromKcal(m.kcal))) \(energy.rawValue) · \(Int(m.protein)) P · \(Int(m.carbs)) C").font(.fine).foregroundStyle(.secondary).monospacedDigit()
                 if !s.eaten {
                     Button { toggleLock(s) } label: { Image(systemName: s.locked ? "lock.fill" : "lock.open") }
                         .buttonStyle(.borderless).accessibilityLabel(s.locked ? "Unlock this meal" : "Keep this meal every day")
@@ -192,6 +196,19 @@ struct PlanDayView: View {
             if let t { Text("target \(number(energy.fromKcal(t.kcal))) · \(Int(t.protein)) g").foregroundStyle(.secondary) }
         }
         .font(.fine).monospacedDigit()
+        .safeAreaInset(edge: .bottom, spacing: 4) {
+            if let c = r.plan.carbs {
+                HStack(spacing: 4) {
+                    Text("Carbs \(Int(r.plan.totals.carbs)) g · \(String(format: "%.1f", c.gPerKg)) g/kg")
+                    Text(c.rangeIsTarget ? "(target \(Int(c.range.lowerBound))–\(Int(c.range.upperBound)))" : "(cut range \(Int(c.range.lowerBound))–\(Int(c.range.upperBound)); 4–7 for performance)")
+                        .foregroundStyle(c.gPerKg < c.range.lowerBound ? palette.warn : Color.secondary)
+                    if c.recovery { Label("recovery window", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon) }
+                    if c.intra > 0 { Text("· \(Int(c.intra)) g during training") }
+                    Spacer()
+                }
+                .font(.fine).monospacedDigit().foregroundStyle(.secondary)
+            }
+        }
     }
 
     private func toggleLock(_ s: PlanSlot) {
@@ -317,11 +334,23 @@ struct WeekPlanView: View {
 
     var body: some View {
         List {
+            Section {
+                Chart(days, id: \.day) { d in
+                    let training = d.plan.slots.contains { $0.kind == .preWorkout || $0.kind == .postWorkout }
+                    BarMark(x: .value("Day", String(date(fromKey: d.day).formatted(.dateTime.weekday(.abbreviated).locale(appLocale)))), y: .value("Carbs", d.plan.totals.carbs))
+                        .foregroundStyle(training ? palette.carbs : palette.carbs.opacity(0.4))
+                        .annotation(position: .top) { Text(training ? "🏋" : "").font(.caption2) }
+                }
+                .frame(height: 140)
+                Text("Carbs per day; solid bars are training days. Same weekly calories: training days take more carbs, rest days more fat.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Carbs this week") }
             Section("Next 7 days") {
                 ForEach(days, id: \.day) { d in
                     VStack(alignment: .leading, spacing: 3) {
                         Text(date(fromKey: d.day).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))).font(.secondaryText.weight(.semibold))
-                        Text("\(Int(d.plan.totals.kcal)) kcal · \(Int(d.plan.totals.protein)) g protein · \(d.plan.slots.count) meals\(d.plan.feasible ? "" : " · doesn't fully fit")")
+                        let training = d.plan.slots.contains { $0.kind == .preWorkout || $0.kind == .postWorkout }
+                        Text("\(training ? "🏋 " : "")\(Int(d.plan.totals.kcal)) kcal · \(Int(d.plan.totals.protein)) P · \(Int(d.plan.totals.carbs)) C\(d.plan.carbs.map { String(format: " (%.1f g/kg)", $0.gPerKg) } ?? "") · \(d.plan.slots.count) meals\(d.plan.feasible ? "" : " · doesn't fully fit")")
                             .font(.caption).foregroundStyle(d.plan.feasible ? Color.secondary : palette.warn).monospacedDigit()
                     }
                 }
@@ -380,6 +409,7 @@ struct PlannerSettingsView: View {
     @State private var s = PlannerSettings()
     @State private var loaded = false
     @State private var inferred: [Int: TrainingSlot] = [:]
+    @Query(sort: \Routine.order) private var routines: [Routine]
 
     /// The week shown: yours once you've edited it, else the one from your workouts.
     private var week: [Int: TrainingSlot] { s.week(inferred) }
@@ -401,11 +431,19 @@ struct PlannerSettingsView: View {
                         Text(weekdayName(wd))
                         Spacer()
                         Picker("", selection: Binding(get: { week[wd]?.start ?? -1 }, set: { v in
-                            edit { $0[wd] = v < 0 ? nil : TrainingSlot(start: v, minutes: $0[wd]?.minutes ?? $0.values.first?.minutes ?? 75) } })) {
+                            edit { $0[wd] = v < 0 ? nil : TrainingSlot(start: v, minutes: $0[wd]?.minutes ?? $0.values.first?.minutes ?? 75, routine: $0[wd]?.routine) } })) {
                             Text("Rest").tag(-1)
                             ForEach(Array(stride(from: 6 * 60, through: 22 * 60, by: 30)), id: \.self) { m in Text(planClock(m)).tag(m) }
                         }
                         .pickerStyle(.menu).labelsHidden()
+                        // Which routine: its working sets size the day's carbs.
+                        if week[wd] != nil, !routines.isEmpty {
+                            Picker("", selection: Binding(get: { week[wd]?.routine ?? "" }, set: { v in edit { $0[wd]?.routine = v.isEmpty ? nil : v } })) {
+                                Text("Usual session").tag("")
+                                ForEach(routines, id: \.key) { r in Text(r.name).tag(r.key) }
+                            }
+                            .pickerStyle(.menu).labelsHidden()
+                        }
                     }
                 }
                 Stepper("Sessions last \(week.values.first?.minutes ?? 75) min", value: Binding(get: { week.values.first?.minutes ?? 75 }, set: { v in
@@ -418,6 +456,15 @@ struct PlannerSettingsView: View {
                 Text((s.scheduleSet ? "Your own week. " : inferred.isEmpty ? "No workouts logged in the last 6 weeks, so every day is a rest day until you set your week or log workouts. "
                       : "Inferred from your workouts in the last 6 weeks (a day counts if you trained on it in at least half the weeks). Change any day to set your own. ")
                      + "A meal goes about 2 hours before training and another after it. Fasted morning training is fine if you prefer it.")
+            }
+            Section {
+                Picker("Training vs rest days", selection: $s.carbs.dayShift) {
+                    Text("Same every day").tag(0.0); Text("Small shift").tag(0.15); Text("Moderate").tag(0.3); Text("Large").tag(0.5)
+                }
+                Stepper("Before training: \(String(format: "%.2f", s.carbs.preGPerKg)) g/kg", value: $s.carbs.preGPerKg, in: 0.5...1.0, step: 0.05)
+                Toggle("Carbs during sessions over 90 min", isOn: $s.carbs.intra)
+            } header: { Text("Carbs and training") } footer: {
+                Text("Your calories don't change: on training days fat moves toward its floor and carbs go up, on rest days the reverse, more for bigger sessions. Before training about 0.5–1 g/kg; more after training when the next session is under 24 h away. The research finds carb timing matters most for long, high-volume sessions.")
             }
             Section {
                 Toggle("Protein before bed", isOn: $s.preSleepProtein)

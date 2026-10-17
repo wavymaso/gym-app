@@ -28,6 +28,7 @@ struct InsightsView: View {
                          d.expenditureChange.map { "\(signedKcal($0, energy)) over this period" } ?? "")
                 }
                 HabitCard()
+                CarbPerformanceCard()
                 Card(title: "Calories", systemImage: "chart.bar") {
                     Chart {
                         ForEach(d.logged, id: \.day) { x in

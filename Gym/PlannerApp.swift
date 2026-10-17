@@ -168,9 +168,14 @@ extension ModelContext {
         for i in slots.indices where !slots[i].eaten { if let l = s.locks[i], !l.isEmpty { slots[i].items = l; slots[i].locked = true } }
         let kg = trendSeries(weightValues, through: day).last?.trend ?? 80
         let fibreGoal = p.planner.fibreFloor(kcal: t.kcal, custom: p.customGoals["fiber"])
-        let targets = PlanTargets(kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs, fibreFloor: fibreGoal,
+        var targets = PlanTargets(kcal: t.kcal, protein: t.protein, fat: t.fat, carbs: t.carbs, fibreFloor: fibreGoal,
                                   fatFloor: min(t.fat, max(40, Evidence.value("fat.min.gPerKg") * kg)), weightKg: kg)
-        let plan = Planner.plan(targets, slots: slots, foods: foods, options: PlanOptions(preSleepProtein: s.preSleepProtein, exclusions: Set(s.exclusions), variety: s.variety, trainingCarbBoost: s.trainingCarbBoost))
+        // Carbs per meal: around the session, the recovery window, your preferred carb meals.
+        let carb = carbMeals(day, dayCarbs: t.carbs, slots: slots, kg: kg, session: training, fasted: fasted, settings: s)
+        targets.mealCarbs = carb.perSlot
+        var plan = Planner.plan(targets, slots: slots, foods: foods, options: PlanOptions(preSleepProtein: s.preSleepProtein, exclusions: Set(s.exclusions), variety: s.variety, trainingCarbBoost: s.trainingCarbBoost))
+        plan.reasons += carbReasons(day, t: t, kg: kg, training: training) + carb.reasons
+        plan.carbs = .init(gPerKg: t.carbs / kg, range: CarbPlanner.range(phase).range, rangeIsTarget: CarbPlanner.range(phase).target, intra: carb.intra, recovery: carb.recovery)
         return (plan, Dictionary(foods.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a }), s)
     }
 
@@ -198,10 +203,59 @@ extension ModelContext {
 
     /// The engine's training flag on training days becomes a proposal: more carbs before training.
     var carbProposal: Bool {
-        guard let p = profile, !p.planner.trainingCarbBoost, !p.planner.schedule.isEmpty,
+        guard let p = profile, !p.planner.trainingCarbBoost, !p.planner.week(p.planner.inferredWeek).isEmpty,
               p.planner.dismissedCarbProposal.isEmpty || p.planner.dismissedCarbProposal < addDays(dayKey(), -14) else { return false }
         let rec = ((try? fetch(FetchDescriptor<DecisionRecord>(sortBy: [SortDescriptor(\.day, order: .reverse)]))) ?? []).first?.record
         return rec?.reasons.contains { $0.rule == "strength drop on a fast cut" } ?? false
+    }
+
+    var phase: Phase { activeProgram.map { $0.goalValue == .lose ? .cut : $0.goalValue == .gain ? .bulk : .maintain } ?? .maintain }
+
+    /// The carb plan for a day's meals (CarbPlanner.meals) with the sessions before and after it.
+    func carbMeals(_ day: String, dayCarbs: Double, slots: [PlanSlot], kg: Double, session: TrainingSlot?, fasted: Bool, settings s: PlannerSettings) -> MealCarbs {
+        func sessionOn(_ d: String) -> TrainingSlot? {
+            let wd = Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d))
+            return (profile?.fastDaySet.contains(wd) ?? false) ? nil : s.training(on: d, inferred: s.inferredWeek)
+        }
+        var toNext: Double?, sincePrev: Double?
+        if let t = session {
+            let end = t.start + t.minutes
+            if let n = sessionOn(addDays(day, 1)) { toNext = Double(24 * 60 - end + n.start) / 60 }
+            if let pv = sessionOn(addDays(day, -1)) { sincePrev = Double(24 * 60 - (pv.start + pv.minutes) + t.start) / 60 }
+        }
+        let size = session.map { sessionSize($0) }
+        let factor = size.map { CarbPlanner.sessionFactor(sets: $0.sets, minutes: $0.minutes, averageSets: $0.averageSets, averageMinutes: $0.averageMinutes) } ?? 1
+        // Where you like your carbs, from the templates: lunch and dinner most, merienda least; a lighter dinner on rest days.
+        var pref: [Int: Double] = [:]
+        for sl in slots {
+            switch MealTemplates.template(for: sl, in: s.mealTemplates)?.meal {
+            case .breakfast: pref[sl.index] = 0.9
+            case .lunch: pref[sl.index] = 1.15
+            case .merienda: pref[sl.index] = 0.7
+            case .dinner: pref[sl.index] = session == nil ? 0.8 : 1.0
+            default: pref[sl.index] = 1
+            }
+        }
+        return CarbPlanner.meals(dayCarbs: dayCarbs, slots: slots, kg: kg, session: session.map { ($0.start, $0.minutes) }, factor: factor, hoursToNext: toNext,
+                                 previousEndedHoursAgo: sincePrev, wake: s.wake, fasted: fasted, preference: pref, settings: s.carbs)
+    }
+
+    /// Why the day has these carbs: training or rest, the session's size, the range for your phase.
+    func carbReasons(_ day: String, t: Targets, kg: Double, training: TrainingSlot?) -> [EngineReason] {
+        let r = CarbPlanner.range(phase)
+        var out: [EngineReason] = []
+        let gkg = String(format: "%.1f", t.carbs / kg)
+        if let tr = training {
+            let size = sessionSize(tr)
+            out.append(.init(rule: "training day", detail: "A training day: fat is lowered toward its floor and carbs raised (same calories), more for a bigger session (\(Int(size.sets)) sets, \(tr.minutes) min vs your average \(Int(size.averageSets)) sets).",
+                             evidence: ["carbs.dayShift.share", "carbs.performance.nuance"]))
+        } else {
+            out.append(.init(rule: "rest day", detail: "A rest day: a little more fat and fewer carbs, so training days can have more (the week's calories are the same).", evidence: ["carbs.dayShift.share"]))
+        }
+        out.append(.init(rule: "carbs per kg", detail: r.target ? "\(gkg) g/kg of carbs; the range for your phase is \(Int(r.range.lowerBound))–\(Int(r.range.upperBound)) g/kg."
+                         : "\(gkg) g/kg of carbs. On a cut that's normal: the reference range for strength athletes is 4–7 g/kg and 2–5 g/kg during dieting; your calories decide, carbs are what's left.",
+                         evidence: [r.id, "carbs.physique.gPerKg"]))
+        return out
     }
 
     /// Log a planned meal as eaten, at its time.
