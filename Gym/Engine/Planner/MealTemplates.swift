@@ -56,7 +56,6 @@ enum MealTemplates {
     // Canonical food groups used by the slots.
     static let proteins = ["chicken-breast", "chicken", "chicken-thigh", "salmon", "beef-mince", "beef", "turkey", "tuna-tinned", "eggs", "egg-whites", "white-fish", "prawns"]
     static let dairyProteins = ["skyr", "queso-fresco-batido", "yogurt", "cottage-cheese"]
-    static let mainCarbs = ["pasta", "white-rice", "potato", "sweet-potato", "bread", "wholemeal-bread", "pulses", "couscous"]
     static let breakfastCarbs = ["rice-cakes-chocolate", "rice-cakes", "bread", "wholemeal-bread", "oats"]
     static let lunchCarbs = ["pasta", "white-rice", "potato", "sweet-potato", "pulses", "couscous", "bread"]
     static let sauces = ["olive-oil", "tomato-sauce", "sauce", "mayonnaise", "aioli"]

@@ -370,23 +370,6 @@ struct StrategyView: View {
         }
     }
 
-    private func checkInCard(_ g: Program) -> some View {
-        let due = ctx.dueCheckIn != nil
-        return HStack(spacing: Space.l) {
-            Image(systemName: "calendar.badge.checkmark").font(.sectionTitle).foregroundStyle(due ? palette.onAccent : palette.accent)
-                .frame(width: 50, height: 50).background(due ? palette.accent : palette.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: Radius.m))
-            VStack(alignment: .leading, spacing: Space.xxs) {
-                Text(due ? "Check-in ready" : "Weekly check-in").font(.cardTitle)
-                Text(due ? "Update your targets" : "Next: \(nextCheckIn(g))").font(.secondaryText).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button(due ? "Check in" : "Early") { checkingIn = true }
-                .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(due ? palette.accent : Color.raisedBackground)
-                .foregroundStyle(due ? palette.onAccent : .primary)
-        }
-        .padding(Space.l).modifier(CardSurface())
-    }
-
     // MARK: Settings rows
 
     @ViewBuilder private func settings(_ p: Profile, _ g: Program, _ t: TargetSet) -> some View {
@@ -485,18 +468,8 @@ struct StrategyView: View {
         Button(action: action) { rowContent(icon, c, title, value, last: last) }.buttonStyle(.plain)
     }
 
-    private func rowMenu<M: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, @ViewBuilder _ items: () -> M) -> some View {
-        Menu { items() } label: { rowContent(icon, c, title, value, last: last) }.menuStyle(.button).buttonStyle(.plain)
-    }
-
     private func rowLink<D: View>(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool = false, @ViewBuilder _ dest: @escaping () -> D) -> some View {
         NavigationLink { dest() } label: { rowContent(icon, c, title, value, last: last) }.buttonStyle(.plain)
-    }
-
-    private func nextCheckIn(_ g: Program) -> String {
-        var d = addDays(dayKey(), 1)
-        while Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d)) != g.checkInWeekday { d = addDays(d, 1) }
-        return date(fromKey: d).formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale))
     }
 
     private func row(_ label: String, _ value: String) -> some View {

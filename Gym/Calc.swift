@@ -302,17 +302,6 @@ func parseNumber(_ text: String) -> Double? {
 
 // MARK: - Days
 
-let dayFormatter: DateFormatter = {
-    let f = DateFormatter()
-    var cal = Calendar(identifier: .gregorian)
-    cal.timeZone = .autoupdatingCurrent           // follows you when you travel, without a relaunch
-    f.calendar = cal
-    f.timeZone = .autoupdatingCurrent
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.dateFormat = "yyyy-MM-dd"
-    return f
-}()
-
 /// English with European dates: 14/10/2026, "Wednesday 14 October", weeks from Monday.
 let appLocale = Locale(identifier: "en_GB")
 

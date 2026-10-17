@@ -21,7 +21,7 @@ struct GymApp: App {
 
 /// Applies the chosen theme; changing it redraws everything in the new colours.
 struct ThemedRoot: View {
-    @AppStorage("appearance") private var appearance: Appearance = { ThemeChoice.migrate(); return ThemeChoice.appearance }()
+    @AppStorage("appearance") private var appearance: Appearance = ThemeChoice.appearance
     @AppStorage("finish") private var finish: Finish = .titanium
     @AppStorage("reduceDepth") private var reduceDepth = false
     @Environment(\.colorScheme) private var systemScheme
@@ -341,20 +341,6 @@ struct MainView: View {
     }
 }
 
-struct ComingSoon: View {
-    let page: Page
-    let phase: Int
-    let text: String
-    var body: some View {
-        ContentUnavailableView {
-            Label(page.label, systemImage: page.icon)
-        } description: {
-            Text(text + "\nComing in phase \(phase).")
-        }
-        .navigationTitle(page.label)
-    }
-}
-
 #if DEBUG
 /// Testing only: save a picture of the window, then quit (no screen-recording permission needed).
 @MainActor func saveSnapshot(to path: String) async {
@@ -470,7 +456,6 @@ func addDemoProfile(_ ctx: ModelContext) {
     ctx.commit()
 }
 #endif
-
 
 #if os(iOS)
 /// Where you were, kept across the rebuild a theme change causes.

@@ -5,7 +5,7 @@ import SwiftUI
 
 // The phone's food log, after MacroFactor's: a pinned header (the day, a week of day pills with a
 // calorie ring each, the four macro bars) over a timeline of hours with food cards. Ours keeps the
-// macro colours, an emoji per food, glow (Maximal) and glass.
+// macro colours and an emoji per food.
 
 struct PhoneFoodLog: View {
     @Environment(\.modelContext) private var ctx

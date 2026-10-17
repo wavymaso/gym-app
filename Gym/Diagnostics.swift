@@ -43,7 +43,6 @@ struct DiagnosticsView: View {
     @Environment(\.modelContext) private var ctx
     @State private var problems = Log.problems
     @State private var report = IntegrityReport.last
-    @State private var exportText: String?
 
     var body: some View {
         Form {

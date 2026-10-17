@@ -47,28 +47,10 @@ struct Palette: Equatable {
     static let standard = Palette.make(.dark, .titanium)
 }
 
-/// Settings: the two choices, plus "Reduce depth". Older theme choices move over once.
+/// Settings: the two choices, plus "Reduce depth".
 enum ThemeChoice {
     static var appearance: Appearance { Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "") ?? .automatic }
     static var finish: Finish { Finish(rawValue: UserDefaults.standard.string(forKey: "finish") ?? "") ?? .titanium }
-
-    /// The old 29 themes → appearance and finish.
-    static func migrate() {
-        let d = UserDefaults.standard
-        guard d.string(forKey: "appearance") == nil, let old = d.string(forKey: "theme") else { return }
-        let light = ["daylight", "sand", "mint", "blush", "arctic", "paper", "frost"]
-        let a: Appearance = old == "system" ? .automatic : old == "oled" ? .black : light.contains(old) ? .light : .dark
-        let f: Finish = switch old {
-            case "noir", "bronze", "mocha", "sand", "ember": .gold
-            case "sterling", "arctic", "frost", "paper": .silver
-            case "roseGold", "blush", "crimson", "sunsetGlass": .roseGold
-            case "graphite", "oled", "neon": .graphite
-            default: .titanium
-        }
-        d.set(a.rawValue, forKey: "appearance")
-        d.set(f.rawValue, forKey: "finish")
-        d.set(false, forKey: "reduceDepth")
-    }
 }
 
 /// The palette in use (set by ThemedRoot before anything is drawn).
@@ -287,21 +269,6 @@ struct Ring: View {
     }
 }
 
-/// A small coloured pill: "P 142 g".
-struct MacroChip: View {
-    let macro: Macro
-    let text: String
-    var body: some View {
-        HStack(spacing: Space.xs) {
-            Circle().fill(macro.color).frame(width: 7, height: 7)
-            Text(text).monospacedDigit()
-        }
-        .font(.label)
-        .padding(.horizontal, Space.s).padding(.vertical, Space.xs)
-        .background(Color.raisedBackground, in: Capsule())
-    }
-}
-
 /// "Protein  0 / 145 g" with a coloured bar.
 struct MacroBar: View {
     let macro: Macro
@@ -358,28 +325,6 @@ extension View {
                 AxisValueLabel { if let d = v.as(Double.self) { Text(number(d, digits: digits)) } }
             }
         }
-    }
-}
-
-/// Where the day's calories come from: protein, fat and carbs as a ring.
-struct MacroDonut: View {
-    let targets: Targets
-    var body: some View {
-        let parts: [(Macro, Double)] = [(.protein, targets.protein * 4), (.fat, targets.fat * 9), (.carbs, targets.carbs * 4)]
-        let total = max(1, parts.reduce(0) { $0 + $1.1 })
-        ZStack {
-            Chart(parts, id: \.0) { m, kcal in
-                SectorMark(angle: .value("kcal", kcal), innerRadius: .ratio(0.68), angularInset: 2)
-                    .cornerRadius(Radius.xs).foregroundStyle(m.color)
-            }
-            VStack(spacing: 0) {
-                Text("\(Int((parts[0].1 / total * 100).rounded()))%").font(.numberMedium).foregroundStyle(Macro.protein.color)
-                Text("protein").font(.fine).foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Calories by macro")
-        .accessibilityValue(parts.map { "\($0.0.label) \(Int(($0.1 / total * 100).rounded())) percent" }.joined(separator: ", "))
     }
 }
 

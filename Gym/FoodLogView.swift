@@ -369,32 +369,6 @@ struct DayLog: View {
     }
 }
 
-/// "Protein ▬▬▬▬░░ 76/188" on one line.
-struct CompactMacroBar: View {
-    let macro: Macro
-    let eaten: Double
-    let target: Double
-
-    var body: some View {
-        HStack(spacing: Space.m) {
-            Text(macro.label).font(.label).lineLimit(1).minimumScaleFactor(0.6).frame(width: 52, alignment: .leading)
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(macro.color.opacity(0.16))
-                    Capsule().fill(macro.color).frame(width: max(8, g.size.width * min(1, target > 0 ? eaten / target : 0)))
-                        .opacity(eaten > 0 ? 1 : 0)
-                }
-            }
-            .frame(height: 8)
-            HStack(spacing: 0) {
-                Text(number(eaten)).fontWeight(.semibold)
-                Text("/\(number(target))").foregroundStyle(.secondary)
-            }
-            .font(.note).monospacedDigit().frame(width: 64, alignment: .trailing)
-        }
-    }
-}
-
 struct EntryRow: View {
     let entry: FoodEntry
     let energy: EnergyUnit

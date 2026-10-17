@@ -10,61 +10,6 @@ enum QuickSheet: String, Identifiable {
     var id: String { rawValue }
 }
 
-/// The + button's menu: the things you do most, one tap away.
-struct QuickActionsSheet: View {
-    let choose: (QuickSheet) -> Void
-    let train: () -> Void
-    @Environment(\.modelContext) private var ctx
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.l) {
-            Text("Quick add").font(.numberMedium).padding(.top, Space.xl)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 3), spacing: Space.m) {
-                tile("Log food", "magnifyingglass", palette.accent) { pick(.food) }
-                tile("Photo", "camera.fill", Color.weightTone) { pick(.photo) }
-                tile("Describe", "text.bubble.fill", Color.calmTone) { pick(.describe) }
-                #if os(iOS)
-                tile("Scan barcode", "barcode.viewfinder", Macro.carbs.color) { pick(.scan) }
-                #endif
-                tile("Scan label", "text.viewfinder", Macro.fat.color) { pick(.label) }
-                tile("Quick add", "bolt.fill", Macro.fat.color) { pick(.quickAdd) }
-                tile("Weigh in", "scalemass.fill", DashItem.color("weighIn")) { pick(.weighIn) }
-                tile("Water +250", "drop.fill", Color.waterTone) { ctx.addWater(250); dismiss() }
-                tile("Train", "dumbbell.fill", Macro.protein.color) { dismiss(); train() }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, Space.xl)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .pageBackground()
-        #if os(iOS)
-        .presentationDetents([.height(isPhone ? 380 : 340)])
-        .presentationDragIndicator(.visible)
-        #else
-        .frame(width: 420, height: 320)
-        #endif
-        .appStyle()
-    }
-
-    private func pick(_ s: QuickSheet) { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { choose(s) } }
-
-    private func tile(_ title: String, _ icon: String, _ c: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: Space.s) {
-                // Monochrome symbols on a tonal tile (no rainbow).
-                Image(systemName: icon).font(.sectionTitle).foregroundStyle(palette.text1)
-                    .frame(width: 50, height: 50).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m + 2, style: .continuous))
-                Text(title).font(.label).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
-            }
-            .frame(maxWidth: .infinity).padding(.vertical, Space.m)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// The sheet behind each quick action.
 @ViewBuilder func quickSheet(_ s: QuickSheet) -> some View {
     switch s {

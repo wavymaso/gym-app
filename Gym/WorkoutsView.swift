@@ -227,28 +227,6 @@ struct WorkoutsView: View {
         }
     }
 
-    private func routineCard(_ r: Routine) -> some View {
-        let count = routineCount(r)
-        let last = finished.first { $0.routineKey == r.key || $0.name == r.name }
-        return VStack(alignment: .leading, spacing: Space.s) {
-            Text(r.name).font(.cardTitle).lineLimit(1)
-            Text("\(count) exercises").font(.note).foregroundStyle(.secondary)
-            Text(last.map { "Last \(relative($0.day))" } ?? "Not done yet").font(.note).foregroundStyle(.secondary)
-            HStack {
-                Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.small)
-                Spacer()
-                Button { editingRoutine = r } label: { Image(systemName: "pencil") }.buttonStyle(.borderless).accessibilityLabel("Edit routine")
-            }
-        }
-        .padding(Space.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(CardSurface(cornerRadius: Radius.l))
-        .contextMenu {
-            Button("Start") { ctx.startWorkout(routine: r) }
-            Button("Edit…") { editingRoutine = r }
-        }
-    }
-
     private func routineCount(_ r: Routine) -> Int {
         let key = r.key
         return (try? ctx.fetchCount(FetchDescriptor<RoutineExercise>(predicate: #Predicate { $0.routineKey == key }))) ?? 0
