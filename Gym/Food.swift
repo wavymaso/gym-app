@@ -54,6 +54,9 @@ import SwiftData
     var ratio: (value: Double, measured: Bool, what: String)? {
         if cookedRatio > 0 { return (cookedRatio, true, "your batch") }
         if source == "recipe" { return nil }                  // only a weighed batch tells
+        // Sold cooked (roast chicken, tinned, ready meals): you weigh it as it comes, so the typical
+        // raw→cooked ratio is never applied; only a batch you weighed yourself can convert.
+        if state == .cooked { return nil }
         return Cooking.guessRatio(name).map { ($0.ratio, false, $0.what) }
     }
     /// "g cooked" for raw/dry values, "g raw" for cooked ones.

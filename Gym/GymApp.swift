@@ -68,6 +68,7 @@ struct Root: View {
             }
             IntegrityReport.last = ctx.integrityCheck()
             ctx.applyTaxonomySeeds()
+            ctx.applyTaxonomySeeds2()
             Task { await ctx.fillTaxonomyData() }
             #if os(iOS)
             MetricsReceiver.shared.start()

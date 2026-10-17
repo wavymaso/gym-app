@@ -104,4 +104,28 @@ extension ModelContext {
         commit()
         UserDefaults.standard.set(true, forKey: "taxonomySeed1")
     }
+
+    /// Your second round of corrections (17 Oct 2026), applied once.
+    func applyTaxonomySeeds2() {
+        guard !UserDefaults.standard.bool(forKey: "taxonomySeed2") else { return }
+        // Peanut butter: a fat source, NOVA 2.
+        if let f = food(key: "usda:2707537") { var o = f.override ?? .init(); o.role = .fatSource; o.nova = 2; f.override = o }
+        // Roosterz roast chicken is sold cooked: values per cooked weight.
+        if let f = food(key: "custom:2671D80A-8923-49E9-A752-C8676D6764AA") { f.weightState = WeightState.cooked.rawValue; f.cookedRatio = 0 }
+        // Spicy Kimchi Protein Noodles: still loggable, never planned.
+        if let p = profile {
+            var s = p.planner
+            if !s.exclusions.contains("off:5404017410015") { s.exclusions.append("off:5404017410015") }
+            p.planner = s
+        }
+        // "Potatoes, raw, skin" is the skin only: merged into "Potatoes, flesh and skin, raw" (it was never logged).
+        if let skin = food(key: "usda:170032") {
+            let k = "usda:170032"
+            let used = ((try? fetch(FetchDescriptor<FoodEntry>(predicate: #Predicate { $0.foodKey == k }))) ?? [])
+            for e in used { e.foodKey = "usda:170026" }      // keeps each entry's own nutrition; only the link moves
+            if ((try? fetch(FetchDescriptor<RecipeIngredient>(predicate: #Predicate { $0.foodKey == k }))) ?? []).isEmpty { delete(skin) }
+        }
+        commit()
+        UserDefaults.standard.set(true, forKey: "taxonomySeed2")
+    }
 }

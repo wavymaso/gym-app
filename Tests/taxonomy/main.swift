@@ -10,6 +10,8 @@ Task { @MainActor in
     let ctx = c.mainContext
     UserDefaults.standard.removeObject(forKey: "taxonomySeed1")
     ctx.applyTaxonomySeeds()
+    UserDefaults.standard.removeObject(forKey: "taxonomySeed2")
+    ctx.applyTaxonomySeeds2()
     await ctx.fillTaxonomyData()
     if ai { await ctx.suggestTaxonomy() }
     let foods = ((try? ctx.fetch(FetchDescriptor<Food>())) ?? []).map { ($0, ctx.taxonomy(of: $0)) }

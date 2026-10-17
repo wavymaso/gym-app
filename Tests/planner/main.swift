@@ -264,7 +264,7 @@ check("a widened band never hides a miss: misses listed", wide.feasible || !wide
 // MARK: Roles and condiment limits
 let jam = food("Mermelada de Fresa Diet", 57, 0.5, 0, 14, 1, usual: 75, slots: [0: 5]).with(role: .condiment)
 check("jam: condiment, ≤ 30 g a meal, once a day", jam.role == .condiment && jam.maxGrams <= 30 && jam.maxPerDay == 1, (jam.maxGrams, jam.maxPerDay))
-for (n, kcal, fat, role) in [("Miel de flores", 304.0, 0.0, FoodRole.condiment), ("Crema de cacahuete", 600, 50, .condiment), ("Tomate Frito", 69, 3, .condiment),
+for (n, kcal, fat, role) in [("Miel de flores", 304.0, 0.0, FoodRole.condiment), ("Crema de cacahuete", 600, 50, .fatSource), ("Tomate Frito", 69, 3, .condiment),
                              ("Ligeresa", 177, 18, .condiment), ("Ketchup cero", 38, 0, .condiment), ("Nutella", 539, 31, .condiment),
                              ("Palomitas de mantequilla", 438, 20, .treat), ("Dates", 288, 0.4, .fruit), ("Premium Roasted Chicken", 115, 2, .proteinMain),
                              ("Barebells Mint", 349, 13, .proteinSnack), ("Tortitas de arroz integral con chocolate negro", 456, 18, .treat), ("Sourdough Bread", 230, 1, .carbSide),
@@ -299,4 +299,17 @@ check("old saved roles still read (main → protein main, side → vegetable)",
 check("protein bars and oats: breakfast and merienda", Taxonomy.bands("protein-bar") == [.breakfast, .afternoon] && Taxonomy.bands("oats") == [.breakfast, .afternoon])
 check("every canonical food has keywords and a USDA anchor", Taxonomy.canonical.allSatisfy { !$0.words.isEmpty && !$0.usda.isEmpty })
 check("canonical ids unique", Set(Taxonomy.canonical.map(\.id)).count == Taxonomy.canonical.count)
+// Drinks: only non-nutritive, caffeinated and sugary ones are left out of planning.
+check("liquid protein shake → protein snack", Taxonomy.classify(TI(name: "Batido proteico chocolate", source: "off", kcal: 70, protein: 12, fat: 1, carbs: 3, isLiquid: true)).role == .proteinSnack)
+check("RTD protein drink by macros → protein snack", Taxonomy.classify(TI(name: "Pro Drink", source: "off", kcal: 60, protein: 10, fat: 0.5, carbs: 3, isLiquid: true)).role == .proteinSnack)
+check("milk → dairy", Taxonomy.classify(TI(name: "Leche semidesnatada", source: "off", kcal: 46, protein: 3.2, fat: 1.6, carbs: 4.7, isLiquid: true)).role == .dairy)
+check("energy drink, cola, juice → drink", [TI(name: "NOCCO Ramonade", source: "off", kcal: 1, protein: 0, fat: 0, carbs: 0, isLiquid: true),
+      TI(name: "Coca-Cola", source: "off", kcal: 42, protein: 0, fat: 0, carbs: 10.6, isLiquid: true),
+      TI(name: "Zumo de naranja", source: "off", kcal: 45, protein: 0.7, fat: 0.2, carbs: 10, isLiquid: true)].allSatisfy { Taxonomy.classify($0).role == .drink })
+check("peanut butter → fat source, NOVA 2 (typical)", Taxonomy.classify(TI(name: "Crema de cacahuete", source: "off", kcal: 600, protein: 25, fat: 50, carbs: 12)).role == .fatSource)
+// Protein per meal counts every food in the meal, not only the protein main.
+let mix = [food("oats", 380, 13, 7, 60, 10, usual: 80, slots: [0: 5]).with(role: .carbSide), food("skyr", 63, 11, 0.2, 4, 0, usual: 200, slots: [0: 5]).with(role: .dairy)]
+let only = Planner.shortMeals([PlanSlot(index: 0, minute: 480, kind: .meal, items: [PlanItem(key: "oats", grams: 80), PlanItem(key: "skyr", grams: 200)])],
+                              PlanTargets(kcal: 2000, protein: 150, fat: 60, carbs: 200, weightKg: 100), Dictionary(uniqueKeysWithValues: mix.map { ($0.key, $0) }))
+check("protein per meal sums all foods (oats 10 g + skyr 22 g = 32 g ≥ 30 g, no protein main)", only.isEmpty, only)
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

@@ -168,7 +168,9 @@ check(abs(pasta.grams(200, unit: Cooking.cookedUnit) - 200 / 2.35) < 0.01, "200 
 pasta.cookedRatio = 2.5
 check(abs(pasta.grams(250, unit: Cooking.cookedUnit) - 100) < 0.01, "your batch ratio wins (250 g cooked = 100 g dry)")
 let chicken = Food(key: "c", name: "Premium Roasted Chicken", source: "custom", per100: Nutrients(kcal: 115, protein: 24, fat: 2, carbs: 0))
-check(chicken.state == .cooked && chicken.units.contains(Cooking.rawUnit) && abs(chicken.grams(100, unit: Cooking.rawUnit) - 73) < 0.01, "roasted chicken: 100 g raw = 73 g cooked")
+check(chicken.state == .cooked && !chicken.units.contains(Cooking.rawUnit), "sold cooked (roast chicken): the typical ratio is never applied")
+chicken.cookedRatio = 0.7
+check(chicken.units.contains(Cooking.rawUnit) && abs(chicken.grams(100, unit: Cooking.rawUnit) - 70) < 0.01, "…only a batch you weighed converts it")
 let potato = Food(key: "pt", name: "Potatoes, flesh and skin, raw", source: "usda", per100: Nutrients(kcal: 77, protein: 2, fat: 0.1, carbs: 17))
 check(abs(potato.grams(925, unit: Cooking.cookedUnit) - 925 / 0.83) < 0.01, "925 g baked potato = 1 114 g raw")
 let recipe = Food(key: "recipe:x", name: "Pasta bake", source: "recipe", per100: Nutrients(kcal: 200, protein: 10, fat: 5, carbs: 30))

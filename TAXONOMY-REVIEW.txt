@@ -1,4 +1,4 @@
-FOOD TAXONOMY · 22 foods · least certain first
+FOOD TAXONOMY · 21 foods · least certain first
  80%  Palomitas de mantequilla
       → Popcorn · Treat · NOVA 4 (estimated (typical popcorn))
         name → Popcorn · group: unknown
@@ -41,13 +41,7 @@ FOOD TAXONOMY · 22 foods · least certain first
  95%  PEPERO White + cookie blanc + biscuit
       → Biscuits / cookies · Treat · NOVA 4 (Open Food Facts)
         name → Biscuits / cookies; category → Treat · group: Biscuits and cakes
- 95%  Peanut butter
-      → Peanut butter · Condiment · NOVA 1 (USDA generic food)
-        name → Peanut butter; macros → Fat source · group: Nuts and seeds
  95%  Potatoes, flesh and skin, raw
-      → Potatoes · Carb side · NOVA 1 (USDA generic food) · values per raw/dry weight
-        name → Potatoes; category → Vegetable; macros → Carb side · group: Vegetables and Vegetable Products
- 95%  Potatoes, raw, skin
       → Potatoes · Carb side · NOVA 1 (USDA generic food) · values per raw/dry weight
         name → Potatoes; category → Vegetable; macros → Carb side · group: Vegetables and Vegetable Products
  95%  Tortellini Carne
@@ -56,6 +50,9 @@ FOOD TAXONOMY · 22 foods · least certain first
 100%  Barebells Mint Dark Chocolate
       → Protein bar · Protein snack · NOVA 4 (estimated (typical protein bar))
         your correction · group: unknown
+100%  Peanut butter
+      → Peanut butter · Fat source · NOVA 2 (your correction)
+        your correction · group: Nuts and seeds
 100%  Pipe Rigate
       → Pasta · Carb side · NOVA 1 (Open Food Facts) · values per raw/dry weight
         your correction · group: Cereals

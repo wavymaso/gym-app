@@ -80,8 +80,11 @@ enum Taxonomy {
         .init(id: "chocolate", name: "Chocolate", usda: "Candies, milk chocolate", role: .treat, nova: 4, words: ["chocolate con leche", "tableta de chocolate", "kitkat", "kinder", "milka", "chocolatina", "bombón"]),
         .init(id: "ice-cream", name: "Ice cream", usda: "Ice creams, vanilla", role: .treat, nova: 4, words: ["helado", "ice cream"]),
         .init(id: "pastry", name: "Pastry", usda: "Croissants, butter", role: .treat, nova: 4, words: ["croissant", "napolitana", "donut", "bollo", "magdalena", "muffin", "brownie", "palmera"]),
+        // Juices before the fruit they're made from (a drink: not planned)
+        .init(id: "juice", name: "Juice", usda: "Orange juice, raw (Includes foods for USDA's Food Distribution Program)", role: .drink, nova: 1,
+              words: ["zumo", "juice", "néctar", "nectar", "smoothie"]),
         // Spreads and sauces (before the staples they contain)
-        .init(id: "peanut-butter", name: "Peanut butter", usda: "Peanut butter, smooth style, without salt", role: .condiment, nova: 2,
+        .init(id: "peanut-butter", name: "Peanut butter", usda: "Peanut butter, smooth style, without salt", role: .fatSource, nova: 2,
               words: ["peanut butter", "crema de cacahuete", "mantequilla de cacahuete"]),
         .init(id: "jam", name: "Jam", usda: "Jams and preserves", role: .condiment, nova: 3, words: ["mermelada", "jam", "confitura", "preserves"]),
         .init(id: "honey", name: "Honey", usda: "Honey", role: .condiment, nova: 1, words: ["miel", "honey"]),
@@ -227,7 +230,9 @@ enum Taxonomy {
     static func role(kcal: Double, protein: Double, fat: Double, carbs: Double, sugar: Double?, isLiquid: Bool) -> FoodRole? {
         guard kcal > 5 else { return isLiquid ? .drink : nil }
         let p = protein * 4 / kcal, f = fat * 9 / kcal, c = carbs * 4 / kcal
-        if isLiquid { return p > 0.3 ? .dairy : .drink }
+        // Liquids: a protein shake is a protein snack, milk-like drinks dairy; other drinks (non-nutritive,
+        // caffeinated, sugary) aren't planned.
+        if isLiquid { return p > 0.5 ? .proteinSnack : p > 0.2 ? .dairy : .drink }
         if p > 0.6 { return .proteinMain }
         if p > 0.3 && kcal > 300 { return .proteinSnack }
         if f > 0.7 { return .fatSource }
