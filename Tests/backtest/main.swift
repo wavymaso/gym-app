@@ -43,6 +43,113 @@ func score(_ e: [String: Double], from: String, to: String) -> (Double, Double, 
     }
     return (errs.map(abs).reduce(0, +) / Double(max(errs.count, 1)), errs.reduce(0, +) / Double(max(errs.count, 1)), errs.count)
 }
+if ProcessInfo.processInfo.environment["COHERE"] != nil {
+    // A1: which trend should drive both the screens and the targets? The classic expenditure fed by the
+    // EMA trend (today) vs by the engine trend; and both trends on forecasts and against MacroFactor's trend.
+    let prof = ctx.profile!
+    print("settings in this database: expenditure", prof.expAlgorithm.isEmpty ? "default (classic)" : prof.expAlgorithm)
+    let all = days(from: weights.first!.day, through: end)
+    let split = all[all.count * 2 / 3]
+    let wmap = Dictionary(grouping: weights, by: \.day).mapValues { $0.map(\.value) }
+    func target(_ d: String) -> Double? {
+        let v = (-3...3).flatMap { wmap[addDays(d, $0)] ?? [] }
+        return v.count >= 2 ? v.reduce(0, +) / Double(v.count) : nil
+    }
+    let emaS = trendSeriesV1(weights, through: end)
+    let ema = Dictionary(emaS.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+    let engRun = EngineTrend.run(emaS.map { EngineDay(key: $0.day, weighIns: wmap[$0.day] ?? [], events: trendWaterEvents[$0.day] ?? []) })
+    let eng = Dictionary(engRun.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+    let engRate = Dictionary(engRun.map { ($0.day, $0.ratePerWeek) }, uniquingKeysWith: { a, _ in a })
+    var mfT: [String: Double] = [:]
+    let mfTPath = (args[2] as NSString).deletingLastPathComponent + "/mf-trend.csv"
+    for line in ((try? String(contentsOfFile: mfTPath, encoding: .utf8)) ?? "").split(separator: "\n") {
+        let p = line.split(separator: ","); if p.count == 2, let v = Double(p[1]) { mfT[String(p[0])] = v }
+    }
+    func avg(_ x: [Double]) -> Double { x.reduce(0, +) / Double(max(x.count, 1)) }
+    func ranges() -> [(String, String, String)] { [("0", split, "train"), (split, "9", "test ")] }
+    print("\n1. Trend forecasts: MAE (kg) of the mean weigh-in 1/2/3/4 weeks later; test = last third (from \(split))")
+    func forecast(_ name: String, _ f: (String, Int) -> Double?) {
+        var line = name.padding(toLength: 36, withPad: " ", startingAt: 0)
+        for (lo, hi, label) in ranges() {
+            let cells = (1...4).map { wk -> String in
+                var errs: [Double] = []
+                for (i, d) in all.enumerated() where i % 3 == 0 && d >= lo && d < hi && i > 30 {
+                    guard wmap[d] != nil, let p = f(d, wk * 7), let t = target(addDays(d, wk * 7)) else { continue }
+                    errs.append(abs(p - t))
+                }
+                return String(format: "%.2f", avg(errs))
+            }
+            line += " \(label) " + cells.joined(separator: "/")
+        }
+        print(line)
+    }
+    forecast("classic EMA, level") { d, _ in ema[d] }
+    forecast("classic EMA + 14-day slope") { d, h in ema[d].flatMap { a in ema[addDays(d, -14)].map { a + (a - $0) / 14 * Double(h) } } }
+    forecast("engine, level") { d, _ in eng[d] }
+    forecast("engine + its rate") { d, h in eng[d].flatMap { a in engRate[d].map { a + $0 / 7 * Double(h) } } }
+    for (name, m) in [("classic EMA", ema), ("engine", eng)] {
+        var line = "vs MacroFactor's trend: \(name)".padding(toLength: 36, withPad: " ", startingAt: 0)
+        for (lo, hi, label) in ranges() { line += String(format: " \(label) %.2f kg", avg(mfT.keys.filter { $0 >= lo && $0 < hi }.compactMap { d in m[d].map { abs($0 - mfT[d]!) } })) }
+        print(line)
+    }
+    // The app's classic expenditure, with the trend passed in (same maths as classicExpenditure).
+    func classic(_ trend: [String: Double], window: Int = 21, density: Double = 5500, alpha: Double = 0.05) -> [String: Double] {
+        let ds = days(from: start.day, through: end)
+        var e = start.kcal, out: [String: Double] = [:]
+        for (i, d) in ds.enumerated() {
+            if i >= window - 1 {
+                let first = ds[i - window + 1]
+                let logged = ds[(i - window + 1)...i].compactMap { intake[$0] }
+                if Double(logged.count) >= Double(window) * 0.5, let t0 = trend[first], let t1 = trend[d] {
+                    e += alpha * (logged.reduce(0, +) / Double(logged.count) - density * (t1 - t0) / Double(window - 1) - e)
+                }
+            }
+            out[d] = e
+        }
+        return out
+    }
+    let c1 = classic(ema), c2 = classic(eng)
+    var js = JointSettings(); js.waterEvents = ctx.waterEvents(from: start.day, to: end)
+    let jt = Dictionary(jointExpenditure(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights,
+                                         nudges: ctx.expenditureNudges(from: start.day, to: end), settings: js).map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+    let snap = ctx.engineSnapshot()!
+    let en = Dictionary(snap.expenditure.map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+    let enTrend = Dictionary(snap.trend.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
+    let appExp = Dictionary(classicExpenditure(start: start.day, end: end, initial: start.kcal, intake: intake, weights: weights).map { ($0.day, $0.kcal) }, uniquingKeysWith: { a, _ in a })
+    print(String(format: "\n(check: the copy matches the app's classic expenditure on every day: max diff %.3f kcal)", appExp.keys.map { abs(appExp[$0]! - (c1[$0] ?? .infinity)) }.max() ?? -1))
+    print("\n2. Expenditure (classic maths) fed by each trend")
+    for (name, e, t) in [("classic exp. on EMA trend", c1, ema), ("classic exp. on engine trend", c2, eng),
+                         ("joint V2 (your setting), from EMA", jt, ema), ("joint V2 (your setting), from eng", jt, eng),
+                         ("engine energy (shadow), its trend", en, enTrend)] {
+        var line = name.padding(toLength: 36, withPad: " ", startingAt: 0)
+        for (from, label) in [("2025-01-01", "vs MF since 2025"), ("2026-07-01", "since Jul 26"), (split, "test third")] {
+            line += String(format: "  \(label) %.0f kcal", avg(mf.keys.filter { $0 >= from && $0 < end }.compactMap { d in e[d].map { abs($0 - mf[d]!) } }))
+        }
+        print(line)
+        var l2 = "   4-week weight prediction".padding(toLength: 36, withPad: " ", startingAt: 0)
+        for (lo, hi, label) in ranges() {
+            var errs: [Double] = []
+            for (i, d) in all.enumerated() where i % 3 == 0 && d >= lo && d < hi && i > 60 {
+                guard let x = e[d], let tp = t[d], let tt = target(addDays(d, 28)) else { continue }
+                guard (1...28).compactMap({ intake[addDays(d, $0)] }).count >= 20 else { continue }
+                errs.append(abs(tp + (1...28).reduce(0.0) { acc, j in intake[addDays(d, j)].map { acc + ($0 - x) / 5500 } ?? acc } - tt))
+            }
+            l2 += String(format: "  \(label) %.2f kg (n %d)", avg(errs), errs.count)
+        }
+        print(l2)
+    }
+    print("\n3. Today (\(end))")
+    let g = ctx.activeProgram!
+    let body = ctx.bodyInfo(guardrails: g.mode == "coached")
+    print("app now: expenditure \(Int(ctx.expenditureEstimates(through: end).last?.kcal ?? 0)), live target \(Int(ctx.targets()?.kcal ?? 0)) kcal, trend shown \(String(format: "%.2f", trendSeries(weights, through: end).last?.trend ?? 0))")
+    for (name, e, t) in [("now: joint expenditure, engine weight", jt, eng), ("A1: engine trend + engine energy", en, enTrend), ("A2: engine trend + classic exp.", c2, eng), ("B: classic EMA + classic exp.", c1, ema), ("B': classic EMA + joint", jt, ema)] {
+        let kg = t[end] ?? t.values.first!, x = e[end] ?? 0
+        let tg = makeTargets(expenditure: x, weightKg: kg, sex: prof.sexValue, goal: g.goalValue, ratePercent: g.ratePercent, diet: g.dietValue, protein: g.proteinValue, body: body)
+        print(name.padding(toLength: 38, withPad: " ", startingAt: 0), String(format: "trend %.2f kg · expenditure %.0f · target %.0f kcal, P %.0f g (rate %.2f%%/wk)", kg, x, tg.kcal, tg.protein, g.ratePercent))
+    }
+    print(String(format: "MacroFactor's last trend %@ %.2f kg", mfT.keys.max() ?? "-", mfT[mfT.keys.max() ?? ""] ?? 0))
+    exit(0)
+}
 if ProcessInfo.processInfo.environment["REPLAY"] != nil {
     // Every week of the last year, as if the engine had been live: only data up to that day.
     let all = ctx.engineDays()
