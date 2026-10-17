@@ -1,6 +1,6 @@
 # Gym: architecture
 
-One SwiftUI app (iPhone primary, Mac secondary) plus a widget extension. ~22k lines in `Gym/`,
+One SwiftUI app (iPhone primary, Mac secondary) plus a widget extension. ~30k lines in `Gym/`,
 tests as standalone harnesses in `Tests/`. Everything is checked by `tools/check.sh`.
 
 ## Data model (SwiftData)

@@ -27,6 +27,12 @@ current: add each decision when it's made.
 - The app follows MacroFactor's fundamentals with our own styling (see DESIGN.md). Ask before
   departing from MacroFactor's flow.
 
+## Part A (18 Oct 2026)
+
+A1–A9 were done in small commits. A10's proof is PROOF-dark-titanium.png, PROOF-light-titanium.png and
+PROOF-black-gold.png. Part B is planned in PART-B-PLAN.md: an engine switch decision on 9 Nov, then the
+information architecture.
+
 ## Feature freeze: 17 Oct to 7 Nov 2026
 
 Bug fixes and polish only. New features go in BACKLOG.md with a spec. Part B
@@ -129,3 +135,15 @@ PART-B-PLAN.md and is not built before 7 Nov.
   If a genuine need has no role, add one to Design.swift and DESIGN.md instead of using a raw font or
   number.
 - **Themes:** appearance (light, dark, black) × finish (titanium, silver, graphite, gold, rose gold).
+- **Lint:** `tools/lint-design.sh` (part of check.sh) fails on raw fonts, numeric paddings, spacing
+  and radii. Justified exceptions go in `tools/design-allowlist.txt`, each with a reason.
+- **One title system:** every tab and page uses `.largeTitle("Sentence case")`, the system large
+  title that collapses on scroll. Header buttons go in the toolbar. Uppercase tracked labels only
+  via `.sectionLabelStyle()`.
+- **Phone bottom:** no floating search pill. Every scroll view ends with `Space.tabBarClearance`.
+- **Numbers never wrap:** use `.numberFit()`. At accessibility text sizes, layouts switch (2×2 stats,
+  macros on their own line).
+- **Every chart has `.chartSummary(...)`.** Raw data is faint dots, never a line, under a smoothed
+  series.
+- **Before/after proof for UI passes:** `tools/proof-snapshots.sh before|after|grid` produces
+  PROOF-*.png. The theme grid includes Plan and the swap sheet.

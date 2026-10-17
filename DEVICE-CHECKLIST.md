@@ -32,7 +32,7 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 
 ## Text size
 - [ ] Settings → Display → Text Size at the largest, and Accessibility Larger Text at XL: calories left, rings and set fields still readable and not cut off
-- [ ] Light themes (Daylight, Paper) and Glass: problem/empty cards and the undo toast readable
+- [ ] Light appearance (any finish): problem/empty cards and the undo toast readable
 
 ## Added 15 Oct (evening)
 - [ ] Food log: select a food → Copy → bar shows To Now / To Today / To Tomorrow / To Date & Time; every hour shows a paste button; swipe to another day and paste there; Undo works
@@ -61,3 +61,16 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 - [ ] Every number in a coach message matches one shown elsewhere in the app; the coach never suggests new targets
 - [ ] On check-in day the coach explains the engine's decision; "See why" opens the check-in
 - [ ] After a workout: a short post-workout note
+
+## Polish pass and one trend (18 Oct, Part A)
+- [ ] **One trend:** the trend on the Dashboard, Weight page and Strategy matches More → Diagnostics → Developer (Engine selected), and the same number shows on the Mac after sync
+- [ ] **Expenditure:** after the first launch, expenditure moves from the joint model (~2680) to the engine's (~2780); the next check-in applies only part of the change (no jump in targets until then)
+- [ ] More → Diagnostics → Developer: the trend and expenditure pickers are there; More and Strategy no longer list "Weight trend"; Expenditure shows only the starting estimate and modifiers
+- [ ] **Titles:** every tab has a plain large title (Dashboard, Food log, Strategy, Training, More) that tucks into the bar as you scroll; toolbar buttons sit top right and do what the old round buttons did
+- [ ] **Bottom:** no "Search for a food" pill; the last item of every tab (Dashboard → Customize dashboard, Strategy → Goal history, Training, More, Food log, Plan) scrolls fully clear of the tab bar and ＋; search is the magnifier in the Food log bar and in ＋
+- [ ] **Food log:** only logged hours and the next planned meal; the dashed "Next planned" row opens the Plan; each "＋ Add" gap row opens the logger at that time; ⋯ → Show empty hours brings back the full day
+- [ ] **Charts:** weigh-ins are faint dots, not a line (Weight page and Insights → Weight Trend)
+- [ ] **VoiceOver on:** the calorie ring reads "Calories, x of y, z left"; a day pill reads its date and calories; a set row reads "Set 1, weight…, reps…, reps in reserve…, Mark set 1 done"; a plan food reads name, amount, calories and protein; the swap sheet's portion is adjustable by swiping up and down; a chart reads its summary
+- [ ] **Largest text (Accessibility XL):** Today, Food log, Plan, Workout and Weight readable with nothing cut off; the tab bar stays its size and long-pressing a tab shows its name big
+- [ ] **Profile:** with no name set, More shows a person symbol and "Add your name"; adding one shows your initials
+- [ ] What's new appears once (this update, then "Earlier")

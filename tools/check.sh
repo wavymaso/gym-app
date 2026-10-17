@@ -10,6 +10,8 @@ for dest in 'generic/platform=iOS Simulator' 'platform=macOS'; do
   step "build ${dest##*=}" "$r"
 done
 
+step design-lint "$(tools/lint-design.sh 2>&1 | tail -1 | sed 's/PASSED/ALL PASSED/')"
+
 for t in activity-sync distribution budget strategy trendv2 photoai progression undo integrity time tokens partialdays evidence engine coacheval planner; do
   [ -x Tests/$t/run.sh ] || continue
   step "$t" "$(Tests/$t/run.sh 2>&1 | tail -1)"
