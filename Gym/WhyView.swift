@@ -126,7 +126,7 @@ struct ShadowEngineCard: View {
                 NavigationLink { WhyView(record: r, liveKcal: liveKcal) } label: {
                     HStack(spacing: Space.m) {
                         VStack(alignment: .leading, spacing: Space.xs) {
-                            Text("New coaching engine (preview)").font(.label).foregroundStyle(.secondary).textCase(.uppercase)
+                            Text("New coaching engine (preview)").sectionLabelStyle()
                             Text(r.action == "no change" ? "Would keep \(number(r.output.kcal)) kcal" : "Would set \(number(r.output.kcal)) kcal")
                                 .font(.cardTitle)
                             Text(r.reasons.last?.detail ?? "").font(.secondaryText).foregroundStyle(.secondary).lineLimit(2)

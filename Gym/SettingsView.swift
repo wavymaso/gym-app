@@ -18,9 +18,6 @@ struct SettingsView: View {
         ScrollView {
             if let p = profiles.first {
                 VStack(alignment: .leading, spacing: Space.xl) {
-                    if isPhone {
-                        Text("MORE").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).padding(.top, Space.s)
-                    }
                     profileHeader(p)
                     group("General", [
                         row("person.crop.circle", "Profile & units", "\(p.weight.rawValue) · \(p.energy.rawValue) · \(formatHeight(p.heightCm, p.weight))") { profilePage(p) },
@@ -66,10 +63,7 @@ struct SettingsView: View {
             }
         }
         .pageBackground()
-        .navigationTitle(isPhone ? "More" : "Settings")
-        #if os(iOS)
-        .toolbar(.hidden, for: .navigationBar)
-        #endif
+        .largeTitle(isPhone ? "More" : "Settings")
         #if DEBUG
         .navigationDestination(isPresented: Binding(get: { debugSub != nil }, set: { if !$0 { debugSub = nil } })) {
             if debugSub == "expenditure" { ExpenditureSettingsView() } else if debugSub == "diagnostics" { DiagnosticsView() } else { DeveloperView() }

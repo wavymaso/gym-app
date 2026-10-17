@@ -48,7 +48,6 @@ struct StrategyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.l) {
-                header
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
                     checkInRing(g)
                     CoachCard()
@@ -75,12 +74,13 @@ struct StrategyView: View {
         }
         .debugScrollAnchor()
         .pageBackground()
-        #if os(iOS)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        #else
-        .navigationTitle("Strategy")
-        #endif
+        .largeTitle("Strategy")
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button { checkingIn = true } label: { Label("Check in", systemImage: "calendar.badge.checkmark") }
+                Button { editing = true } label: { Label("Change goal", systemImage: "slider.horizontal.3") }
+            }
+        }
         .sheet(isPresented: $editing) { GoalEditor() }
         .sheet(isPresented: $checkingIn) { CheckInView() }
         .sheet(isPresented: $manual) { ProgramEditor(mode: "manual") }
@@ -119,21 +119,6 @@ struct StrategyView: View {
         }
     }
 
-    // MARK: Header
-
-    private var header: some View {
-        HStack {
-            Text("STRATEGY").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-            Spacer()
-            Button { checkingIn = true } label: { roundIcon("calendar.badge.checkmark") }.buttonStyle(.plain)
-            Button { editing = true } label: { roundIcon("slider.horizontal.3") }.buttonStyle(.plain)
-        }
-    }
-
-    private func roundIcon(_ name: String) -> some View {
-        Image(systemName: name).font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
-    }
-
     // MARK: The program
 
     private func hero(_ p: Profile, _ g: Program) -> some View {
@@ -143,7 +128,7 @@ struct StrategyView: View {
         return VStack(alignment: .leading, spacing: Space.l) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    Text("CURRENT PROGRAM").font(.label).tracking(0.8).foregroundStyle(palette.text2)
+                    Text("Current program").sectionLabelStyle()
                     Text(g.goalValue.label).font(.numberLarge).foregroundStyle(palette.text1)
                 }
                 Spacer()
@@ -276,7 +261,7 @@ struct StrategyView: View {
                     .rotationEffect(.degrees(-90))
                 Circle().inset(by: 22).stroke(Color.primary.opacity(0.85), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 VStack(spacing: Space.xxs) {
-                    Text(due ? "TODAY" : "\(days) DAY\(days == 1 ? "" : "S")").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).monospacedDigit()
+                    Text(due ? "Today" : "\(days) day\(days == 1 ? "" : "s")").font(.numberHero).foregroundStyle(palette.titleStyle).monospacedDigit()
                     Text(due ? "check-in ready" : "until check-in").font(.secondaryText).foregroundStyle(.secondary)
                 }
             }

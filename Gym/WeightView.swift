@@ -61,7 +61,7 @@ struct WeightView: View {
         let layout = isPhone ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.l)) : AnyLayout(HStackLayout(alignment: .center, spacing: Space.l))
         return layout {
             VStack(alignment: .leading, spacing: Space.xs) {
-                Text("TREND WEIGHT").font(.label).tracking(0.6).foregroundStyle(.secondary)
+                Text("Trend weight").sectionLabelStyle()
                 HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                     Text(series.last.map { number(unit.fromKg($0.trend), digits: 1) } ?? "–").font(.numberHero).monospacedDigit()
                         .lineLimit(1).fixedSize()

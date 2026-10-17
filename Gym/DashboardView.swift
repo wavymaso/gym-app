@@ -68,11 +68,9 @@ struct DashboardView: View {
         }
         .debugScrollAnchor()
         .pageBackground()
-        .navigationTitle("Dashboard")
+        .largeTitle("Dashboard")
+        .toolbar { headerButtons }
         .navigationDestination(item: $detail) { InsightDetailView(kind: $0) }
-        #if os(iOS)
-        .toolbar(.hidden, for: .navigationBar)
-        #endif
         .sheet(item: $sheet) { s in
             switch s {
             case .addFood: FoodLogger(day: dayKey())
@@ -87,41 +85,23 @@ struct DashboardView: View {
     // MARK: Top
 
     private var header: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("DASHBOARD").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-                Text("\(greeting) · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))")
-                    .font(.secondaryEmphasis).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
-            }
-            Spacer()
+        Text("\(greeting) · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))")
+            .font(.secondaryEmphasis).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+    }
+
+    @ToolbarContentBuilder private var headerButtons: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
             let s = streak
             if s > 1 {
-                HStack(spacing: Space.xs) {
-                    Image(systemName: "flame.fill").foregroundStyle(palette.warn)
-                    Text("\(s)").font(.numberSmall).monospacedDigit()
-                    if !isPhone { Text("day streak").font(.label).foregroundStyle(.secondary) }
-                }
-                .padding(.horizontal, Space.m).padding(.vertical, Space.s)
-                .background(Color.cardBackground, in: Capsule())
-                .overlay(Capsule().stroke(palette.stroke))
-                .help("Days in a row you've logged food")
+                Label("\(s)", systemImage: "flame.fill").labelStyle(.titleAndIcon)
+                    .font(.numberSmall).monospacedDigit().foregroundStyle(palette.warn)
+                    .help("Days in a row you've logged food").accessibilityLabel("\(s) day logging streak")
             }
-            Button { sheet = .layout } label: {
-                Image(systemName: "slider.horizontal.3").font(.cardTitle).frame(width: 44, height: 44)
-                    .modifier(GlassCapsule())
-            }
-            .buttonStyle(.plain)
+            Button { sheet = .layout } label: { Label("Customize dashboard", systemImage: "slider.horizontal.3") }
             if isPhone {
-                // More: profile, settings, weight, insights, exercises, data
-                Button { openPage(.settings) } label: {
-                    Image(systemName: "person.crop.circle").font(.subsectionTitle).frame(width: 44, height: 44)
-                        .modifier(GlassCapsule())
-                }
-                .buttonStyle(.plain)
+                Button { openPage(.settings) } label: { Label("Profile and settings", systemImage: "person.crop.circle") }
             }
         }
-        .padding(.top, isPhone ? Space.s : 0)
-        .capType()
     }
 
     private var greeting: String {

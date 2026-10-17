@@ -33,12 +33,8 @@ struct PhoneFoodLog: View {
         }
         .debugScrollAnchor()
         .pageBackground()
-        .overlay(alignment: .top) {
-            // Under the status bar: cover what scrolls past the pinned header.
-            Color.clear.frame(height: 0)
-                .background { Color.pageBackground.ignoresSafeArea(edges: .top) }
-        }
-        .toolbar(.hidden, for: .navigationBar)
+        .largeTitle("Food log")
+        .toolbar { headerButtons }
         .onChange(of: day) { _, d in if selection.mode == nil { selection.ids = [] }; selection.day = d; Haptics.tick() }
         .onAppear {
             selection.day = day
@@ -65,29 +61,8 @@ struct PhoneFoodLog: View {
 
     private func header(_ energy: EnergyUnit) -> some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            HStack(spacing: Space.m) {
-                Text(title).font(.pageTitle(title.count > 9 ? 24 : 30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.5)
-                    .onTapGesture(count: 2) { animate(Motion.snappy) { day = dayKey() } }
-                Spacer(minLength: 4)
-                round("calendar") { picking = true }
-                round("slider.horizontal.3") { details = true }
-                Menu {
-                    Button("Add food", systemImage: "plus") { sheet = .add(nil) }
-                    Button("Quick add", systemImage: "bolt") { sheet = .quickAdd(nil) }
-                    Divider()
-                    Button("Copy yesterday", systemImage: "doc.on.doc") { _ = ctx.copyEntries(from: addDays(day, -1), to: day) }
-                    Button("Copy from a day…", systemImage: "calendar.badge.plus") { sheet = .copy }
-                    Divider()
-                    Picker("View", selection: $style) {
-                        Label("Timeline", systemImage: "clock").tag(FoodLogView.LogStyle.timeline)
-                        Label("Meals", systemImage: "fork.knife").tag(FoodLogView.LogStyle.meals)
-                        Label("Plan", systemImage: "calendar.badge.clock").tag(FoodLogView.LogStyle.plan)
-                    }
-                    if style == .timeline { Toggle("Show empty hours", isOn: $showEmptyHours) }
-                    if day != dayKey() { Divider(); Button("Go to today", systemImage: "arrow.uturn.backward") { day = dayKey() } }
-                } label: { roundLabel("ellipsis") }
-                .menuStyle(.button).buttonStyle(.plain)
-            }
+            Text(title).font(.cardTitle).foregroundStyle(.secondary)
+                .onTapGesture(count: 2) { animate(Motion.snappy) { day = dayKey() } }
             DayPills(day: $day)
             MacroBarsRow(day: day, energy: energy)
         }
@@ -97,18 +72,32 @@ struct PhoneFoodLog: View {
 
     private var title: String {
         let d = date(fromKey: day)
-        if Calendar.current.isDateInToday(d) { return "TODAY" }
-        if Calendar.current.isDateInYesterday(d) { return "YESTERDAY" }
-        if Calendar.current.isDateInTomorrow(d) { return "TOMORROW" }
-        return d.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)).uppercased()
+        if Calendar.current.isDateInToday(d) { return "Today" }
+        if Calendar.current.isDateInYesterday(d) { return "Yesterday" }
+        if Calendar.current.isDateInTomorrow(d) { return "Tomorrow" }
+        return d.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale))
     }
 
-    private func round(_ icon: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { roundLabel(icon) }.buttonStyle(.plain)
-    }
-
-    private func roundLabel(_ icon: String) -> some View {
-        Image(systemName: icon).font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
+    @ToolbarContentBuilder private var headerButtons: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button { picking = true } label: { Label("Pick a day", systemImage: "calendar") }
+            Button { details = true } label: { Label("Day details", systemImage: "slider.horizontal.3") }
+            Menu {
+                Button("Add food", systemImage: "plus") { sheet = .add(nil) }
+                Button("Quick add", systemImage: "bolt") { sheet = .quickAdd(nil) }
+                Divider()
+                Button("Copy yesterday", systemImage: "doc.on.doc") { _ = ctx.copyEntries(from: addDays(day, -1), to: day) }
+                Button("Copy from a day…", systemImage: "calendar.badge.plus") { sheet = .copy }
+                Divider()
+                Picker("View", selection: $style) {
+                    Label("Timeline", systemImage: "clock").tag(FoodLogView.LogStyle.timeline)
+                    Label("Meals", systemImage: "fork.knife").tag(FoodLogView.LogStyle.meals)
+                    Label("Plan", systemImage: "calendar.badge.clock").tag(FoodLogView.LogStyle.plan)
+                }
+                if style == .timeline { Toggle("Show empty hours", isOn: $showEmptyHours) }
+                if day != dayKey() { Divider(); Button("Go to today", systemImage: "arrow.uturn.backward") { day = dayKey() } }
+            } label: { Label("More", systemImage: "ellipsis") }
+        }
     }
 }
 

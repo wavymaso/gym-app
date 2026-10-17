@@ -86,7 +86,7 @@ struct EditGoalFlow: View {
             }
             .frame(height: 340).clipped()
             VStack(alignment: .leading, spacing: Space.l) {
-                Text("EDIT GOAL").font(.pageTitle(32)).foregroundStyle(palette.titleStyle)
+                Text("Edit goal").font(.screenTitle).foregroundStyle(palette.titleStyle)
                 stepRow(1, "Edit goal", "Modify goal weight and rate of weight change", on: true)
                 stepRow(2, "Set new program", "Targets from your current expenditure", on: false)
             }

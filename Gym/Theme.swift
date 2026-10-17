@@ -198,10 +198,7 @@ struct Card<Content: View>: View {
                     } icon: {
                         if let systemImage { Image(systemName: systemImage) }
                     }
-                    .font(.label)
-                    .textCase(.uppercase)
-                    .tracking(0.6)
-                    .foregroundStyle(.secondary)
+                    .sectionLabelStyle()
                     Spacer(minLength: 0)
                     if let accessory { accessory }
                 }

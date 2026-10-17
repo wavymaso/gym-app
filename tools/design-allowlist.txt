@@ -2,7 +2,6 @@ Gym/TokenGallery.swift: *  # the token gallery draws every theme at fixed sizes 
 GymWidget/RestLiveActivity.swift: *  # widget target: no Design.swift; Live Activity layout is fixed by the system
 GymWidget/GymWidget.swift: *  # widget target: no Design.swift; widget families have fixed sizes
 Gym/Theme.swift: .system(size:  # Font.number's definition (Dynamic Type scaled, capped)
-Gym/DashboardMF.swift: static func pageTitle  # the old wide title font's definition
 Gym/SettingsView.swift: .font(.system(size: 26, weight: .black).width(.expanded))  # initials inside the fixed 70 pt avatar circle
 Gym/Navigation.swift: .font(.system(size: size * 0.52  # an icon sized to its tile (size is the tile's)
 Gym/WorkoutParts.swift: .font(.system(size: 8, weight: .bold))  # plate weight drawn inside a plate of fixed height

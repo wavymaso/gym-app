@@ -94,33 +94,33 @@ struct CaloriesView: View {
                 }
                 .gaugeStyle(.accessoryCircularCapacity)
             case .accessoryRectangular:
-                VStack(alignment: .leading, spacing: Space.hairline) {
-                    Text("\(s.kcalText(abs(s.left))) \(s.energyUnit) \(s.left >= 0 ? "left" : "over")").font(.cardTitle)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(s.kcalText(abs(s.left))) \(s.energyUnit) \(s.left >= 0 ? "left" : "over")").font(.headline)
                     Text("P \(Int(max(0, s.targetProtein - s.protein))) · F \(Int(max(0, s.targetFat - s.fat))) · C \(Int(max(0, s.targetCarbs - s.carbs))) g left")
-                        .font(.note)
+                        .font(.caption)
                     Gauge(value: min(s.kcal, s.targetKcal), in: 0...max(s.targetKcal, 1)) { EmptyView() }.gaugeStyle(.accessoryLinearCapacity)
                 }
             case .systemMedium:
-                HStack(spacing: Space.l) {
+                HStack(spacing: 16) {
                     ring(s).frame(width: 118, height: 118)
-                    VStack(alignment: .leading, spacing: Space.s) {
+                    VStack(alignment: .leading, spacing: 8) {
                         bar("Protein", s.protein, s.targetProtein, Color(hex: s.proteinColor))
                         bar("Fat", s.fat, s.targetFat, Color(hex: s.fatColor))
                         bar("Carbs", s.carbs, s.targetCarbs, Color(hex: s.carbsColor))
-                        HStack(spacing: Space.m) {
+                        HStack(spacing: 10) {
                             Label("\(String(format: "%.1f", s.waterMl / 1000)) L", systemImage: "drop.fill").foregroundStyle(Color(hex: 0x3BB2F6))
                             if s.steps > 0 { Label("\(s.steps)", systemImage: "figure.walk").foregroundStyle(Color(hex: 0x34C77B)) }
                         }
-                        .font(.fineLabel)
+                        .font(.caption2.weight(.semibold))
                     }
                 }
             default:
                 ring(s)
             }
         } else {
-            VStack(spacing: Space.s) {
-                Image(systemName: "fork.knife.circle").font(.sectionTitle)
-                Text("Open Gym once to fill this in.").font(.note).multilineTextAlignment(.center)
+            VStack(spacing: 6) {
+                Image(systemName: "fork.knife.circle").font(.title)
+                Text("Open Gym once to fill this in.").font(.caption).multilineTextAlignment(.center)
             }
         }
     }
@@ -130,18 +130,18 @@ struct CaloriesView: View {
             WRing(progress: s.targetKcal > 0 ? s.kcal / s.targetKcal : 0, color: Color(hex: s.caloriesColor), width: 11)
             VStack(spacing: 0) {
                 Text(s.kcalText(abs(s.left))).font(.system(size: 26, weight: .bold, design: .rounded)).minimumScaleFactor(0.6).lineLimit(1)
-                Text(s.left >= 0 ? "\(s.energyUnit) left" : "\(s.energyUnit) over").font(.fineLabel).foregroundStyle(.secondary)
+                Text(s.left >= 0 ? "\(s.energyUnit) left" : "\(s.energyUnit) over").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
             }
-            .padding(Space.l)
+            .padding(14)
         }
     }
 
     private func bar(_ name: String, _ v: Double, _ t: Double, _ c: Color) -> some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
+        VStack(alignment: .leading, spacing: 3) {
             HStack {
-                Text(name).font(.fineLabel)
+                Text(name).font(.caption2.weight(.semibold))
                 Spacer()
-                Text("\(Int(v))/\(Int(t)) g").font(.fine).foregroundStyle(.secondary).monospacedDigit()
+                Text("\(Int(v))/\(Int(t)) g").font(.caption2).foregroundStyle(.secondary).monospacedDigit()
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {

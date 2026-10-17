@@ -142,6 +142,16 @@ extension Font {
 }
 
 extension View {
+    /// Every page's title, tabs included: sentence case ("Food log"), large, collapsing to an inline
+    /// title on scroll (the system's large titles). On the Mac: the window's title.
+    func largeTitle(_ title: String) -> some View {
+        #if os(iOS)
+        navigationTitle(title).navigationBarTitleDisplayMode(.large)
+        #else
+        navigationTitle(title)
+        #endif
+    }
+
     /// The one style for small uppercase section labels ("UP NEXT"): caption, semibold, tracked, secondary.
     func sectionLabelStyle() -> some View { font(.sectionLabel).textCase(.uppercase).tracking(0.8).foregroundStyle(.secondary) }
 

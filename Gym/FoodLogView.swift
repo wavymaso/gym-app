@@ -41,7 +41,6 @@ struct FoodLogView: View {
         let energy = profiles.first?.energy ?? .kcal
         return ScrollView {
             VStack(alignment: .leading, spacing: Space.l) {
-                if isPhone { header }
                 WeekStrip(day: $day)
                 DayLog(day: day, energy: energy, target: ctx.dayTargets(on: day),
                        style: $style) { sheet = $0 }
@@ -52,10 +51,8 @@ struct FoodLogView: View {
         }
         .debugScrollAnchor()
         .pageBackground()
-        .navigationTitle("Food log")
-        #if os(iOS)
-        .toolbar(.hidden, for: .navigationBar)
-        #else
+        .largeTitle("Food log")
+        #if os(macOS)
         .toolbar {
             ToolbarItemGroup {
                 Menu {
@@ -81,24 +78,6 @@ struct FoodLogView: View {
 }
 
 extension FoodLogView {
-    /// The phone's page header: FOOD LOG, and the day's actions as round buttons.
-    var header: some View {
-        HStack(alignment: .center) {
-            Text("FOOD LOG").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-            Spacer()
-            Menu {
-                Button("Copy yesterday", systemImage: "doc.on.doc") { _ = ctx.copyEntries(from: addDays(day, -1), to: day) }
-                Button("Copy from a day…", systemImage: "calendar") { sheet = .copy }
-            } label: { roundIcon("doc.on.doc") }
-            .menuStyle(.button).buttonStyle(.plain)
-            Button { sheet = .add(nil) } label: { roundIcon("plus") }.buttonStyle(.plain)
-        }
-        .padding(.top, Space.s)
-    }
-
-    func roundIcon(_ name: String) -> some View {
-        Image(systemName: name).font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
-    }
 }
 
 /// Monday to Sunday around the chosen day, each with a little calorie ring.
@@ -546,7 +525,7 @@ struct DaySummary: View {
         Button { animate(Motion.snappy) { remaining.toggle() } } label: {
             VStack(alignment: .leading, spacing: Space.m) {
                 HStack {
-                    Text(remaining ? "Remaining" : "Consumed").font(.label).textCase(.uppercase).tracking(0.6)
+                    Text(remaining ? "Remaining" : "Consumed").sectionLabelStyle()
                         .foregroundStyle(.secondary)
                     Spacer()
                     Image(systemName: "arrow.left.arrow.right").font(.label).foregroundStyle(.tertiary)

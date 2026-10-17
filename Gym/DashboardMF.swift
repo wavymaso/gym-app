@@ -3,12 +3,7 @@ import SwiftData
 import SwiftUI
 
 // MacroFactor's dashboard fundamentals, in our colours: the weekly nutrition grid, small insight
-// cards with a sparkline, the wide page title, the "Search for a food" bar and the + Shortcuts sheet.
-
-extension Font {
-    /// Page titles: wide, tight, heavy, like an engraved label.
-    static func pageTitle(_ size: CGFloat = 32) -> Font { .system(size: size * 0.86, weight: .bold).width(.expanded) }
-}
+// cards with a sparkline, the "Search for a food" bar and the + Shortcuts sheet.
 
 /// Monday to Sunday × calories, protein, fat, carbs: a bar per day against its target (the tick).
 struct WeekGrid: View {

@@ -98,10 +98,15 @@ struct WorkoutsView: View {
         }
         .debugScrollAnchor()
         .pageBackground()
-        .navigationTitle("Training")
-        #if os(iOS)
-        .toolbar(.hidden, for: .navigationBar)
-        #endif
+        .largeTitle("Training")
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if isPhone {
+                    NavigationLink { ExercisesView() } label: { Label("Exercise library", systemImage: "list.bullet") }
+                    Button { newRoutine = true } label: { Label("New routine", systemImage: "plus") }
+                }
+            }
+        }
         .sheet(item: $editingRoutine) { RoutineEditor(routine: $0) }
         .sheet(isPresented: $newRoutine) { RoutineEditor(routine: nil) }
         .sheet(item: $showing) { WorkoutDetail(workout: $0) }
@@ -111,7 +116,7 @@ struct WorkoutsView: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: Space.l) {
             if let r = nextRoutine {
-                Text("UP NEXT").font(.label).tracking(0.8).foregroundStyle(palette.text2)
+                Text("Up next").sectionLabelStyle()
                 Text(r.name).font(.numberHero).foregroundStyle(palette.text1)
                 Text(routineSummary(r)).font(.secondaryText).foregroundStyle(palette.text2).lineLimit(2)
                 HStack(spacing: Space.m) {
@@ -127,7 +132,7 @@ struct WorkoutsView: View {
                     .buttonStyle(.plain)
                 }
             } else {
-                Text("READY WHEN YOU ARE").font(.label).tracking(0.8).foregroundStyle(palette.text2)
+                Text("Ready when you are").sectionLabelStyle()
                 Text("Start training").font(.numberHero).foregroundStyle(palette.text1)
                 HStack(spacing: Space.m) {
                     Button { ctx.startWorkout(routine: nil) } label: {
@@ -153,7 +158,7 @@ struct WorkoutsView: View {
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
     }
 
-    /// TRAINING, this week's numbers, and Mon–Sun with the days you trained.
+    /// This week's numbers, and Mon–Sun with the days you trained.
     private func header(_ unit: WeightUnit) -> some View {
         var cal = Calendar(identifier: .gregorian); cal.firstWeekday = 2
         let monday = dayKey(cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date())
@@ -162,21 +167,6 @@ struct WorkoutsView: View {
         let volume = week.reduce(0.0) { t, w in t + ctx.sets(of: w.key).filter(\.done).reduce(0) { $0 + $1.kg * Double($1.reps) } }
         let minutes = week.reduce(0.0) { $0 + ($1.end ?? $1.start).timeIntervalSince($1.start) / 60 }
         return VStack(alignment: .leading, spacing: Space.l) {
-            if isPhone {
-                HStack {
-                    Text("TRAINING").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
-                    Spacer()
-                    NavigationLink { ExercisesView() } label: {
-                        Image(systemName: "list.bullet").font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
-                    }
-                    .buttonStyle(.plain)
-                    Button { newRoutine = true } label: {
-                        Image(systemName: "plus").font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, Space.s)
-            }
             HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { i in
                     let d = addDays(monday, i)

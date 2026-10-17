@@ -191,7 +191,7 @@ struct PlanDayView: View {
         return VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.s) {
                 Text(planClock(s.minute)).font(.numberSmall).monospacedDigit()
-                Text(label(s.kind)).font(.label).foregroundStyle(.secondary).textCase(.uppercase)
+                Text(label(s.kind)).sectionLabelStyle()
                 if s.kind == .preWorkout || s.kind == .postWorkout {
                     Image(systemName: "bolt.fill").font(.fine).foregroundStyle(palette.accent).accessibilityLabel(s.kind == .preWorkout ? "Before training" : "After training")
                 }
@@ -341,7 +341,7 @@ struct WeekPlanView: View {
                 ForEach(Aisle.allCases, id: \.self) { a in
                     let items = groceries.filter { $0.aisle == a }
                     if !items.isEmpty {
-                        Text(a.rawValue).font(.label).foregroundStyle(.secondary).textCase(.uppercase)
+                        Text(a.rawValue).sectionLabelStyle()
                         ForEach(items, id: \.name) { g in
                             HStack { Text(g.name).lineLimit(1); Spacer(); Text(g.amount).foregroundStyle(.secondary).monospacedDigit() }
                         }
