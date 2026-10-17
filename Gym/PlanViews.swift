@@ -429,6 +429,7 @@ struct PlannerSettingsView: View {
             Section {
                 NavigationLink("Meal templates") { TemplatesView() }
                 NavigationLink("Simple foods") { CatalogView() }
+                NavigationLink("Your usual meals") { UsualMealsView() }
                 NavigationLink("Food taxonomy (roles, NOVA)") { TaxonomyReviewView() }
                 NavigationLink("Staples (\(s.staples.count))") { StaplesView().onDisappear { if let p = ctx.profile { s.staples = p.planner.staples } } }
                 NavigationLink("Foods to leave out (\(s.exclusions.count))") { ExclusionsView(exclusions: $s.exclusions) }
@@ -445,7 +446,7 @@ struct PlannerSettingsView: View {
         guard let p = ctx.profile else { return }
         // Staples and Health workouts are edited elsewhere: keep the latest of those.
         s.staples = p.planner.staples; s.healthSessions = p.planner.healthSessions; s.roles = p.planner.roles; s.inferredWeek = p.planner.inferredWeek
-        s.templates = p.planner.templates; s.treatsEnabled = p.planner.treatsEnabled; s.catalogRemoved = p.planner.catalogRemoved; s.inStock = p.planner.inStock
+        s.templates = p.planner.templates; s.treatsEnabled = p.planner.treatsEnabled; s.catalogRemoved = p.planner.catalogRemoved; s.inStock = p.planner.inStock; s.usualMeals = p.planner.usualMeals; s.deletedUsualMeals = p.planner.deletedUsualMeals
         guard p.planner != s else { return }
         p.planner = s; ctx.commit()
     }

@@ -14,6 +14,21 @@ Task { @MainActor in
     ctx.applyTaxonomySeeds2()
     await ctx.fillTaxonomyData()
     if ai { await ctx.suggestTaxonomy() }
+    if CommandLine.arguments.contains("--usual") {
+        let mp = ctx.mealPatterns()
+        print("YOUR USUAL MEALS · learned from \(Set(mp.meals.map(\.day)).count) days, \(mp.meals.count) meals")
+        for band in MealBand.allCases {
+            let ms = mp.meals.filter { $0.band == band }
+            guard !ms.isEmpty else { continue }
+            print("\n\(band.label.uppercased())")
+            for m in ms { print("  \(m.day): \(m.foods.sorted().map { Taxonomy.byID[$0]?.name ?? $0 }.joined(separator: " + "))") }
+            let pairs = (mp.pairs[band] ?? [:]).sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(6)
+            if !pairs.isEmpty {
+                print("  pairs: " + pairs.map { kv in kv.key.split(separator: "|").map { Taxonomy.byID[String($0)]?.name ?? String($0) }.joined(separator: " & ") + String(format: " (%.1f)", kv.value) }.joined(separator: "; "))
+            }
+        }
+        exit(0)
+    }
     if CommandLine.arguments.contains("--staples") {
         let sg = ctx.stapleSuggestions()
         print("STAPLE SUGGESTIONS · logged on ≥ \(ctx.profile!.planner.stapleMinDays) of the last \(ctx.profile!.planner.stapleWindowDays) days")

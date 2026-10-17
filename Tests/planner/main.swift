@@ -417,4 +417,26 @@ for f in pool {
     check("catalogue \(f.name): calories match macros (±20%)", abs(atwater - v.kcal) <= max(v.kcal * 0.2, 10), (atwater, v.kcal))
 }
 check("catalogue: no drinks", !cat.contains { $0.role == .drink })
+
+// MARK: Meal patterns (co-occurrence)
+do {
+    let t = "2026-10-17"
+    let mk: (String, Int, String) -> LoggedFood = { day, minute, key in
+        LoggedFood(day: day, weekday: weekdayOfKey(day), minute: minute, key: key, name: key, grams: 50, kcal: 0, protein: 0, fat: 0, carbs: 0, fibre: 0) }
+    let canon = ["tortitas": "rice-cakes-chocolate", "pb": "peanut-butter", "jam": "jam", "banana": "banana", "chicken": "chicken", "potato": "potato", "pasta": "pasta"]
+    var l: [LoggedFood] = []
+    for d in [-1, -2, -3] { l += [mk(addDaysKey(t, d), 480, "tortitas"), mk(addDaysKey(t, d), 485, "jam"), mk(addDaysKey(t, d), 520, "pb")] }   // 08:00–08:40: one meal
+    l += [mk(addDaysKey(t, -1), 480, "banana")]
+    l += [mk(addDaysKey(t, -1), 840, "chicken"), mk(addDaysKey(t, -1), 845, "potato"), mk(addDaysKey(t, -2), 840, "chicken"), mk(addDaysKey(t, -2), 841, "pasta")]
+    l += [mk(addDaysKey(t, -2), 1300, "jam")]                                                                                   // 21:40, its own meal
+    let mp = MealPatterns.learn(l, canonical: { canon[$0] }, today: t)
+    check("patterns: entries within 45 min are one meal (08:00 + 08:40)", mp.meals.filter { $0.band == .breakfast }.allSatisfy { $0.foods.contains("peanut-butter") })
+    check("patterns: rice cakes → peanut butter at breakfast, every time", abs(mp.association("rice-cakes-chocolate", "peanut-butter", at: .breakfast) - 1) < 1e-9)
+    check("patterns: banana with rice cakes once in three (recency-weighted ≈ 1/3)", (0.3...0.4).contains(mp.association("rice-cakes-chocolate", "banana", at: .breakfast)))
+    check("patterns: no association across meals (jam at dinner isn't jam at breakfast)", mp.association("jam", "rice-cakes-chocolate", at: .dinner) == 0)
+    check("patterns: lunch combos chicken+potato and chicken+pasta", Set(mp.combos.filter { $0.band == .lunch }.map(\.foods)) == [["chicken", "potato"], ["chicken", "pasta"]])
+    check("patterns: the breakfast combo is the most frequent", mp.combos.first?.foods == ["jam", "peanut-butter", "rice-cakes-chocolate"], mp.combos.first?.foods ?? [])
+    check("patterns: deterministic", MealPatterns.learn(l.reversed(), canonical: { canon[$0] }, today: t) == mp)
+    check("patterns: fit = best association with what's in the meal", mp.fit("peanut-butter", with: ["jam", "banana"], at: .breakfast) == mp.association("jam", "peanut-butter", at: .breakfast))
+}
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

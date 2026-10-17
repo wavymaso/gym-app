@@ -18,6 +18,8 @@ struct PlannerSettings: Codable, Equatable {
     var templates: [MealTemplate] = []               // your edited meal templates (empty: the defaults)
     var treatsEnabled = false                        // an evening snack with one treat a day
     var catalogRemoved: [String] = []                // simple foods you'd never buy (canonical ids)
+    var usualMeals: [UsualMeal] = []                 // combinations you confirmed or edited (they win over learned ones)
+    var deletedUsualMeals: [String] = []             // learned combinations you deleted (ids)
     var inStock: [String] = []                       // tier 3 foods (and whey) you have: only these are planned
     var fibreFloorGrams: Double = 19                 // fixed fibre floor (g/day); 0: scale with calories (registry, 14 g per 1,000 kcal)
     var highDaysFollowTraining = true                // calorie distribution: training days = your training week
@@ -101,6 +103,8 @@ extension PlannerSettings {
         templates = (try? c.decodeIfPresent(type(of: templates), forKey: .templates)) ?? d.templates
         treatsEnabled = (try? c.decodeIfPresent(type(of: treatsEnabled), forKey: .treatsEnabled)) ?? d.treatsEnabled
         catalogRemoved = (try? c.decodeIfPresent(type(of: catalogRemoved), forKey: .catalogRemoved)) ?? d.catalogRemoved
+        usualMeals = (try? c.decodeIfPresent(type(of: usualMeals), forKey: .usualMeals)) ?? d.usualMeals
+        deletedUsualMeals = (try? c.decodeIfPresent(type(of: deletedUsualMeals), forKey: .deletedUsualMeals)) ?? d.deletedUsualMeals
         inStock = (try? c.decodeIfPresent(type(of: inStock), forKey: .inStock)) ?? d.inStock
     }
 }
