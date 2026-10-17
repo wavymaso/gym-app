@@ -383,6 +383,8 @@ check("a staple protein main is used as a primary protein source", mains.contain
 // MARK: Meal templates
 let tps = MealTemplates.defaults
 check("templates: every food id is a canonical food", MealTemplates.unknownFoods(tps).isEmpty, MealTemplates.unknownFoods(tps))
+let porkFoods: Set<String> = ["pork", "ham", "sausages", "chorizo"]
+check("templates: no pork anywhere (pork, ham, sausages, chorizo)", tps.allSatisfy { $0.slots.allSatisfy { Set($0.allowed + [$0.defaultFood]).isDisjoint(with: porkFoods) } })
 check("templates: every default is allowed in its slot", tps.allSatisfy { $0.slots.allSatisfy { $0.allowed.contains($0.defaultFood) } })
 check("templates: every meal has a required protein slot (the evening snack is a treat only)", tps.filter { $0.meal != .eveningSnack }.allSatisfy { $0.slots.contains { $0.kind == .protein && $0.required } })
 check("templates: one carb base per meal (bread as a side is separate)", tps.allSatisfy { $0.slots.filter { $0.kind == .carbBase }.count <= 1 })
