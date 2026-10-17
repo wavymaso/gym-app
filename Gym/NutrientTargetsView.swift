@@ -25,10 +25,10 @@ struct NutrientTargetsView: View {
                         let def = nutrientTarget(k, kcal: kcal, sex: p.sexValue, profile: nil)
                         let unit = k == "sodium" ? "mg" : (Micro.all.first { $0.key == k }?.unit ?? "g")
                         HStack {
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: Space.hairline) {
                                 Text(DashItem.label(k))
                                 Text("\(def.limit ? "Limit" : "Target") by default: \(number(def.value, digits: def.value < 10 ? 1 : 0)) \(unit)")
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.note).foregroundStyle(.secondary)
                             }
                             Spacer()
                             TextField("Default", text: Binding(get: { texts[k] ?? "" }, set: { texts[k] = $0 }))

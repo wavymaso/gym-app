@@ -54,12 +54,12 @@ struct WorkoutsView: View {
     private var overview: some View {
         let unit = profiles.first?.weight ?? .kg
         return ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 header(unit)
                 hero
                 if !routines.isEmpty {
                     HStack {
-                        Text("Routines").font(.title2.bold())
+                        Text("Routines").font(.sectionTitle)
                         Spacer()
                         Button { newRoutine = true } label: { Label("New", systemImage: "plus") }.buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.small)
                     }
@@ -79,11 +79,11 @@ struct WorkoutsView: View {
                                message: "Log your first session and your history, records and volume per muscle build from here.",
                                action: ("Start a workout", { ctx.startWorkout(routine: nil) }))
                 } else {
-                    Text("History").font(.title3.bold()).padding(.top, 4)
+                    Text("History").font(.subsectionTitle).padding(.top, Space.xs)
                     let months = Dictionary(grouping: finished.prefix(120), by: { monthKey($0.start) }).sorted { $0.key > $1.key }
                     ForEach(months, id: \.key) { _, ws in
                         Card(title: ws[0].start.formatted(.dateTime.month(.wide).year().locale(appLocale)), systemImage: "calendar",
-                             accessory: AnyView(Text("\(ws.count) workouts").font(.caption).foregroundStyle(.secondary))) {
+                             accessory: AnyView(Text("\(ws.count) workouts").font(.note).foregroundStyle(.secondary))) {
                             ForEach(ws) { w in
                                 Button { showing = w } label: { WorkoutRow(workout: w, unit: unit) }.buttonStyle(.plain)
                                 if w.id != ws.last?.id { Divider() }
@@ -109,48 +109,48 @@ struct WorkoutsView: View {
 
     /// The big "start" card: your next routine, or an empty workout.
     private var hero: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.l) {
             if let r = nextRoutine {
-                Text("UP NEXT").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(palette.text2)
-                Text(r.name).font(.number(34)).foregroundStyle(palette.text1)
-                Text(routineSummary(r)).font(.callout).foregroundStyle(palette.text2).lineLimit(2)
-                HStack(spacing: 10) {
+                Text("UP NEXT").font(.label).tracking(0.8).foregroundStyle(palette.text2)
+                Text(r.name).font(.numberHero).foregroundStyle(palette.text1)
+                Text(routineSummary(r)).font(.secondaryText).foregroundStyle(palette.text2).lineLimit(2)
+                HStack(spacing: Space.m) {
                     Button { ctx.startWorkout(routine: r) } label: {
-                        Label("Start \(r.name)", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
+                        Label("Start \(r.name)", systemImage: "play.fill").font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.m)
                             .background(palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.onAccent)
                     }
                     .buttonStyle(.plain)
                     Button { ctx.startWorkout(routine: nil) } label: {
-                        Text("Empty").font(.headline).padding(.horizontal, 18).padding(.vertical, 12)
+                        Text("Empty").font(.cardTitle).padding(.horizontal, Space.l).padding(.vertical, Space.m)
                             .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.text1)
                     }
                     .buttonStyle(.plain)
                 }
             } else {
-                Text("READY WHEN YOU ARE").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(palette.text2)
-                Text("Start training").font(.number(34)).foregroundStyle(palette.text1)
-                HStack(spacing: 10) {
+                Text("READY WHEN YOU ARE").font(.label).tracking(0.8).foregroundStyle(palette.text2)
+                Text("Start training").font(.numberHero).foregroundStyle(palette.text1)
+                HStack(spacing: Space.m) {
                     Button { ctx.startWorkout(routine: nil) } label: {
-                        Label("Empty workout", systemImage: "play.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 12)
+                        Label("Empty workout", systemImage: "play.fill").font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.m)
                             .background(palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.onAccent)
                     }
                     .buttonStyle(.plain)
                     Button { newRoutine = true } label: {
-                        Text("New routine").font(.headline).padding(.horizontal, 18).padding(.vertical, 12)
+                        Text("New routine").font(.cardTitle).padding(.horizontal, Space.l).padding(.vertical, Space.m)
                             .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous)).foregroundStyle(palette.text1)
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .padding(20)
+        .padding(Space.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(CardSurface(cornerRadius: 22))
+        .modifier(CardSurface(cornerRadius: Radius.xl))
         .overlay(alignment: .topTrailing) {
             Image(systemName: "dumbbell.fill").font(.system(size: 90, weight: .bold)).foregroundStyle(palette.text1.opacity(0.045))
                 .rotationEffect(.degrees(-25)).offset(x: 10, y: 6).allowsHitTesting(false)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
     }
 
     /// TRAINING, this week's numbers, and Mon–Sun with the days you trained.
@@ -161,31 +161,31 @@ struct WorkoutsView: View {
         let trained = Set(week.map(\.day))
         let volume = week.reduce(0.0) { t, w in t + ctx.sets(of: w.key).filter(\.done).reduce(0) { $0 + $1.kg * Double($1.reps) } }
         let minutes = week.reduce(0.0) { $0 + ($1.end ?? $1.start).timeIntervalSince($1.start) / 60 }
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             if isPhone {
                 HStack {
                     Text("TRAINING").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
                     Spacer()
                     NavigationLink { ExercisesView() } label: {
-                        Image(systemName: "list.bullet").font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
+                        Image(systemName: "list.bullet").font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
                     }
                     .buttonStyle(.plain)
                     Button { newRoutine = true } label: {
-                        Image(systemName: "plus").font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
+                        Image(systemName: "plus").font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.top, 8)
+                .padding(.top, Space.s)
             }
             HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { i in
                     let d = addDays(monday, i)
-                    VStack(spacing: 6) {
-                        Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale))).font(.caption2.weight(.semibold))
+                    VStack(spacing: Space.s) {
+                        Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale))).font(.fineLabel)
                             .foregroundStyle(d == dayKey() ? .primary : .secondary)
                         ZStack {
                             Circle().fill(trained.contains(d) ? Macro.protein.color : Color.raisedBackground)
-                            if trained.contains(d) { Image(systemName: "checkmark").font(.caption.weight(.black)).foregroundStyle(palette.onData) }
+                            if trained.contains(d) { Image(systemName: "checkmark").font(.label).foregroundStyle(palette.onData) }
                         }
                         .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(d == dayKey() ? Color.primary.opacity(0.8) : .clear, lineWidth: 2).padding(-3))
@@ -202,9 +202,9 @@ struct WorkoutsView: View {
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value).font(.number(20, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        VStack(spacing: Space.xxs) {
+            Text(value).font(.numberMedium).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -215,21 +215,21 @@ struct WorkoutsView: View {
         let last = finished.first { $0.routineKey == r.key || $0.name == r.name }
         let colors = [Macro.protein.color, Macro.calories.color, Macro.carbs.color, Macro.fat.color]
         let c = colors[abs(r.name.hashValue) % colors.count]
-        return HStack(spacing: 14) {
-            Text(String(r.name.prefix(1)).uppercased()).font(.number(18)).foregroundStyle(c)
+        return HStack(spacing: Space.l) {
+            Text(String(r.name.prefix(1)).uppercased()).font(.numberMedium).foregroundStyle(c)
                 .frame(width: 42, height: 42).background(c.opacity(0.16), in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
-                Text(r.name).font(.headline)
-                Text("\(count) exercises · \(last.map { relative($0.day) } ?? "not done yet")").font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                Text(r.name).font(.cardTitle)
+                Text("\(count) exercises · \(last.map { relative($0.day) } ?? "not done yet")").font(.note).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { editingRoutine = r } label: { Image(systemName: "pencil").font(.callout) }.buttonStyle(.borderless)
+            Button { editingRoutine = r } label: { Image(systemName: "pencil").font(.secondaryText) }.buttonStyle(.borderless)
             Button { ctx.startWorkout(routine: r) } label: {
-                Image(systemName: "play.fill").font(.callout).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accentFill, in: Circle())
+                Image(systemName: "play.fill").font(.secondaryText).foregroundStyle(palette.onAccent).frame(width: 38, height: 38).background(palette.accentFill, in: Circle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14).padding(.vertical, 12)
+        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
         .contentShape(Rectangle())
         .contextMenu {
             Button("Start") { ctx.startWorkout(routine: r) }
@@ -240,17 +240,17 @@ struct WorkoutsView: View {
     private func routineCard(_ r: Routine) -> some View {
         let count = routineCount(r)
         let last = finished.first { $0.routineKey == r.key || $0.name == r.name }
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(r.name).font(.headline).lineLimit(1)
-            Text("\(count) exercises").font(.caption).foregroundStyle(.secondary)
-            Text(last.map { "Last \(relative($0.day))" } ?? "Not done yet").font(.caption).foregroundStyle(.secondary)
+        return VStack(alignment: .leading, spacing: Space.s) {
+            Text(r.name).font(.cardTitle).lineLimit(1)
+            Text("\(count) exercises").font(.note).foregroundStyle(.secondary)
+            Text(last.map { "Last \(relative($0.day))" } ?? "Not done yet").font(.note).foregroundStyle(.secondary)
             HStack {
                 Button("Start") { ctx.startWorkout(routine: r) }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.small)
                 Spacer()
                 Button { editingRoutine = r } label: { Image(systemName: "pencil") }.buttonStyle(.borderless)
             }
         }
-        .padding(14)
+        .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(CardSurface(cornerRadius: Radius.l))
         .contextMenu {

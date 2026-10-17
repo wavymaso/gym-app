@@ -89,6 +89,7 @@ enum Haptics {
 // MARK: - Spacing and corners (a 4/8 pt grid)
 
 enum Space {
+    static let hairline: CGFloat = 1   // grid gaps that read as lines
     static let xxs: CGFloat = 2
     static let xs: CGFloat = 4
     static let s: CGFloat = 8
@@ -96,26 +97,42 @@ enum Space {
     static let l: CGFloat = 16
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
+    static let xxxl: CGFloat = 48
+    /// Under the last item of a scroll view on the phone: clears the tab bar and the + button.
+    static let tabBarClearance: CGFloat = 96
 }
 
 enum Radius {
+    static let xs: CGFloat = 4      // chart bars, progress tracks, tiny badges
     static let s: CGFloat = 8       // chips, small fields
     static let m: CGFloat = 12      // buttons, inputs, tiles
     static let l: CGFloat = 18      // cards and rows
     static let xl: CGFloat = 24     // big cards, sheets
+    /// A shape inside another, inset by `padding`: concentric corners (never below Radius.xs).
+    static func inner(_ outer: CGFloat, inset padding: CGFloat) -> CGFloat { max(xs, outer - padding) }
 }
 
 // MARK: - Type
 
 extension Font {
     // Text roles (all scale with Dynamic Type).
-    static let screenTitle = Font.largeTitle.weight(.black)
-    static let sectionTitle = Font.title2.bold()
-    static let cardTitle = Font.headline
+    static let screenTitle = Font.largeTitle.bold()           // a page's large title (sentence case)
+    static let sectionTitle = Font.title2.bold()               // a group of cards on a page
+    static let subsectionTitle = Font.title3.weight(.semibold) // a heading inside a page or sheet
+    static let cardTitle = Font.headline                       // a card's or row's title
     static let bodyText = Font.body
-    static let secondaryText = Font.subheadline
-    static let label = Font.caption.weight(.semibold)
-    static let fine = Font.caption2
+    static let bodyEmphasis = Font.body.weight(.semibold)      // a row's main text that must stand out
+    static let secondaryText = Font.subheadline                // details, descriptions
+    static let secondaryEmphasis = Font.subheadline.weight(.semibold)  // buttons in cards, values in rows
+    static let note = Font.caption                             // small print beside values
+    static let label = Font.caption.weight(.semibold)          // small labels, chips
+    static let fine = Font.caption2                            // axis labels, footnotes
+    static let fineLabel = Font.caption2.weight(.semibold)     // the smallest labels that must read
+    static let sectionLabel = Font.caption.weight(.semibold)
+    // Icons and emoji that stand alone (they scale with Dynamic Type like text).
+    static let iconSmall = Font.title3.weight(.medium)         // tab bar icons
+    static let iconMedium = Font.title                         // a food's emoji at the start of a row
+    static let iconHero = Font.system(size: 48, weight: .regular)  // an empty state's or sheet's big symbol (fixed: art)   // UPPERCASE TRACKED section labels: use .sectionLabelStyle()
 
     // Number roles: rounded, tabular, and they scale with Dynamic Type too.
     static let numberHero = Font.system(.largeTitle, design: .rounded).weight(.bold)      // calories left, the weigh-in
@@ -125,6 +142,9 @@ extension Font {
 }
 
 extension View {
+    /// The one style for small uppercase section labels ("UP NEXT"): caption, semibold, tracked, secondary.
+    func sectionLabelStyle() -> some View { font(.sectionLabel).textCase(.uppercase).tracking(0.8).foregroundStyle(.secondary) }
+
     /// A number that changes: tabular digits, and it rolls to the new value.
     func liveNumber(_ value: Double) -> some View {
         monospacedDigit().contentTransition(.numericText(value: value)).animation(Motion.pick(Motion.snappy), value: value)

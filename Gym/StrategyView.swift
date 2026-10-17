@@ -47,7 +47,7 @@ struct StrategyView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 header
                 if let p = profiles.first, let g = programs.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
                     checkInRing(g)
@@ -60,7 +60,7 @@ struct StrategyView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    Text("In Progress").font(.title2.bold()).padding(.top, 4)
+                    Text("In Progress").font(.sectionTitle).padding(.top, Space.xs)
                     hero(p, g)
                     weekTargets(p, t)
                     programButtons(g)
@@ -102,7 +102,7 @@ struct StrategyView: View {
             NavigationStack {
                 ScrollView {
                     if let p = profiles.first, let t = targetSets.first(where: { $0.fromDay <= dayKey() }) {
-                        DistributionCard(profile: p, targets: t.targets).padding(16)
+                        DistributionCard(profile: p, targets: t.targets).padding(Space.l)
                     }
                 }
                 .pageBackground()
@@ -131,7 +131,7 @@ struct StrategyView: View {
     }
 
     private func roundIcon(_ name: String) -> some View {
-        Image(systemName: name).font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
+        Image(systemName: name).font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
     }
 
     // MARK: The program
@@ -140,17 +140,17 @@ struct StrategyView: View {
         let series = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let now = series.last?.trend
         let startKg = series.first { $0.day >= g.startDay }?.trend ?? g.startWeightKg
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("CURRENT PROGRAM").font(.caption.weight(.bold)).tracking(0.8).foregroundStyle(palette.text2)
-                    Text(g.goalValue.label).font(.number(32)).foregroundStyle(palette.text1)
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text("CURRENT PROGRAM").font(.label).tracking(0.8).foregroundStyle(palette.text2)
+                    Text(g.goalValue.label).font(.numberLarge).foregroundStyle(palette.text1)
                 }
                 Spacer()
-                Text("Week \(daysBetween(g.startDay, dayKey()) / 7 + 1)").font(.caption.weight(.bold))
-                    .padding(.horizontal, 10).padding(.vertical, 5).background(Color.raisedBackground, in: Capsule()).foregroundStyle(palette.text1)
+                Text("Week \(daysBetween(g.startDay, dayKey()) / 7 + 1)").font(.label)
+                    .padding(.horizontal, Space.m).padding(.vertical, Space.xs).background(Color.raisedBackground, in: Capsule()).foregroundStyle(palette.text1)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: Space.s) {
                 chip(goalDetail(g, p))
                 chip(p.inDietBreak(dayKey()) ? "Diet break" : p.shadowMode ? "Shadow" : styleText(g.mode))
                 if let end = p.phaseEndText(p.weight) { chip(end) }
@@ -159,11 +159,11 @@ struct StrategyView: View {
             if let goal = p.goalWeightKg, let now {
                 let total = goal - startKg
                 let done = total != 0 ? max(0, min(1, (now - startKg) / total)) : 1
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Space.s) {
                     HStack {
-                        Text("\(p.weight.format(startKg)) → \(p.weight.format(goal))").font(.callout.weight(.semibold)).foregroundStyle(palette.text1)
+                        Text("\(p.weight.format(startKg)) → \(p.weight.format(goal))").font(.secondaryEmphasis).foregroundStyle(palette.text1)
                         Spacer()
-                        Text("\(Int(done * 100 + 0.5))%").font(.callout.weight(.bold)).foregroundStyle(palette.text1).monospacedDigit()
+                        Text("\(Int(done * 100 + 0.5))%").font(.secondaryEmphasis).foregroundStyle(palette.text1).monospacedDigit()
                     }
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -172,25 +172,25 @@ struct StrategyView: View {
                         }
                     }
                     .frame(height: 8)
-                    if let proj = projection(p, goal) { Text(proj).font(.caption).foregroundStyle(palette.text2) }
+                    if let proj = projection(p, goal) { Text(proj).font(.note).foregroundStyle(palette.text2) }
                 }
             } else {
-                Button("Set a goal weight") { editingGoalWeight = true }.font(.callout.weight(.semibold)).foregroundStyle(palette.text1)
+                Button("Set a goal weight") { editingGoalWeight = true }.font(.secondaryEmphasis).foregroundStyle(palette.text1)
             }
         }
-        .padding(20)
+        .padding(Space.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(CardSurface(cornerRadius: 22))
+        .modifier(CardSurface(cornerRadius: Radius.xl))
         .overlay(alignment: .topTrailing) {
             Image(systemName: "target").font(.system(size: 110, weight: .bold)).foregroundStyle(palette.text1.opacity(0.045))
                 .offset(x: 24, y: 30).allowsHitTesting(false)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
     }
 
     private func chip(_ t: String) -> some View {
-        Text(t).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
-            .padding(.horizontal, 10).padding(.vertical, 6).background(Color.raisedBackground, in: Capsule()).foregroundStyle(palette.text1)
+        Text(t).font(.label).lineLimit(1).minimumScaleFactor(0.8)
+            .padding(.horizontal, Space.m).padding(.vertical, Space.s).background(Color.raisedBackground, in: Capsule()).foregroundStyle(palette.text1)
     }
 
     /// This week, Monday to Sunday: each day's calories as a stacked column of protein, fat and carbs.
@@ -202,20 +202,20 @@ struct StrategyView: View {
         let top = max(targets.map(\.kcal).max() ?? 1, 1)
         let sel = days.firstIndex(of: selectedDay) ?? days.firstIndex(of: dayKey()) ?? 0
         let s = targets[sel]
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             HStack {
-                Text("Weekly Targets").font(.title3.weight(.semibold))
+                Text("Weekly Targets").font(.subsectionTitle)
                 Spacer()
-                Text("avg \(p.energy.format(targets.map(\.kcal).reduce(0, +) / 7))").font(.callout).foregroundStyle(.secondary)
+                Text("avg \(p.energy.format(targets.map(\.kcal).reduce(0, +) / 7))").font(.secondaryText).foregroundStyle(.secondary)
             }
-            HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: Space.s) {
                 ForEach(days.indices, id: \.self) { i in
                     let d = targets[i]
                     Button { animate(Motion.snappy) { selectedDay = days[i] } } label: {
-                        VStack(spacing: 6) {
-                            Text(number(p.energy.fromKcal(d.kcal))).font(.caption2.weight(.semibold)).monospacedDigit()
+                        VStack(spacing: Space.s) {
+                            Text(number(p.energy.fromKcal(d.kcal))).font(.fineLabel).monospacedDigit()
                                 .lineLimit(1).minimumScaleFactor(0.6).foregroundStyle(i == sel ? .primary : .secondary)
-                            VStack(spacing: 2) {
+                            VStack(spacing: Space.xxs) {
                                 let h = 130 * d.kcal / top
                                 segment(palette.carbs, h * d.carbs * 4 / max(d.kcal, 1))
                                 segment(palette.fat, h * d.fat * 9 / max(d.kcal, 1))
@@ -223,10 +223,10 @@ struct StrategyView: View {
                             }
                             .frame(height: 134, alignment: .bottom)
                             Text(date(fromKey: days[i]).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
-                                .font(.caption.weight(i == sel ? .bold : .regular)).foregroundStyle(i == sel ? .primary : .secondary)
+                                .font(i == sel ? Font.label : Font.note).foregroundStyle(i == sel ? .primary : .secondary)
                         }
-                        .frame(maxWidth: .infinity).padding(.vertical, 6)
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .frame(maxWidth: .infinity).padding(.vertical, Space.s)
+                        .overlay(RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
                             .stroke(i == sel ? Color.primary.opacity(0.85) : .clear, lineWidth: 2))
                         .contentShape(Rectangle())
                     }
@@ -235,27 +235,27 @@ struct StrategyView: View {
             }
             Divider()
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(date(fromKey: days[sel]).formatted(.dateTime.weekday(.wide).locale(appLocale))).font(.caption).foregroundStyle(.secondary)
-                    Text(p.energy.format(s.kcal)).font(.number(22, weight: .semibold)).monospacedDigit()
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(date(fromKey: days[sel]).formatted(.dateTime.weekday(.wide).locale(appLocale))).font(.note).foregroundStyle(.secondary)
+                    Text(p.energy.format(s.kcal)).font(.numberMedium).monospacedDigit()
                 }
                 Spacer()
                 ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(m.label).font(.caption).foregroundStyle(m.color)
-                        Text("\(number(m.value(s))) g").font(.headline).monospacedDigit()
+                    VStack(alignment: .trailing, spacing: Space.xxs) {
+                        Text(m.label).font(.note).foregroundStyle(m.color)
+                        Text("\(number(m.value(s))) g").font(.cardTitle).monospacedDigit()
                     }
                     .frame(minWidth: 62, alignment: .trailing)
                 }
             }
             Text("Based on an expenditure of \(p.energy.format(t.expenditure)) since \(relative(t.fromDay)).")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.note).foregroundStyle(.secondary)
         }
-        .padding(16).modifier(CardSurface())
+        .padding(Space.l).modifier(CardSurface())
     }
 
     private func segment(_ c: Color, _ h: Double) -> some View {
-        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(c).frame(width: 22, height: max(0, h))
+        RoundedRectangle(cornerRadius: Radius.xs, style: .continuous).fill(c).frame(width: 22, height: max(0, h))
     }
 
     // MARK: MacroFactor's Strategy top: the countdown, then the program and goal
@@ -269,33 +269,33 @@ struct StrategyView: View {
             while Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: d)) != g.checkInWeekday { d = addDays(d, 1); days += 1 }
         }
         let progress = due ? 1 : Double(7 - days) / 7
-        return VStack(spacing: 18) {
+        return VStack(spacing: Space.l) {
             ZStack {
                 Circle().stroke(Color.raisedBackground, lineWidth: 10)
                 Circle().trim(from: 0, to: progress).stroke(palette.good, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Circle().inset(by: 22).stroke(Color.primary.opacity(0.85), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                VStack(spacing: 2) {
+                VStack(spacing: Space.xxs) {
                     Text(due ? "TODAY" : "\(days) DAY\(days == 1 ? "" : "S")").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).monospacedDigit()
-                    Text(due ? "check-in ready" : "until check-in").font(.subheadline).foregroundStyle(.secondary)
+                    Text(due ? "check-in ready" : "until check-in").font(.secondaryText).foregroundStyle(.secondary)
                 }
             }
             .frame(width: 230, height: 230)
             .animation(Motion.snappy, value: progress)
-            HStack(spacing: 28) {
-                Button { editingGoalFlow = true } label: { Label("Goal", systemImage: "target").font(.headline) }
+            HStack(spacing: Space.xxl) {
+                Button { editingGoalFlow = true } label: { Label("Goal", systemImage: "target").font(.cardTitle) }
                 Button { checkingIn = true } label: {
-                    Label(due ? "Check in now" : "Check-in", systemImage: "calendar.badge.checkmark").font(.headline)
+                    Label(due ? "Check in now" : "Check-in", systemImage: "calendar.badge.checkmark").font(.cardTitle)
                 }
             }
             .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, Space.s)
     }
 
     private func programButtons(_ g: Program) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Space.m) {
             pill("arrow.clockwise", "New Program") { editing = true }
             pill("pencil", "Edit Program") {
                 if g.mode == "manual" { manual = true } else if g.mode == "collaborative" { collaborative = true } else { editing = true }
@@ -305,8 +305,8 @@ struct StrategyView: View {
 
     private func pill(_ icon: String, _ title: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: icon).font(.subheadline.weight(.semibold)).lineLimit(1)
-                .padding(.horizontal, 16).padding(.vertical, 11).modifier(GlassCapsule())
+            Label(title, systemImage: icon).font(.secondaryEmphasis).lineLimit(1)
+                .padding(.horizontal, Space.l).padding(.vertical, Space.m).modifier(GlassCapsule())
         }
         .buttonStyle(.plain)
     }
@@ -315,11 +315,11 @@ struct StrategyView: View {
     private func goalCard(_ p: Profile, _ g: Program) -> some View {
         let trend = trendSeries(weighIns.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey()).last?.trend ?? g.startWeightKg
         let weekly = weeklyChangeKg(goal: g.goalValue, ratePercent: g.ratePercent, weightKg: trend)
-        return VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(g.goalValue == .lose ? "Weight Loss Goal" : g.goalValue == .gain ? "Weight Gain Goal" : "Maintenance Goal").font(.title3.weight(.semibold))
+        return VStack(alignment: .leading, spacing: Space.l) {
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                Text(g.goalValue == .lose ? "Weight Loss Goal" : g.goalValue == .gain ? "Weight Gain Goal" : "Maintenance Goal").font(.subsectionTitle)
                 Text("\(date(fromKey: g.startDay).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale))) – Now")
-                    .font(.subheadline).foregroundStyle(.secondary)
+                    .font(.secondaryText).foregroundStyle(.secondary)
             }
             HStack(alignment: .top) {
                 goalStat(p.goalWeightKg.map { number(p.weight.fromKg($0), digits: 1) } ?? "–", p.weight.rawValue, "Goal Weight")
@@ -327,29 +327,29 @@ struct StrategyView: View {
                 goalStat((g.goalValue == .lose ? "−" : g.goalValue == .gain ? "+" : "") + number(g.ratePercent, digits: 2), "%", "Goal Rate")
             }
             if let gw = p.goalWeightKg, let proj = projection(p, gw) {
-                Text(proj).font(.caption).foregroundStyle(palette.good)
+                Text(proj).font(.note).foregroundStyle(palette.good)
             }
             Divider()
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     pill("plus", "New Goal") { editing = true }
                     pill("pencil", "Edit Goal") { editingGoalFlow = true }
                     pill("flag.2.crossed", "Phase Plan") { planning = true }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Space.l)
             }
             .padding(.horizontal, -16)          // scrolls to the card's edge instead of being cut at its padding
         }
-        .padding(16).modifier(CardSurface())
+        .padding(Space.l).modifier(CardSurface())
     }
 
     private func goalStat(_ value: String, _ unit: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(value).font(.number(26, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                Text(unit).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.xxs) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                Text(value).font(.numberLarge).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                Text(unit).font(.note).foregroundStyle(.secondary)
             }
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -360,46 +360,46 @@ struct StrategyView: View {
                                uniquingKeysWith: { a, _ in a })
         func kg(_ day: String) -> Double? { trend[day] ?? trend.filter { $0.key <= day }.max { $0.key < $1.key }?.value }
         let list = Array(allPrograms.prefix(20))
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Goal History").font(.title2.bold()).padding(.top, 4)
+        return VStack(alignment: .leading, spacing: Space.m) {
+            Text("Goal History").font(.sectionTitle).padding(.top, Space.xs)
             ForEach(Array(list.enumerated()), id: \.element.id) { i, prog in
                 let end = i == 0 ? nil : list[i - 1].startDay
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Space.xs) {
                         Text("\(date(fromKey: prog.startDay).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale))) – \(end.map { date(fromKey: $0).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)) } ?? "Now")")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(p.weight.format(kg(prog.startDay) ?? prog.startWeightKg)).font(.title3.weight(.semibold)).monospacedDigit()
+                            .font(.secondaryText).foregroundStyle(.secondary)
+                        HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                            Text(p.weight.format(kg(prog.startDay) ?? prog.startWeightKg)).font(.subsectionTitle).monospacedDigit()
                             if let e = end, let w = kg(e) {
-                                Text("to").font(.caption).foregroundStyle(.secondary)
-                                Text(p.weight.format(w)).font(.title3.weight(.semibold)).monospacedDigit()
+                                Text("to").font(.note).foregroundStyle(.secondary)
+                                Text(p.weight.format(w)).font(.subsectionTitle).monospacedDigit()
                             }
                         }
                     }
                     Spacer()
-                    Text(prog.goalValue.label).font(.subheadline).foregroundStyle(.secondary)
+                    Text(prog.goalValue.label).font(.secondaryText).foregroundStyle(.secondary)
                     Image(systemName: prog.isActive ? "hourglass" : "checkmark.circle.fill").foregroundStyle(prog.isActive ? Color.primary : palette.good)
                 }
-                .padding(16).modifier(CardSurface())
+                .padding(Space.l).modifier(CardSurface())
             }
         }
     }
 
     private func checkInCard(_ g: Program) -> some View {
         let due = ctx.dueCheckIn != nil
-        return HStack(spacing: 14) {
-            Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(due ? palette.onAccent : palette.accent)
-                .frame(width: 50, height: 50).background(due ? palette.accent : palette.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 14))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(due ? "Check-in ready" : "Weekly check-in").font(.headline)
-                Text(due ? "Update your targets" : "Next: \(nextCheckIn(g))").font(.callout).foregroundStyle(.secondary)
+        return HStack(spacing: Space.l) {
+            Image(systemName: "calendar.badge.checkmark").font(.sectionTitle).foregroundStyle(due ? palette.onAccent : palette.accent)
+                .frame(width: 50, height: 50).background(due ? palette.accent : palette.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: Radius.m))
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                Text(due ? "Check-in ready" : "Weekly check-in").font(.cardTitle)
+                Text(due ? "Update your targets" : "Next: \(nextCheckIn(g))").font(.secondaryText).foregroundStyle(.secondary)
             }
             Spacer()
             Button(due ? "Check in" : "Early") { checkingIn = true }
                 .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(due ? palette.accent : Color.raisedBackground)
                 .foregroundStyle(due ? palette.onAccent : .primary)
         }
-        .padding(16).modifier(CardSurface())
+        .padding(Space.l).modifier(CardSurface())
     }
 
     // MARK: Settings rows
@@ -482,16 +482,16 @@ struct StrategyView: View {
     }
 
     private func rowContent(_ icon: String, _ c: Color, _ title: String, _ value: String, last: Bool) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon).font(.title3).foregroundStyle(.primary).frame(width: 32)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body)
-                Text(value).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        HStack(spacing: Space.l) {
+            Image(systemName: icon).font(.subsectionTitle).foregroundStyle(.primary).frame(width: 32)
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                Text(title).font(.bodyText)
+                Text(value).font(.note).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+            Image(systemName: "chevron.right").font(.secondaryEmphasis).foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { if !last { Divider().padding(.leading, 60) } }
     }

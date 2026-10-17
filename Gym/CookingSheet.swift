@@ -34,7 +34,7 @@ struct CookingSheet: View {
                 HStack { Text("Raw weight"); Spacer(); TextField("g", text: $raw).multilineTextAlignment(.trailing).frame(width: 90); Text("g").foregroundStyle(.secondary) }
                 HStack { Text("Cooked weight"); Spacer(); TextField("g", text: $cooked).multilineTextAlignment(.trailing).frame(width: 90); Text("g").foregroundStyle(.secondary) }
                 if let b = batch {
-                    Text("Cooked weighs \(number(b, digits: 2))× raw. 100 g cooked = \(number(100 / b)) g raw.").font(.callout).monospacedDigit()
+                    Text("Cooked weighs \(number(b, digits: 2))× raw. 100 g cooked = \(number(100 / b)) g raw.").font(.secondaryText).monospacedDigit()
                 }
             } header: { Text("Weigh a batch") } footer: {
                 if let g = Cooking.guessRatio(food.name), food.source != "recipe" {

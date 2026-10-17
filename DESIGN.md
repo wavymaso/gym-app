@@ -26,15 +26,35 @@ becomes a 0.15 s fade and nothing travels or scales. Time-based progress (the re
 Never on scrolling or on a tap that didn't change anything.
 
 ## Type
-Text: `.screenTitle` (custom page titles keep `pageTitle`), `.sectionTitle`, `.cardTitle`, `.bodyText`,
-`.secondaryText`, `.label`, `.fine`.
+Text roles, largest first (all scale with Dynamic Type):
+
+| Role | Base | Use |
+|---|---|---|
+| `.screenTitle` | largeTitle bold | a page's large title, sentence case ("Food log"); collapses inline on scroll |
+| `.sectionTitle` | title2 bold | a group of cards on a page |
+| `.subsectionTitle` | title3 semibold | a heading inside a page or sheet |
+| `.cardTitle` | headline | a card's or row's title |
+| `.bodyText` / `.bodyEmphasis` | body / semibold | running text / a row's main text |
+| `.secondaryText` / `.secondaryEmphasis` | subheadline / semibold | details / buttons and values in cards |
+| `.note` / `.label` | caption / semibold | small print / small labels and chips |
+| `.fine` / `.fineLabel` | caption2 / semibold | axis labels and footnotes / the smallest labels |
+| `.sectionLabel` | caption semibold | UPPERCASE tracked section labels, only via `.sectionLabelStyle()` |
+
+No raw `.font(.title…)`, `.font(.caption…)`, `.system(size:)` or `.number(size)` outside Design.swift
+and Tokens.swift: `tools/lint-design.sh` (part of `tools/check.sh`) fails on new ones. Justified exceptions
+(drawn art at a fixed size, numbers inside a fixed-size ring) go in `tools/design-allowlist.txt` with a
+reason.
 Numbers (rounded, scale with Dynamic Type): `.numberHero`, `.numberLarge`, `.numberMedium`, `.numberSmall`.
 Any number that changes gets `.liveNumber(value)`: tabular digits that roll to the new value.
 Units sit next to values in the same size, lighter: `.unitStyle()`.
 
 ## Spacing (4/8 pt grid) and corners
-`Space.xxs 2 · xs 4 · s 8 · m 12 · l 16 · xl 24 · xxl 32`
-`Radius.s 8 (chips) · m 12 (buttons, inputs, tiles) · l 18 (cards, rows) · xl 24 (big cards)`
+`Space.hairline 1 · xxs 2 · xs 4 · s 8 · m 12 · l 16 · xl 24 · xxl 32 · xxxl 48`; `Space.tabBarClearance`
+under the last item of a phone scroll view.
+`Radius.xs 4 (bars, tracks) · s 8 (chips) · m 12 (buttons, inputs, tiles) · l 18 (cards, rows) · xl 24 (big cards)`.
+Nested shapes are concentric: `Radius.inner(outer, inset: padding)`.
+Only tokens for padding, stack spacing and corner radii (0 is fine). Negative paddings and alignment
+offsets (a column lined up with the time column) are allowlisted.
 
 ## Colour
 Only from `palette` (accent, calories, protein, fat, carbs, good, warn, background, card, raised).

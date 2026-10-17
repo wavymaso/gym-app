@@ -31,7 +31,7 @@ struct ActiveWorkoutView: View {
         let unit = profiles.first?.weight ?? .kg
         let groups = Dictionary(grouping: sets, by: \.exerciseOrder).sorted { $0.key < $1.key }
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 header
                 ForEach(groups, id: \.key) { order, rows in
                     if let ex = ctx.exercise(rows[0].exerciseKey) {
@@ -42,7 +42,7 @@ struct ActiveWorkoutView: View {
                     }
                 }
                 Button { picking = true } label: {
-                    Label("Add exercise", systemImage: "plus").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 14)
+                    Label("Add exercise", systemImage: "plus").font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.l)
                         .background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                         .foregroundStyle(palette.accent)
                 }
@@ -63,7 +63,7 @@ struct ActiveWorkoutView: View {
                 }
             if let restEnds {
                 RestBar(ends: restEnds, total: restTotal) { e in animate(Motion.snappy) { self.restEnds = e } }
-                    .padding(.horizontal, pagePadding).padding(.bottom, 8)
+                    .padding(.horizontal, pagePadding).padding(.bottom, Space.s)
                     .frame(maxWidth: 860)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -82,7 +82,7 @@ struct ActiveWorkoutView: View {
     private var header: some View {
         let unit = profiles.first?.weight ?? .kg
         let done = sets.filter(\.done)
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             HStack(alignment: .center) {
                 TextField("Workout name", text: Binding(get: { workout.name }, set: { workout.name = $0; ctx.commit() }))
                     .font(.number(isPhone ? 26 : 30)).textFieldStyle(.plain)
@@ -90,11 +90,11 @@ struct ActiveWorkoutView: View {
                 Menu {
                     Button("Discard workout…", role: .destructive) { confirmDiscard = true }
                 } label: {
-                    Image(systemName: "ellipsis").font(.body.weight(.bold)).frame(width: 34, height: 34)
+                    Image(systemName: "ellipsis").font(.bodyEmphasis).frame(width: 34, height: 34)
                         .background(Color.raisedBackground, in: Circle())
                 }
                 .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-                Button { ctx.finish(workout) } label: { Text("Finish").font(.headline).padding(.horizontal, 6) }
+                Button { ctx.finish(workout) } label: { Text("Finish").font(.cardTitle).padding(.horizontal, Space.s) }
                     .buttonStyle(.borderedProminent).tint(palette.accent).foregroundStyle(palette.onAccent).controlSize(.large)
                     .disabled(done.isEmpty)
             }
@@ -110,14 +110,14 @@ struct ActiveWorkoutView: View {
                 stat("\(records.values.filter { !$0.isEmpty }.count)", "PRs", color: Macro.protein.color)
             }
         }
-        .padding(16)
-        .modifier(CardSurface(cornerRadius: 20))
+        .padding(Space.l)
+        .modifier(CardSurface(cornerRadius: Radius.l))
     }
 
     private func stat(_ value: String, _ label: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.number(20)).monospacedDigit().foregroundStyle(color)
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.xxs) {
+            Text(value).font(.numberMedium).monospacedDigit().foregroundStyle(color)
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
     }
 
@@ -183,18 +183,18 @@ private struct ExerciseBlock: View {
 
     var body: some View {
         let previous = ctx.previousSets(of: exercise.key, before: workoutKey).filter { $0.kindValue.counts }
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Text(String(exercise.name.prefix(1))).font(.headline).foregroundStyle(palette.accent)
-                    .frame(width: 34, height: 34).background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.name).font(.headline)
-                    Text("\(exercise.muscleValue.label) · \(rows.filter(\.done).count)/\(rows.count) sets").font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.m) {
+                Text(String(exercise.name.prefix(1))).font(.cardTitle).foregroundStyle(palette.accent)
+                    .frame(width: 34, height: 34).background(palette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Radius.m))
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(exercise.name).font(.cardTitle)
+                    Text("\(exercise.muscleValue.label) · \(rows.filter(\.done).count)/\(rows.count) sets").font(.note).foregroundStyle(.secondary)
                 }
                 Spacer()
                 if exercise.equipmentValue == .barbell {
                     Button { plates = true } label: {
-                        Label("Plates", systemImage: "line.3.horizontal.decrease").font(.caption.weight(.semibold))
+                        Label("Plates", systemImage: "line.3.horizontal.decrease").font(.label)
                             .labelStyle(isPhone ? AnyLabelStyle(.iconOnly) : AnyLabelStyle(.titleAndIcon))
                     }
                         .buttonStyle(.bordered).controlSize(.small).help("Plates to load")
@@ -234,7 +234,7 @@ private struct ExerciseBlock: View {
             }
             if rows[0].group > 0 {
                 Label("Superset \(String(UnicodeScalar(64 + min(rows[0].group, 26))!)) · rest after the last exercise", systemImage: "link")
-                    .font(.caption.weight(.bold)).foregroundStyle(supersetColor)
+                    .font(.label).foregroundStyle(supersetColor)
             }
             TextField("Note",
                       text: Binding(get: { workout.notesByExercise[exercise.key] ?? "" },
@@ -242,16 +242,16 @@ private struct ExerciseBlock: View {
                       prompt: Text(ctx.lastNote(for: exercise.key, before: workoutKey).map { "Last time: \($0)" } ?? "Note (seat height, grip, how it felt…)")
                         .foregroundStyle(.secondary),
                       axis: .vertical)
-                .font(.callout).lineLimit(1...3).textFieldStyle(.plain)
-                .padding(.horizontal, 10).padding(.vertical, 7)
+                .font(.secondaryText).lineLimit(1...3).textFieldStyle(.plain)
+                .padding(.horizontal, Space.m).padding(.vertical, Space.s)
                 .background(Color.raisedBackground.opacity(0.6), in: RoundedRectangle(cornerRadius: Radius.s))
                 .onSubmit { ctx.commit() }
             if let t = target, !rows.contains(where: \.done) {
                 Label {
                     Text("\(t.kg > 0 ? "\(trimmed(unit.fromKg(t.kg))) \(unit.rawValue) × " : "")\(repsText(t.reps)) · \(t.reason)")
                 } icon: { Image(systemName: "arrow.up.right.circle.fill") }
-                .font(.caption.weight(.semibold)).foregroundStyle(palette.good)
-                .padding(.horizontal, 10).padding(.vertical, 6)
+                .font(.label).foregroundStyle(palette.good)
+                .padding(.horizontal, Space.m).padding(.vertical, Space.s)
                 .background(palette.good.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.s))
             }
             Grid(alignment: .leading, horizontalSpacing: isPhone ? 10 : 14, verticalSpacing: 8) {
@@ -260,7 +260,7 @@ private struct ExerciseBlock: View {
                     Text("RIR").frame(width: isPhone ? 34 : 44)
                     Text("")
                 }
-                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                .font(.label).foregroundStyle(.secondary)
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     let working = rows.prefix(i + 1).filter { $0.kindValue.counts }.count
                     GridRow {
@@ -291,24 +291,24 @@ private struct ExerciseBlock: View {
                                 Button("–") { row.rir = nil; ctx.commit() }
                                 ForEach([0, 1, 2, 3, 4, 5], id: \.self) { v in Button("\(v)\(v == 0 ? " (failure)" : "")") { row.rir = Double(v); ctx.commit() } }
                             } label: {
-                                Text(row.rir.map { number($0) } ?? "–").font(.callout.weight(.semibold)).monospacedDigit()
-                                    .frame(width: 34, height: 34).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 9))
+                                Text(row.rir.map { number($0) } ?? "–").font(.secondaryEmphasis).monospacedDigit()
+                                    .frame(width: 34, height: 34).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                             .menuStyle(.button).buttonStyle(.plain)
                         } else {
                             DecimalField(value: Binding(get: { row.rir ?? -1 }, set: { row.rir = $0 < 0 ? nil : $0; ctx.commitSoon() }), digits: 1, emptyBelowZero: true)
                                 .frame(width: 44)
                         }
-                        HStack(spacing: 6) {
+                        HStack(spacing: Space.s) {
                             Button { animate(Motion.snappy) { onDone(row) } } label: {
-                                Image(systemName: "checkmark").font(.callout.weight(.heavy))
+                                Image(systemName: "checkmark").font(.secondaryEmphasis)
                                     .foregroundStyle(row.done ? palette.onData : .secondary)
                                     .frame(width: 32, height: 28)
                                     .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                             .buttonStyle(.plain)
                             if let r = records[row.persistentModelID], !r.isEmpty {
-                                Label(r.joined(separator: " · "), systemImage: "trophy.fill").font(.caption).foregroundStyle(Macro.fat.color)
+                                Label(r.joined(separator: " · "), systemImage: "trophy.fill").font(.note).foregroundStyle(Macro.fat.color)
                                     .symbolEffect(.bounce, options: .repeat(2), value: r)
                                     .transition(.scale(scale: 0.4, anchor: .leading).combined(with: .opacity))
                             }
@@ -318,14 +318,14 @@ private struct ExerciseBlock: View {
                 }
             }
             Button(action: addSet) {
-                Label("Add set", systemImage: "plus").font(.callout.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 8)
-                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 10))
+                Label("Add set", systemImage: "plus").font(.secondaryEmphasis).frame(maxWidth: .infinity).padding(.vertical, Space.s)
+                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
             }
             .buttonStyle(.plain)
         }
-        .padding(16)
+        .padding(Space.l)
         .modifier(CardSurface())
-        .overlay { if rows[0].group > 0 { RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(supersetColor.opacity(0.7), lineWidth: 2) } }
+        .overlay { if rows[0].group > 0 { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).stroke(supersetColor.opacity(0.7), lineWidth: 2) } }
     }
 
     private var supersetColor: Color { [Macro.fat.color, Macro.carbs.color, Color.extraTone, Macro.protein.color][(max(rows[0].group, 1) - 1) % 4] }

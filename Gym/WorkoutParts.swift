@@ -22,9 +22,9 @@ struct DecimalField: View {
             #if os(iOS)
             .keyboardType(.decimalPad)
             .textFieldStyle(.plain)
-            .padding(.horizontal, 8).frame(height: 34)
-            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(focused ? palette.accent : .clear, lineWidth: 1.5))
+            .padding(.horizontal, Space.s).frame(height: 34)
+            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.s, style: .continuous).stroke(focused ? palette.accent : .clear, lineWidth: 1.5))
             #endif
             .onAppear(perform: load)
             .onChange(of: value) { _, _ in if !focused { load() } }
@@ -80,27 +80,27 @@ struct RestBar: View {
         TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
             let left = max(0, Int(ends.timeIntervalSince(ctx.date).rounded(.up)))
             let color = left > 0 ? palette.accent : palette.good
-            HStack(spacing: 14) {
+            HStack(spacing: Space.l) {
                 ZStack {
                     Circle().stroke(color.opacity(0.2), lineWidth: 5)
                     Circle().trim(from: 0, to: total > 0 ? Double(left) / Double(total) : 0)
                         .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 0.5), value: left)
-                    Image(systemName: left > 0 ? "timer" : "checkmark").font(.callout.weight(.bold)).foregroundStyle(color)
+                    Image(systemName: left > 0 ? "timer" : "checkmark").font(.secondaryEmphasis).foregroundStyle(color)
                 }
                 .frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(left > 0 ? clock(left) : "Go!").font(.number(24)).liveNumber(Double(left))
-                    Text(left > 0 ? "Rest" : "Rest over, next set").font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: Space.hairline) {
+                    Text(left > 0 ? clock(left) : "Go!").font(.numberLarge).liveNumber(Double(left))
+                    Text(left > 0 ? "Rest" : "Rest over, next set").font(.note).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("−15") { change(ends.addingTimeInterval(-15)) }.buttonStyle(.bordered)
                 Button("+15") { change(ends.addingTimeInterval(15)) }.buttonStyle(.bordered)
                 Button { change(nil) } label: { Image(systemName: "xmark") }.buttonStyle(.bordered)
             }
-            .padding(12)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(color.opacity(0.5), lineWidth: 1.5))
+            .padding(Space.m)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous).stroke(color.opacity(0.5), lineWidth: 1.5))
             .floatShadow()
             .onChange(of: left == 0) { _, over in if over && !rang { rang = true; ring() } }
         }
@@ -136,7 +136,7 @@ struct ExercisePicker: View {
                                     HStack {
                                         Text(e.name)
                                         Spacer()
-                                        Text(e.equipmentValue.label).font(.caption).foregroundStyle(.secondary)
+                                        Text(e.equipmentValue.label).font(.note).foregroundStyle(.secondary)
                                     }
                                     .contentShape(Rectangle())
                                 }
@@ -215,48 +215,48 @@ struct PlateCalculator: View {
 
     var body: some View {
         let side = Self.perSide(total: kg, bar: bar, plates: have)
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.l) {
             HStack(alignment: .firstTextBaseline) {
-                Text("\(trimmed(unit.fromKg(kg))) \(unit.rawValue)").font(.number(26))
+                Text("\(trimmed(unit.fromKg(kg))) \(unit.rawValue)").font(.numberLarge)
                 Text("on a \(trimmed(bar)) kg bar").foregroundStyle(.secondary)
             }
             if side.plates.isEmpty {
                 Text(kg <= bar ? "Just the bar." : "Can't make this exactly.").foregroundStyle(.secondary)
             } else {
-                HStack(alignment: .center, spacing: 3) {
+                HStack(alignment: .center, spacing: Space.xs) {
                     Rectangle().fill(.secondary).frame(width: 30, height: 8)
                     ForEach(Array(side.plates.enumerated()), id: \.offset) { _, p in
-                        RoundedRectangle(cornerRadius: 3).fill(color(p))
+                        RoundedRectangle(cornerRadius: Radius.xs).fill(color(p))
                             .frame(width: p >= 10 ? 14 : 10, height: 34 + p * 2.6)
                             .overlay { Text(trimmed(p)).font(.system(size: 8, weight: .bold)).rotationEffect(.degrees(-90)).foregroundStyle(Tokens.onScrim).fixedSize() }
                     }
                 }
                 .frame(height: 104)
-                Text("Each side: " + side.plates.map { trimmed($0) }.joined(separator: " + ") + " kg").font(.callout.weight(.semibold))
-                if side.left > 0.01 { Text("\(trimmed(side.left * 2)) kg short of the target").font(.caption).foregroundStyle(palette.warn) }
+                Text("Each side: " + side.plates.map { trimmed($0) }.joined(separator: " + ") + " kg").font(.secondaryEmphasis)
+                if side.left > 0.01 { Text("\(trimmed(side.left * 2)) kg short of the target").font(.note).foregroundStyle(palette.warn) }
             }
             Picker("Bar", selection: $bar) {
                 Text("20 kg bar").tag(20.0); Text("15 kg bar").tag(15.0); Text("10 kg bar").tag(10.0)
             }
             .pickerStyle(.segmented).labelsHidden()
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Plates at your gym").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                HStack(spacing: 5) {
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text("Plates at your gym").font(.label).foregroundStyle(.secondary)
+                HStack(spacing: Space.xs) {
                     ForEach(Self.plates, id: \.self) { p in
                         let on = have.contains(p)
                         Button(trimmed(p)) {
                             var set = Set(have); if on { set.remove(p) } else { set.insert(p) }
                             available = set.sorted(by: >).map { trimmed($0).replacingOccurrences(of: ",", with: ".") }.joined(separator: ",")
                         }
-                        .font(.caption2.weight(.bold)).buttonStyle(.plain)
-                        .frame(minWidth: 24).padding(.vertical, 5)
-                        .background(on ? palette.accentFill : AnyShapeStyle(Color.raisedBackground), in: RoundedRectangle(cornerRadius: 6))
+                        .font(.fineLabel).buttonStyle(.plain)
+                        .frame(minWidth: 24).padding(.vertical, Space.xs)
+                        .background(on ? palette.accentFill : AnyShapeStyle(Color.raisedBackground), in: RoundedRectangle(cornerRadius: Radius.s))
                         .foregroundStyle(on ? palette.onAccent : .secondary)
                     }
                 }
             }
         }
-        .padding(18)
+        .padding(Space.l)
         .frame(width: 340)
         .presentationCompactAdaptation(.popover)
     }

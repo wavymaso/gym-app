@@ -105,7 +105,7 @@ struct RemindersSection: View {
             Toggle("Meals you usually log", isOn: $meals)
             Toggle("Weekly check-in", isOn: $checkIn)
             if denied {
-                Text("Notifications are off for Gym. Turn them on in System Settings → Notifications.").font(.callout).foregroundStyle(palette.warn)
+                Text("Notifications are off for Gym. Turn them on in System Settings → Notifications.").font(.secondaryText).foregroundStyle(palette.warn)
             }
         } header: {
             Text("Reminders on this \(isPhone ? "iPhone" : "Mac")")

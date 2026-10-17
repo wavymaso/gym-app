@@ -83,7 +83,7 @@ struct InsightDetailView: View {
         let all = series(unit, energy)
         let shown = clip(all)
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 if kind == .nutrition {
                     Picker("", selection: $macro) { ForEach(Macro.allCases, id: \.self) { Text($0.label).tag($0) } }
                         .pickerStyle(.segmented).labelsHidden()
@@ -102,7 +102,7 @@ struct InsightDetailView: View {
                 if kind != .goal { controls }
                 if let w = window, kind != .goal { windowStrip(w, all) }
                 legend
-                Text("Insights & Data").font(.title2.bold()).padding(.top, 6)
+                Text("Insights & Data").font(.sectionTitle).padding(.top, Space.s)
                 if [.weightTrend, .expenditure, .scaleWeight].contains(kind) { changes(all, unit, energy) }
                 explainers(all, unit, energy)
                 dataSources
@@ -110,11 +110,11 @@ struct InsightDetailView: View {
                 if kind == .weightTrend {
                     NavigationLink { InsightDetailView(kind: .scaleWeight) } label: {
                         HStack {
-                            Label("Scale weight & all weigh-ins", systemImage: "scalemass").font(.headline)
+                            Label("Scale weight & all weigh-ins", systemImage: "scalemass").font(.cardTitle)
                             Spacer()
                             Image(systemName: "chevron.right").foregroundStyle(.tertiary)
                         }
-                        .padding(16).modifier(CardSurface())
+                        .padding(Space.l).modifier(CardSurface())
                     }
                     .buttonStyle(.plain)
                 }
@@ -227,23 +227,23 @@ struct InsightDetailView: View {
             if kind != .energyBalance && kind != .goal && kind != .nutrition {
                 Button { animate(Motion.snappy) { zoomed.toggle() } } label: {
                     Image(systemName: zoomed ? "arrow.up.and.down.text.horizontal" : "arrow.down.and.line.horizontal.and.arrow.up")
-                        .font(.headline).frame(width: 46, height: 46).modifier(GlassCapsule())
+                        .font(.cardTitle).frame(width: 46, height: 46).modifier(GlassCapsule())
                 }
                 .buttonStyle(.plain)
             }
         }
         if let f = pts.first, let l = pts.last {
             Text("\(date(fromKey: f.day).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale))) – \(l.day == dayKey() ? "Today" : date(fromKey: l.day).formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)))")
-                .font(.subheadline).foregroundStyle(.secondary).padding(.top, -12)
+                .font(.secondaryText).foregroundStyle(.secondary).padding(.top, -12)
         }
     }
 
     private func stat(_ label: String, _ value: String, _ unit: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.subheadline).foregroundStyle(.secondary)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(value).font(.number(34, weight: .semibold)).monospacedDigit().contentTransition(.numericText()).animation(Motion.pick(Motion.snappy), value: value)
-                Text(unit).font(.callout).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.xxs) {
+            Text(label).font(.secondaryText).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                Text(value).font(.numberHero).monospacedDigit().contentTransition(.numericText()).animation(Motion.pick(Motion.snappy), value: value)
+                Text(unit).font(.secondaryText).foregroundStyle(.secondary)
             }
         }
         .frame(minWidth: 150, alignment: .leading)
@@ -334,14 +334,14 @@ struct InsightDetailView: View {
                        let x = proxy.position(forX: p.when), let frame = proxy.plotFrame {
                         let px = geo[frame].origin.x + x
                         Rectangle().fill(Color.secondary.opacity(0.6)).frame(width: 1).position(x: px, y: geo[frame].midY).frame(height: geo[frame].height)
-                        VStack(spacing: 3) {
-                            Text(grouping == .day ? "Daily Total" : grouping == .week ? "Week Average" : "Month Average").font(.subheadline.weight(.semibold))
-                            Text(p.when.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year().locale(appLocale))).font(.caption)
+                        VStack(spacing: Space.xs) {
+                            Text(grouping == .day ? "Daily Total" : grouping == .week ? "Week Average" : "Month Average").font(.secondaryEmphasis)
+                            Text(p.when.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year().locale(appLocale))).font(.note)
                             Divider()
                             Text("\(kind == .nutrition ? macro.label : kind.title): \(number(p.value, digits: isEnergy || kind == .nutrition ? 0 : 1)) \(isEnergy ? energy.rawValue : kind == .nutrition ? "g" : unit.rawValue)")
-                                .font(.caption.weight(.semibold)).monospacedDigit()
+                                .font(.label).monospacedDigit()
                         }
-                        .padding(10).foregroundStyle(palette.onInverse)
+                        .padding(Space.m).foregroundStyle(palette.onInverse)
                         .background(palette.inverseFill.opacity(0.96), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                         .fixedSize()
                         .position(x: min(max(px, 90), geo.size.width - 90), y: geo[frame].minY + 40)
@@ -423,14 +423,14 @@ struct InsightDetailView: View {
         return HStack(spacing: Space.s) {
             Button { slide(-max(span / 2, 1), all) } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }
                 .disabled(w.from <= (all.first?.day ?? w.from))
-            VStack(spacing: 1) {
-                Text("\(fmt(w.from)) – \(fmt(w.to))").font(.subheadline.weight(.semibold)).monospacedDigit()
-                Text("\(span) days · pinch to zoom").font(.caption).foregroundStyle(.secondary)
+            VStack(spacing: Space.hairline) {
+                Text("\(fmt(w.from)) – \(fmt(w.to))").font(.secondaryEmphasis).monospacedDigit()
+                Text("\(span) days · pinch to zoom").font(.note).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
             Button { slide(max(span / 2, 1), all) } label: { Image(systemName: "chevron.right").frame(width: 36, height: 36) }
                 .disabled(w.to >= (all.last?.day ?? w.to))
-            Button { animate(Motion.snappy) { window = nil } } label: { Image(systemName: "xmark").font(.caption.weight(.bold)).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle()) }
+            Button { animate(Motion.snappy) { window = nil } } label: { Image(systemName: "xmark").font(.label).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle()) }
                 .accessibilityLabel("Back to the preset ranges")
         }
         .buttonStyle(.plain)
@@ -450,31 +450,31 @@ struct InsightDetailView: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 2) {
+        HStack(spacing: Space.m) {
+            HStack(spacing: Space.xxs) {
                 ForEach(DetailRange.allCases) { r in
                     let on = range == r && window == nil
                     Button { animate(Motion.snappy) { range = r; window = nil } } label: {
-                        Text(r.rawValue).font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 40)
+                        Text(r.rawValue).font(.secondaryEmphasis).frame(maxWidth: .infinity, minHeight: 40)
                             .background(on ? Color.primary : .clear, in: Capsule())
                             .foregroundStyle(on ? palette.onInverse : Color.primary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(3).modifier(GlassCapsule())
+            .padding(Space.xs).modifier(GlassCapsule())
             Menu {
                 ForEach(InsightGrouping.allCases) { g in Button(g.label) { grouping = g } }
             } label: {
-                HStack(spacing: 6) { Text(grouping.rawValue).font(.subheadline.weight(.semibold)); Image(systemName: "chevron.down").font(.caption.weight(.bold)) }
-                    .padding(.horizontal, 16).frame(height: 46).modifier(GlassCapsule())
+                HStack(spacing: Space.s) { Text(grouping.rawValue).font(.secondaryEmphasis); Image(systemName: "chevron.down").font(.label) }
+                    .padding(.horizontal, Space.l).frame(height: 46).modifier(GlassCapsule())
             }
             .menuStyle(.button).buttonStyle(.plain)
         }
     }
 
     private var legend: some View {
-        HStack(spacing: 22) {
+        HStack(spacing: Space.xl) {
             switch kind {
             case .weightTrend:
                 legendItem("Scale weight", color.opacity(0.55), dot: true)
@@ -495,14 +495,14 @@ struct InsightDetailView: View {
                 legendItem("Surplus", palette.warn, square: true)
             }
         }
-        .font(.subheadline)
-        .frame(maxWidth: .infinity).padding(.vertical, 16)
-        .modifier(CardSurface(cornerRadius: 16))
+        .font(.secondaryText)
+        .frame(maxWidth: .infinity).padding(.vertical, Space.l)
+        .modifier(CardSurface(cornerRadius: Radius.l))
     }
 
     private func legendItem(_ t: String, _ c: Color, line: Bool = false, dot: Bool = false, square: Bool = false) -> some View {
-        HStack(spacing: 7) {
-            if square { RoundedRectangle(cornerRadius: 3).fill(c).frame(width: 13, height: 13) }
+        HStack(spacing: Space.s) {
+            if square { RoundedRectangle(cornerRadius: Radius.xs).fill(c).frame(width: 13, height: 13) }
             else if dot { ZStack { Capsule().fill(c).frame(width: 22, height: 3); Circle().stroke(c, lineWidth: 2).background(Circle().fill(Color.cardBackground)).frame(width: 10, height: 10) } }
             else { Capsule().fill(c).frame(width: 22, height: 3) }
             Text(t)
@@ -513,13 +513,13 @@ struct InsightDetailView: View {
 
     private func changes(_ all: [Point], _ unit: WeightUnit, _ energy: EnergyUnit) -> some View {
         let u = kind == .expenditure ? energy.rawValue : unit.rawValue
-        return VStack(alignment: .leading, spacing: 14) {
-            Text(kind == .expenditure ? "Expenditure Changes" : "Weight Changes").font(.title3.weight(.semibold))
+        return VStack(alignment: .leading, spacing: Space.l) {
+            Text(kind == .expenditure ? "Expenditure Changes" : "Weight Changes").font(.subsectionTitle)
             ForEach([3, 7, 14, 30, 90], id: \.self) { n in
                 let from = addDays(dayKey(), -n)
                 let slice = all.filter { $0.day >= from }
                 let change = (slice.last?.value ?? 0) - (slice.first?.value ?? 0)
-                HStack(spacing: 12) {
+                HStack(spacing: Space.m) {
                     Text("\(n)-day").foregroundStyle(.secondary).frame(width: 64, alignment: .leading)
                     MiniArea(values: slice.map(\.value), color: color).frame(width: 78, height: 30)
                     Text("\(change >= 0 ? "" : "−")\(number(abs(change), digits: kind == .expenditure ? 0 : 1)) \(u)").monospacedDigit()
@@ -529,16 +529,16 @@ struct InsightDetailView: View {
                           systemImage: abs(change) < (kind == .expenditure ? 5 : 0.05) ? "arrow.right" : change > 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
                         .foregroundStyle(.secondary).labelStyle(TintIconLabel(color: color))
                 }
-                .font(.callout)
+                .font(.secondaryText)
             }
         }
-        .padding(16).modifier(CardSurface())
+        .padding(Space.l).modifier(CardSurface())
     }
 
     @ViewBuilder private func explainers(_ all: [Point], _ unit: WeightUnit, _ energy: EnergyUnit) -> some View {
         let trend = trendSeries(weights.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         let weekly = weeklyTrendChange(trend, days: 21)
-        VStack(spacing: 14) {
+        VStack(spacing: Space.l) {
             switch kind {
             case .weightTrend, .scaleWeight:
                 if let t = trend.last {
@@ -599,20 +599,20 @@ struct InsightDetailView: View {
                 }
             }
         }
-        .padding(16).modifier(CardSurface())
+        .padding(Space.l).modifier(CardSurface())
     }
 
     private func explainer(_ value: String, _ unit: String, _ title: String, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(spacing: 4) {
-                Text(value).font(.number(26, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                if !unit.isEmpty { Text(unit).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center) }
+        HStack(alignment: .top, spacing: Space.l) {
+            VStack(spacing: Space.xs) {
+                Text(value).font(.numberLarge).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                if !unit.isEmpty { Text(unit).font(.note).foregroundStyle(.secondary).multilineTextAlignment(.center) }
             }
             .frame(width: 120, height: 100)
             .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.headline)
-                Text(text).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text(title).font(.cardTitle)
+                Text(text).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
@@ -621,7 +621,7 @@ struct InsightDetailView: View {
     // MARK: Data sources and the raw numbers
 
     @ViewBuilder private var dataSources: some View {
-        Text("Data Sources").font(.title2.bold()).padding(.top, 6)
+        Text("Data Sources").font(.sectionTitle).padding(.top, Space.s)
         VStack(spacing: 0) {
             if [.expenditure, .energyBalance, .nutrition].contains(kind) {
                 NavigationLink { FoodLogView() } label: { sourceRow("cylinder.split.1x2", "Nutrition", "Your food log") }.buttonStyle(.plain)
@@ -633,16 +633,16 @@ struct InsightDetailView: View {
     }
 
     private func sourceRow(_ icon: String, _ title: String, _ detail: String) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon).font(.title3).frame(width: 28)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: Space.l) {
+            Image(systemName: icon).font(.subsectionTitle).frame(width: 28)
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(title)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
+                Text(detail).font(.note).foregroundStyle(.secondary)
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+            Image(systemName: "chevron.right").font(.secondaryEmphasis).foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 16).padding(.vertical, 13).contentShape(Rectangle())
+        .padding(.horizontal, Space.l).padding(.vertical, Space.m).contentShape(Rectangle())
     }
 
     /// Every value, newest first, by month: the number, the day, and how it moved from the day before.
@@ -653,21 +653,21 @@ struct InsightDetailView: View {
         let prev = Dictionary(zip(all.dropFirst().map(\.day), all.dropLast().map(\.value)), uniquingKeysWith: { a, _ in a })
         let months = Dictionary(grouping: rows) { String($0.day.prefix(7)) }.sorted { $0.key > $1.key }
         ForEach(months, id: \.key) { _, ps in
-            VStack(alignment: .leading, spacing: 10) {
-                Text(date(fromKey: ps[0].day).formatted(.dateTime.month(.wide).year().locale(appLocale))).font(.title2.bold()).padding(.top, 6)
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text(date(fromKey: ps[0].day).formatted(.dateTime.month(.wide).year().locale(appLocale))).font(.sectionTitle).padding(.top, Space.s)
                 VStack(spacing: 0) {
                     ForEach(ps) { p in
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(number(p.value, digits: digits)) \(u)").font(.headline).monospacedDigit()
+                            VStack(alignment: .leading, spacing: Space.xxs) {
+                                Text("\(number(p.value, digits: digits)) \(u)").font(.cardTitle).monospacedDigit()
                                 Text(date(fromKey: p.day).formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.note).foregroundStyle(.secondary)
                             }
                             Spacer()
                             change(p, prev[p.day], u, digits)
                         }
-                        .padding(.horizontal, 16).padding(.vertical, 11)
-                        if p.id != ps.last?.id { Divider().padding(.leading, 16) }
+                        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
+                        if p.id != ps.last?.id { Divider().padding(.leading, Space.l) }
                     }
                 }
                 .modifier(CardSurface())
@@ -684,38 +684,38 @@ struct InsightDetailView: View {
         } else if kind == .nutrition, let t = p.extra {
             let d = p.value - t
             Text(abs(d) <= max(t * 0.1, 1) ? "On target" : "\(d > 0 ? "+" : "−")\(number(abs(d))) \(u) vs target")
-                .font(.callout).foregroundStyle(abs(d) <= max(t * 0.1, 1) ? palette.good : .secondary)
+                .font(.secondaryText).foregroundStyle(abs(d) <= max(t * 0.1, 1) ? palette.good : .secondary)
         } else if let b = before {
             let d = p.value - b
             let step = digits == 0 ? 0.5 : 0.05
             Label(abs(d) < step ? "No change" : "\(d > 0 ? "+" : "−")\(number(abs(d), digits: digits)) \(u)",
                   systemImage: abs(d) < step ? "arrow.right" : d > 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis")
-                .font(.callout).foregroundStyle(.secondary).labelStyle(TintIconLabel(color: color))
+                .font(.secondaryText).foregroundStyle(.secondary).labelStyle(TintIconLabel(color: color))
         }
     }
 
     private func weighInList(_ unit: WeightUnit) -> some View {
         let months = Dictionary(grouping: weights.reversed().prefix(400), by: { String($0.day.prefix(7)) }).sorted { $0.key > $1.key }
         return ForEach(months, id: \.key) { _, ws in
-            VStack(alignment: .leading, spacing: 10) {
-                Text(date(fromKey: ws[0].day).formatted(.dateTime.month(.wide).year().locale(appLocale))).font(.title3.bold()).padding(.top, 6)
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text(date(fromKey: ws[0].day).formatted(.dateTime.month(.wide).year().locale(appLocale))).font(.subsectionTitle).padding(.top, Space.s)
                 VStack(spacing: 0) {
                     ForEach(ws) { w in
-                        HStack(spacing: 14) {
+                        HStack(spacing: Space.l) {
                             Image(systemName: "scalemass.fill").foregroundStyle(palette.good).frame(width: 40, height: 40)
-                                .background(palette.good.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(unit.format(w.kg)).font(.headline).monospacedDigit()
+                                .background(palette.good.opacity(0.15), in: RoundedRectangle(cornerRadius: Radius.m))
+                            VStack(alignment: .leading, spacing: Space.xxs) {
+                                Text(unit.format(w.kg)).font(.cardTitle).monospacedDigit()
                                 Text(date(fromKey: w.day).formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.note).foregroundStyle(.secondary)
                             }
                             Spacer()
                             Button { editing = w } label: {
-                                Image(systemName: "pencil").font(.subheadline.weight(.semibold)).frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle())
+                                Image(systemName: "pencil").font(.secondaryEmphasis).frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle())
                             }
                             .buttonStyle(.plain)
                         }
-                        .padding(.horizontal, 14).padding(.vertical, 10)
+                        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
                         if w.id != ws.last?.id { Divider().padding(.leading, 68) }
                     }
                 }

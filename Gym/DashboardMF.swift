@@ -22,18 +22,18 @@ struct WeekGrid: View {
         let days = weekDays
         let byDay = Dictionary(grouping: entries.filter { days.contains($0.day) }, by: \.day)
             .mapValues { $0.reduce(Nutrients.zero) { $0 + $1.nutrients }.targets }
-        VStack(spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
+        VStack(spacing: Space.l) {
+            HStack(alignment: .top, spacing: Space.m) {
                 grid(days, byDay).layoutPriority(1)
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Macro.allCases, id: \.self) { m in valueCell(m, byDay[selected], target(selected)).frame(height: rowHeight + rowGap) }
                 }
                 .frame(width: 80, alignment: .leading)
-                .padding(.top, 2)
+                .padding(.top, Space.xxs)
             }
             Picker("", selection: $remaining) { Text("Consumed").tag(false); Text("Remaining").tag(true) }
                 .pickerStyle(.segmented).labelsHidden().frame(width: 240)
-                .padding(.bottom, isPhone ? 22 : 0)            // clear of the page dots
+                .padding(.bottom, isPhone ? Space.xl : 0)            // clear of the page dots
         }
     }
 
@@ -48,18 +48,18 @@ struct WeekGrid: View {
     }
 
     private func grid(_ days: [String], _ byDay: [String: Targets]) -> some View {
-        HStack(spacing: 3) {
+        HStack(spacing: Space.xs) {
             ForEach(days, id: \.self) { d in
                 Button { animate(Motion.snappy) { selected = d } } label: {
                     VStack(spacing: rowGap) {
                         ForEach(Macro.allCases, id: \.self) { m in bar(m, byDay[d], target(d), future: d > dayKey()) }
                         Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
-                            .font(.caption.weight(d == selected ? .bold : .regular)).fixedSize()
+                            .font(d == selected ? Font.label : Font.note).fixedSize()
                             .foregroundStyle(d == selected ? .primary : .secondary)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .padding(.vertical, Space.s)
+                    .overlay(RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
                         .stroke(d == selected ? Color.primary.opacity(0.85) : .clear, lineWidth: 2))
                     .contentShape(Rectangle())
                 }
@@ -73,9 +73,9 @@ struct WeekGrid: View {
         let frac = goal > 0 ? v / goal : 0
         let tickY = rowHeight * 0.18                     // the target sits near the top; over it fills past the tick
         return ZStack(alignment: .bottom) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.raisedBackground.opacity(future ? 0.5 : 1))
+            RoundedRectangle(cornerRadius: Radius.xs, style: .continuous).fill(Color.raisedBackground.opacity(future ? 0.5 : 1))
             if v > 0 {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xs, style: .continuous)
                     .fill(m.color)
                     .frame(width: 8, height: min(rowHeight, (rowHeight - tickY) * frac))
                     .animation(Motion.pick(Motion.smooth), value: frac)
@@ -90,15 +90,15 @@ struct WeekGrid: View {
         let v = eaten.map { m.value($0) } ?? 0, goal = t.map { m.value($0) } ?? 0
         let shown = remaining ? goal - v : v
         let unit = m == .calories ? "" : " \(m.short)"
-        return VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 3) {
-                Text("\(number(m == .calories ? energy.fromKcal(shown) : shown))\(unit)").font(.number(20, weight: .semibold)).monospacedDigit()
+        return VStack(alignment: .leading, spacing: Space.hairline) {
+            HStack(spacing: Space.xs) {
+                Text("\(number(m == .calories ? energy.fromKcal(shown) : shown))\(unit)").font(.numberMedium).monospacedDigit()
                     .foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
                     .liveNumber(shown).lineLimit(1).minimumScaleFactor(0.7)
-                if m == .calories { Image(systemName: "flame.fill").font(.caption).foregroundStyle(m.color) }
+                if m == .calories { Image(systemName: "flame.fill").font(.note).foregroundStyle(m.color) }
             }
             Text(remaining ? (shown < 0 ? "over" : "left") : "of \(number(m == .calories ? energy.fromKcal(goal) : goal))")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.note).foregroundStyle(.secondary)
         }
         .animation(Motion.snappy, value: remaining)
     }
@@ -117,23 +117,23 @@ struct SparkCard: View {
 
     var body: some View {
         Button(action: open) {
-            VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline).lineLimit(1).minimumScaleFactor(0.8)
-                    Text(period).font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: Space.m) {
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(title).font(.cardTitle).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(period).font(.note).foregroundStyle(.secondary)
                 }
                 chart.frame(height: 54)
                 Divider()
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(value).font(.number(22, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                    Text(unit).font(.caption).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                    Text(value).font(.numberMedium).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                    Text(unit).font(.note).foregroundStyle(.secondary)
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
+                    Image(systemName: "chevron.right").font(.label).foregroundStyle(.tertiary)
                 }
             }
-            .padding(14)
+            .padding(Space.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .modifier(CardSurface(cornerRadius: 20))
+            .modifier(CardSurface(cornerRadius: Radius.l))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -158,7 +158,7 @@ struct SparkCard: View {
                 [TipRow(label: title, value: "\(number(values[i], digits: unit == "kg" || unit == "lb" ? 1 : 0)) \(unit)", color: color)]
             }
         } else {
-            Text("Not enough data yet").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+            Text("Not enough data yet").font(.note).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -169,21 +169,21 @@ struct FoodSearchBar: View {
     let scan: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             Button(action: search) {
-                HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass").font(.headline)
+                HStack(spacing: Space.m) {
+                    Image(systemName: "magnifyingglass").font(.cardTitle)
                     Text("Search for a food").foregroundStyle(.secondary)
                     Spacer()
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            Button(action: scan) { Image(systemName: "barcode.viewfinder").font(.title3) }.buttonStyle(.plain)
+            Button(action: scan) { Image(systemName: "barcode.viewfinder").font(.subsectionTitle) }.buttonStyle(.plain)
         }
-        .padding(.horizontal, 18).frame(height: 50)
+        .padding(.horizontal, Space.l).frame(height: 50)
         .modifier(GlassCapsule())
-        .padding(.horizontal, 16).padding(.bottom, 8)
+        .padding(.horizontal, Space.l).padding(.bottom, Space.s)
     }
 }
 
@@ -197,13 +197,13 @@ struct ShortcutsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button { dismiss() } label: { Image(systemName: "xmark").font(.headline) }.buttonStyle(.plain)
+                Button { dismiss() } label: { Image(systemName: "xmark").font(.cardTitle) }.buttonStyle(.plain)
                 Spacer()
-                Text("Shortcuts").font(.title3.weight(.bold))
+                Text("Shortcuts").font(.subsectionTitle)
                 Spacer()
-                Image(systemName: "xmark").font(.headline).hidden()
+                Image(systemName: "xmark").font(.cardTitle).hidden()
             }
-            .padding(.horizontal, 20).padding(.top, 22).padding(.bottom, 14)
+            .padding(.horizontal, Space.xl).padding(.top, Space.xl).padding(.bottom, Space.l)
             Divider()
             ScrollView {
                 VStack(spacing: 0) {
@@ -215,7 +215,7 @@ struct ShortcutsSheet: View {
                         #endif
                         big("Quick Add", "bolt.fill", palette.fat) { pick(.quickAdd) }
                     }
-                    .padding(.vertical, 18)
+                    .padding(.vertical, Space.l)
                     row("AI photo", "camera.fill", Color.weightTone) { pick(.photo) }
                     row("Describe a meal", "quote.opening", Color.calmTone) { pick(.describe) }
                     row("Water +250 ml", "drop.fill", Color.waterTone) {
@@ -245,12 +245,12 @@ struct ShortcutsSheet: View {
 
     private func big(_ title: String, _ icon: String, _ c: Color, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 10) {
-                Image(systemName: icon).font(.title2.weight(.regular)).foregroundStyle(palette.text1)
+            VStack(spacing: Space.m) {
+                Image(systemName: icon).font(.sectionTitle).foregroundStyle(palette.text1)
                     .frame(width: 62, height: 62)
                     .background(Color.raisedBackground, in: Circle())
                     .overlay(Circle().strokeBorder(palette.hairline, lineWidth: 0.5))
-                Text(title).font(.subheadline).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
+                Text(title).font(.secondaryText).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
         }
@@ -259,13 +259,13 @@ struct ShortcutsSheet: View {
 
     private func row(_ title: String, _ icon: String, _ c: Color, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 18) {
-                Image(systemName: icon).font(.title3).foregroundStyle(.secondary).frame(width: 30)
-                Text(title).font(.body)
+            HStack(spacing: Space.l) {
+                Image(systemName: icon).font(.subsectionTitle).foregroundStyle(.secondary).frame(width: 30)
+                Text(title).font(.bodyText)
                 Spacer()
-                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+                Image(systemName: "chevron.right").font(.secondaryEmphasis).foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 22).padding(.vertical, 17)
+            .padding(.horizontal, Space.xl).padding(.vertical, Space.l)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

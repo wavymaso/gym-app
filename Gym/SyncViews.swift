@@ -24,7 +24,7 @@ struct SyncSection: View {
                           prompt: Text("https://your-mac.your-tailnet.ts.net:8443"))
                 LabeledContent("Pairing code") {
                     HStack {
-                        Text(server.code).font(.body.monospaced()).foregroundStyle(.primary).textSelection(.enabled)
+                        Text(server.code).font(.bodyText.monospaced()).foregroundStyle(.primary).textSelection(.enabled)
                         Button("New code…") { confirmNewCode = true }
                     }
                 }
@@ -32,9 +32,9 @@ struct SyncSection: View {
                 if !server.address.isEmpty, let qr = qrImage("gymsync:\(SyncClient.normalise(server.address))#\(server.code)") {
                     HStack {
                         Image(nsImage: qr).interpolation(.none).resizable().frame(width: 220, height: 220)
-                            .padding(10).background(Tokens.paper, in: RoundedRectangle(cornerRadius: Radius.m))
+                            .padding(Space.m).background(Tokens.paper, in: RoundedRectangle(cornerRadius: Radius.m))
                         Text("On your iPhone: Gym → Settings → Connect to your Mac → Scan the code.")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.secondaryText).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -86,8 +86,8 @@ struct MacSyncSection: View {
                         .foregroundStyle(waiting > 0 && client.error != nil ? palette.warn : .secondary)
                 }
                 if let e = client.error {
-                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warn).font(.callout)
-                    Text("Changes stay safe on this phone and go across as soon as the Mac is reachable.").font(.caption).foregroundStyle(.secondary)
+                    Label(e, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warn).font(.secondaryText)
+                    Text("Changes stay safe on this phone and go across as soon as the Mac is reachable.").font(.note).foregroundStyle(.secondary)
                 }
                 Button("Sync now") { Task { await client.sync() } }.disabled(client.syncing)
                 Button("Disconnect", role: .destructive) { confirmDisconnect = true }

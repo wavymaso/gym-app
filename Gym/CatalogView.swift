@@ -14,7 +14,7 @@ struct CatalogView: View {
         List {
             Section {
                 Text("Whole foods first: tier 1 whole foods, tier 2 simple staples, sold at Mercadona, Alcampo or Costco. Values per 100 g are the Spanish products' median, or the generic USDA food where packaged products were mostly prepared forms.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             }
             ForEach(FoodRole.allCases, id: \.self) { role in
                 let list = foods.filter { $0.role == role && $0.tier <= 2 && $0.availableAtMyStores }
@@ -34,11 +34,11 @@ struct CatalogView: View {
     private func row(_ f: SimpleFood, inStockToggle: Bool) -> some View {
         let off = removed.contains(f.id)
         return HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text("\(f.name) · T\(f.tier)").strikethrough(off).foregroundStyle(off ? .secondary : .primary)
                 Text("\(Int(f.values.kcal)) kcal · \(number(f.values.protein, digits: 1)) P · \(number(f.values.fat, digits: 1)) F · \(number(f.values.carbs, digits: 1)) C per 100 g\(f.pack.map { " · pack \(Int($0)) g" } ?? "")")
-                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                Text(SimpleFoods.myStores.filter { (f.stores[$0] ?? 0) > 0 }.map { $0.capitalized }.joined(separator: ", ")).font(.caption2).foregroundStyle(.tertiary)
+                    .font(.note).foregroundStyle(.secondary).monospacedDigit()
+                Text(SimpleFoods.myStores.filter { (f.stores[$0] ?? 0) > 0 }.map { $0.capitalized }.joined(separator: ", ")).font(.fine).foregroundStyle(.tertiary)
             }
             Spacer()
             if inStockToggle {
@@ -46,7 +46,7 @@ struct CatalogView: View {
                     .labelsHidden()
             } else {
                 Button(off ? "Add back" : "Remove") { if off { removed.remove(f.id) } else { removed.insert(f.id) }; save(); Haptics.tick() }
-                    .buttonStyle(.borderless).font(.caption.weight(.semibold))
+                    .buttonStyle(.borderless).font(.label)
             }
         }
     }

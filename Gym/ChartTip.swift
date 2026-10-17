@@ -89,19 +89,19 @@ private struct TipBubble: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle().fill(Color.secondary.opacity(0.7)).frame(width: 1, height: plot.height).position(x: x, y: plot.midY)
-            VStack(spacing: 3) {
-                if !title.isEmpty { Text(title).font(.subheadline.weight(.semibold)) }
-                if let subtitle { Text(subtitle).font(.caption) }
+            VStack(spacing: Space.xs) {
+                if !title.isEmpty { Text(title).font(.secondaryEmphasis) }
+                if let subtitle { Text(subtitle).font(.note) }
                 Divider().overlay(palette.onInverse.opacity(0.2))
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         if r.color != .primary { Circle().fill(r.color).frame(width: 7, height: 7) }
-                        Text("\(r.label):").font(.caption)
-                        Text(r.value).font(.caption.weight(.semibold)).monospacedDigit()
+                        Text("\(r.label):").font(.note)
+                        Text(r.value).font(.label).monospacedDigit()
                     }
                 }
             }
-            .padding(10).foregroundStyle(palette.onInverse)
+            .padding(Space.m).foregroundStyle(palette.onInverse)
             .background(palette.inverseFill.opacity(0.96), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
             .floatShadow()
             .fixedSize()

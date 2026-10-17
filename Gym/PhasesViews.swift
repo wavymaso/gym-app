@@ -17,9 +17,9 @@ struct ScalesSheet: View {
                 Section {
                     LabeledContent("Main scale", value: "reference")
                     ForEach(offsets.keys.sorted(), id: \.self) { name in
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: Space.s) {
                             HStack {
-                                Text(name).font(.headline)
+                                Text(name).font(.cardTitle)
                                 Spacer()
                                 Stepper("\(offsets[name]! >= 0 ? "+" : "−")\(number(abs(unit.fromKg(offsets[name]!)), digits: 1)) \(unit.rawValue)",
                                         value: Binding(get: { unit.fromKg(offsets[name] ?? 0) }, set: { offsets[name] = unit.toKg($0) }), in: -5...5, step: 0.1)
@@ -27,9 +27,9 @@ struct ScalesSheet: View {
                             }
                             if let e = estimated[name] {
                                 Button("Use what your weigh-ins say: \(e >= 0 ? "+" : "−")\(number(abs(unit.fromKg(e)), digits: 2)) \(unit.rawValue)") { offsets[name] = e }
-                                    .font(.caption)
+                                    .font(.note)
                             } else {
-                                Text("After 3 weigh-ins on it the app can work out its offset.").font(.caption).foregroundStyle(.secondary)
+                                Text("After 3 weigh-ins on it the app can work out its offset.").font(.note).foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -183,21 +183,21 @@ struct ShadowSheet: View {
     }
 
     private func row(_ e: ShadowEntry, _ energy: EnergyUnit, _ unit: WeightUnit) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: Space.xs) {
             HStack {
-                Text(date(fromKey: e.day).formatted(.dateTime.day().month(.abbreviated).locale(appLocale))).font(.headline)
+                Text(date(fromKey: e.day).formatted(.dateTime.day().month(.abbreviated).locale(appLocale))).font(.cardTitle)
                 Spacer()
-                if let w = e.weekChangeKg { Text("\(signed(unit, w))/wk").font(.caption).foregroundStyle(.secondary) }
+                if let w = e.weekChangeKg { Text("\(signed(unit, w))/wk").font(.note).foregroundStyle(.secondary) }
             }
-            HStack(spacing: 14) {
+            HStack(spacing: Space.l) {
                 Text("Targets \(energy.format(e.currentKcal))")
                 let d = e.proposedKcal - e.currentKcal
                 Text("Coach \(energy.format(e.proposedKcal))").fontWeight(.semibold)
                     .foregroundStyle(abs(d) < 10 ? Color.primary : d > 0 ? palette.good : palette.warn)
                 Text("(\(energy.format(e.rawKcal)))").foregroundStyle(.secondary)
             }
-            .font(.callout).monospacedDigit()
-            Text("Expenditure \(energy.format(e.expenditure))").font(.caption).foregroundStyle(.secondary)
+            .font(.secondaryText).monospacedDigit()
+            Text("Expenditure \(energy.format(e.expenditure))").font(.note).foregroundStyle(.secondary)
         }
     }
 }

@@ -23,9 +23,9 @@ struct PhoneFoodLog: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    if style != .plan { LargeEntriesCard(day: day, energy: energy).padding(.horizontal, 12).padding(.top, 10) }
+                    if style != .plan { LargeEntriesCard(day: day, energy: energy).padding(.horizontal, Space.m).padding(.top, Space.m) }
                     DayEntries(day: day, energy: energy, style: style, showEmptyHours: showEmptyHours, selected: $selection.ids) { sheet = $0 }
-                        .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 24)
+                        .padding(.horizontal, Space.m).padding(.top, Space.m).padding(.bottom, Space.xl)
                 } header: {
                     header(energy)
                 }
@@ -64,8 +64,8 @@ struct PhoneFoodLog: View {
     // MARK: Pinned header
 
     private func header(_ energy: EnergyUnit) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
+            HStack(spacing: Space.m) {
                 Text(title).font(.pageTitle(title.count > 9 ? 24 : 30)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.5)
                     .onTapGesture(count: 2) { animate(Motion.snappy) { day = dayKey() } }
                 Spacer(minLength: 4)
@@ -91,7 +91,7 @@ struct PhoneFoodLog: View {
             DayPills(day: $day)
             MacroBarsRow(day: day, energy: energy)
         }
-        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 10)
+        .padding(.horizontal, Space.l).padding(.top, Space.s).padding(.bottom, Space.m)
         .background { Color.pageBackground.ignoresSafeArea(edges: .top) }
     }
 
@@ -108,7 +108,7 @@ struct PhoneFoodLog: View {
     }
 
     private func roundLabel(_ icon: String) -> some View {
-        Image(systemName: icon).font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
+        Image(systemName: icon).font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
     }
 }
 
@@ -152,11 +152,11 @@ struct DayPills: View {
     private func pill(_ d: String, _ p: Double) -> some View {
         let selected = d == day
         let shape = Capsule()
-        return VStack(spacing: 1) {
-            Text(date(fromKey: d).formatted(.dateTime.day().locale(appLocale))).font(.number(18, weight: .medium)).monospacedDigit()
+        return VStack(spacing: Space.hairline) {
+            Text(date(fromKey: d).formatted(.dateTime.day().locale(appLocale))).font(.numberMedium).monospacedDigit()
             Text(date(fromKey: d).formatted(.dateTime.weekday(.abbreviated).locale(appLocale)).prefix(2))
-                .font(.caption).foregroundStyle(.secondary)
-            Circle().fill(d == dayKey() ? Color.primary : .clear).frame(width: 4, height: 4).padding(.top, 2)
+                .font(.note).foregroundStyle(.secondary)
+            Circle().fill(d == dayKey() ? Color.primary : .clear).frame(width: 4, height: 4).padding(.top, Space.xxs)
         }
         .frame(width: 44, height: 66)
         .background(selected ? Color.primary.opacity(0.16) : .clear, in: shape)
@@ -184,7 +184,7 @@ struct MacroBarsRow: View {
     var body: some View {
         let eaten = entries.reduce(Nutrients.zero) { $0 + $1.nutrients }.targets
         let t = ctx.dayTargets(on: day)
-        VStack(spacing: 6) {
+        VStack(spacing: Space.s) {
             TabView(selection: $page) {
                 row(eaten, t, remaining: false).tag(0)
                 row(eaten, t, remaining: true).tag(1)
@@ -193,7 +193,7 @@ struct MacroBarsRow: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             #endif
             .frame(height: 30)
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 ForEach(0..<2, id: \.self) { i in Circle().fill(Color.primary.opacity(i == page ? 0.8 : 0.25)).frame(width: 6, height: 6) }
             }
         }
@@ -204,20 +204,20 @@ struct MacroBarsRow: View {
         // Calories gets a wider column (its number is longest), so none of the four has to shrink.
         GeometryReader { geo in
         let unit = (geo.size.width - 36) / 4
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             ForEach(Macro.allCases, id: \.self) { m in
                 let v = m.value(eaten), goal = t.map { m.value($0) } ?? 0
                 let conv: (Double) -> Double = { m == .calories ? energy.fromKcal($0) : $0 }
                 let frac = goal > 0 ? v / goal : 0
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 3) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(spacing: Space.xs) {
                         if m == .calories { Image(systemName: "flame.fill").foregroundStyle(m.color) }
                         else { Text(m.short).fontWeight(.heavy).foregroundStyle(m.color) }
                         Text(remaining ? (goal - v >= 0 ? "\(number(conv(goal - v))) left" : "\(number(conv(v - goal))) over")
                                        : "\(number(conv(v)))/\(number(conv(goal)))")
                             .liveNumber(v).foregroundStyle(remaining && v > goal ? palette.warn : .primary)
                     }
-                    .font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.85)
+                    .font(.label).lineLimit(1).minimumScaleFactor(0.85)
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.primary.opacity(0.12))
@@ -265,9 +265,9 @@ struct DayEntries: View {
 
     /// The food card, tappable to select (the pencil still edits straight away).
     @ViewBuilder private func card(_ e: FoodEntry) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Space.m) {
             if !selected.isEmpty {
-                Image(systemName: selected.contains(e.syncID) ? "checkmark.circle.fill" : "circle").font(.title2)
+                Image(systemName: selected.contains(e.syncID) ? "checkmark.circle.fill" : "circle").font(.sectionTitle)
                     .foregroundStyle(selected.contains(e.syncID) ? palette.accent : Color.secondary)
                     .transition(.scale.combined(with: .opacity))
             }
@@ -291,28 +291,28 @@ struct DayEntries: View {
         let now = day == dayKey() ? cal.component(.hour, from: Date()) : 0
         let lo = min(6, byHour.keys.min() ?? 6), hi = 23                // the whole evening, up to midnight
         let hours = showEmptyHours || sel.mode != nil ? Array(sel.mode != nil ? min(lo, 5)...max(hi, 23) : lo...hi) : byHour.keys.sorted()
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             if entries.isEmpty && !showEmptyHours {
                 emptyState
             }
             ForEach(hours, id: \.self) { h in hourBlock(h, (byHour[h] ?? []).sorted { $0.time < $1.time }) }
         }
         .background(alignment: .leading) {
-            Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 2).padding(.leading, 30).padding(.vertical, 14)
+            Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 2).padding(.leading, Space.xxl).padding(.vertical, Space.l)
         }
     }
 
     private func hourBlock(_ h: Int, _ items: [FoodEntry]) -> some View {
         let n = items.reduce(Nutrients.zero) { $0 + $1.nutrients }
         let cal = Calendar.current
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
+        return VStack(alignment: .leading, spacing: Space.m) {
+            HStack(spacing: Space.m) {
                 let nowHour = day == dayKey() && cal.component(.hour, from: Date()) == h
-                HStack(spacing: 4) {
-                    Text(String(format: "%02d:00", h)).font(.subheadline.weight(.medium)).monospacedDigit()
+                HStack(spacing: Space.xs) {
+                    Text(String(format: "%02d:00", h)).font(.secondaryEmphasis).monospacedDigit()
                     if nowHour { Circle().fill(palette.accent).frame(width: 6, height: 6) }
                 }
-                    .padding(.horizontal, 12).frame(minWidth: 62).frame(height: 34)
+                    .padding(.horizontal, Space.m).frame(minWidth: 62).frame(height: 34)
                     .background(Color.raisedBackground, in: Capsule())
                     .overlay(Capsule().stroke(targetHour == h ? palette.accent : .clear, lineWidth: 2))
                 if let m = sel.mode {
@@ -324,7 +324,7 @@ struct DayEntries: View {
                         sel.clear()
                     } label: {
                         Image(systemName: m == .copy ? "doc.on.clipboard.fill" : "arrowshape.turn.up.left.fill")
-                            .font(.subheadline.weight(.bold)).frame(width: 34, height: 34)
+                            .font(.secondaryEmphasis).frame(width: 34, height: 34)
                             .background(Color.raisedBackground, in: Circle()).foregroundStyle(.primary)
                     }
                     .pressable()
@@ -332,7 +332,7 @@ struct DayEntries: View {
                     .accessibilityLabel(m == .copy ? "Copy here" : "Move here")
                 } else {
                     Button { open(.add(cal.date(bySettingHour: h, minute: 0, second: 0, of: date(fromKey: day)))) } label: {
-                        Image(systemName: "plus").font(.subheadline.weight(.bold)).frame(width: 34, height: 34)
+                        Image(systemName: "plus").font(.secondaryEmphasis).frame(width: 34, height: 34)
                             .background(Color.raisedBackground, in: Circle())
                     }
                     .buttonStyle(.plain)
@@ -342,16 +342,16 @@ struct DayEntries: View {
             }
             ForEach(Array(items.enumerated()), id: \.element.id) { i, e in
                 let showTime = i == 0 || cal.component(.minute, from: e.time) != cal.component(.minute, from: items[i - 1].time)
-                HStack(alignment: .center, spacing: 8) {
+                HStack(alignment: .center, spacing: Space.s) {
                     Text(showTime ? e.time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(appLocale)) : "")
-                        .font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                        .font(.note).monospacedDigit().foregroundStyle(.secondary)
                         .lineLimit(1).fixedSize()
                         .frame(width: 62)
                         .background { if showTime { Color.pageBackground.padding(.vertical, -2) } }
                     card(e)
                         .contextMenu { menu(e) }
                         .draggable(e.syncID) {
-                            Text(e.name).font(.callout.weight(.semibold)).padding(8)
+                            Text(e.name).font(.secondaryEmphasis).padding(Space.s)
                                 .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                         }
                 }
@@ -370,16 +370,16 @@ struct DayEntries: View {
     // MARK: Meals
 
     private var meals: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: Space.l) {
             ForEach(Meal.allCases) { m in
                 let items = entries.filter { Meal(time: $0.time) == m }
                 let n = items.reduce(Nutrients.zero) { $0 + $1.nutrients }
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: Space.m) {
+                    HStack(spacing: Space.m) {
                         Image(systemName: m.icon).foregroundStyle(m.color).frame(width: 34, height: 34).background(m.color.opacity(0.16), in: Circle())
-                        Text(m.label).font(.title3.weight(.bold))
+                        Text(m.label).font(.subsectionTitle)
                         Button { open(.add(m.time(on: day))) } label: {
-                            Image(systemName: "plus").font(.subheadline.weight(.bold)).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle())
+                            Image(systemName: "plus").font(.secondaryEmphasis).frame(width: 30, height: 30).background(Color.raisedBackground, in: Circle())
                         }
                         .buttonStyle(.plain)
                         Spacer(minLength: 4)
@@ -453,7 +453,7 @@ struct DayDetailsSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: Space.l) {
                     Card(title: "View", systemImage: "eye") {
                         Picker("", selection: $style) {
                             Text("Timeline").tag(FoodLogView.LogStyle.timeline)
@@ -466,7 +466,7 @@ struct DayDetailsSheet: View {
                     ProteinMealsCard(days: [day])
                     NutrientPanel(total: entries.reduce(Nutrients.zero) { $0 + $1.nutrients }, entries: entries)
                 }
-                .padding(16)
+                .padding(Space.l)
             }
             .pageBackground()
             .navigationTitle(date(fromKey: day).formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))

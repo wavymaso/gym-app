@@ -41,9 +41,9 @@ struct SetupView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ProgressView(value: Double(step + 1), total: Double(steps)).padding(.horizontal, 24).padding(.top, 20)
+            ProgressView(value: Double(step + 1), total: Double(steps)).padding(.horizontal, Space.xl).padding(.top, Space.xl)
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: Space.xl) {
                     switch step {
                     case 0: UnitsStep(draft: draft)
                     case 1: AboutStep(draft: draft)
@@ -98,8 +98,8 @@ private struct StepTitle: View {
     let title: String
     let subtitle: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.largeTitle.bold())
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text(title).font(.screenTitle)
             Text(subtitle).foregroundStyle(.secondary)
         }
     }
@@ -114,16 +114,16 @@ struct ChoiceRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.body.weight(.medium)).foregroundStyle(.primary)
-                    if let detail { Text(detail).font(.callout).foregroundStyle(.secondary) }
+            HStack(spacing: Space.m) {
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(title).font(.bodyEmphasis).foregroundStyle(.primary)
+                    if let detail { Text(detail).font(.secondaryText).foregroundStyle(.secondary) }
                 }
                 Spacer()
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3).foregroundStyle(selected ? palette.accent : Color.secondary.opacity(0.5))
+                    .font(.subsectionTitle).foregroundStyle(selected ? palette.accent : Color.secondary.opacity(0.5))
             }
-            .padding(14)
+            .padding(Space.l)
             .contentShape(Rectangle())
             .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.m))
             .overlay(RoundedRectangle(cornerRadius: Radius.m).stroke(selected ? palette.accent : .primary.opacity(0.08), lineWidth: selected ? 2 : 1))
@@ -267,14 +267,14 @@ struct DietStep: View {
         ForEach(DietStyle.allCases) { d in
             ChoiceRow(title: d.label, detail: d.detail, selected: draft.diet == d) { draft.diet = d }
         }
-        Text("Protein").font(.headline).padding(.top, 8)
+        Text("Protein").font(.cardTitle).padding(.top, Space.s)
         Picker("Protein", selection: $draft.protein) {
             ForEach(ProteinLevel.allCases) { Text($0.label).tag($0) }
         }
         .pickerStyle(.segmented)
         let grams = draft.protein.gramsPerKg * (draft.weightKg ?? 70)
         Text("\(number(draft.protein.gramsPerKg, digits: 1)) g per kg of body weight · about \(number(grams)) g a day")
-            .font(.callout).foregroundStyle(.secondary)
+            .font(.secondaryText).foregroundStyle(.secondary)
     }
 }
 
@@ -283,8 +283,8 @@ struct SummaryStep: View {
     var body: some View {
         StepTitle(title: "Your plan", subtitle: "These are starting points. Each week the app checks your intake against your weight trend and adjusts.")
         Card(title: "Estimated expenditure", systemImage: "flame") {
-            Text(draft.energyUnit.format(draft.expenditure)).font(.title.bold()).monospacedDigit()
-            Text("What you burn in a typical day, from your answers.").font(.callout).foregroundStyle(.secondary)
+            Text(draft.energyUnit.format(draft.expenditure)).font(.sectionTitle).monospacedDigit()
+            Text("What you burn in a typical day, from your answers.").font(.secondaryText).foregroundStyle(.secondary)
         }
         Card(title: "Daily targets", systemImage: "target") {
             TargetsGrid(targets: draft.targets, energy: draft.energyUnit)
@@ -297,14 +297,14 @@ struct TargetsGrid: View {
     let targets: Targets
     let energy: EnergyUnit
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(energy.format(targets.kcal)).font(.title.bold()).monospacedDigit()
-            HStack(spacing: 24) {
+        VStack(alignment: .leading, spacing: Space.m) {
+            Text(energy.format(targets.kcal)).font(.sectionTitle).monospacedDigit()
+            HStack(spacing: Space.xl) {
                 ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(number(m.value(targets))) g").font(.title3.weight(.semibold)).monospacedDigit()
+                    VStack(alignment: .leading, spacing: Space.xxs) {
+                        Text("\(number(m.value(targets))) g").font(.subsectionTitle).monospacedDigit()
                         Label(m.label, systemImage: "circle.fill").labelStyle(DotLabel(color: m.color))
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.note).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -315,6 +315,6 @@ struct TargetsGrid: View {
 struct DotLabel: LabelStyle {
     let color: Color
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) { Circle().fill(color).frame(width: 7, height: 7); configuration.title }
+        HStack(spacing: Space.xs) { Circle().fill(color).frame(width: 7, height: 7); configuration.title }
     }
 }

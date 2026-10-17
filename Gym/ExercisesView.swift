@@ -21,9 +21,9 @@ struct ExercisesView: View {
                             NavigationLink { ExerciseDetail(exercise: e) } label: {
                                 HStack {
                                     Text(e.name)
-                                    if done.contains(e.key) { Image(systemName: "chart.line.uptrend.xyaxis").font(.caption).foregroundStyle(.secondary) }
+                                    if done.contains(e.key) { Image(systemName: "chart.line.uptrend.xyaxis").font(.note).foregroundStyle(.secondary) }
                                     Spacer()
-                                    Text(e.equipmentValue.label).font(.caption).foregroundStyle(.secondary)
+                                    Text(e.equipmentValue.label).font(.note).foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -65,13 +65,13 @@ struct ExerciseDetail: View {
         let r = records(lifts)
         let byDay = oneRepMaxByDay(lifts)
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 Text("\(exercise.muscleValue.label)\(exercise.secondaryValues.isEmpty ? "" : " · also " + exercise.secondaryValues.map(\.label).joined(separator: ", ")) · \(exercise.equipmentValue.label)")
                     .foregroundStyle(.secondary)
                 if lifts.isEmpty {
                     ContentUnavailableView("Not done yet", systemImage: "dumbbell", description: Text("Your records and progress appear after your first workout with it."))
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16, alignment: .top)], spacing: 16) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: Space.l, alignment: .top)], spacing: Space.l) {
                         tile("Est. 1RM", r.bestOneRepMax.map { "\(fmt($0.value, unit)) \(unit.rawValue)" } ?? "–", r.bestOneRepMax.map { "from \(setText($0.set, unit))" } ?? "")
                         tile("Heaviest", r.heaviest.map { "\(fmt($0.kg, unit)) \(unit.rawValue)" } ?? "–", r.heaviest.map { "× \($0.reps) · \(when($0.day))" } ?? "")
                         tile("Most reps", r.mostReps.map { "\($0.reps) reps" } ?? "–", r.mostReps.map { "at \(fmt($0.kg, unit)) \(unit.rawValue)" } ?? "")
@@ -90,7 +90,7 @@ struct ExerciseDetail: View {
                             byDay.filter { $0.day == d }.map { TipRow(label: "Est. 1RM", value: unit.format($0.value), color: Macro.calories.color) }
                         }
                         .frame(height: 220)
-                        Text("The best set of each session, as the weight you could probably lift once.").font(.caption).foregroundStyle(.secondary)
+                        Text("The best set of each session, as the weight you could probably lift once.").font(.note).foregroundStyle(.secondary)
                     }
                     Card(title: "History", systemImage: "list.bullet") {
                         ForEach(Dictionary(grouping: sets, by: \.workoutKey).sorted { $0.value[0].day > $1.value[0].day }.prefix(20), id: \.key) { _, rows in
@@ -99,7 +99,7 @@ struct ExerciseDetail: View {
                                 Text(rows.sorted { $0.setOrder < $1.setOrder }.map { ($0.kindValue == .warmup ? "W " : "") + setText($0.lift, unit) }.joined(separator: ",  "))
                                     .monospacedDigit().foregroundStyle(.secondary)
                             }
-                            .font(.callout)
+                            .font(.secondaryText)
                         }
                     }
                 }
@@ -123,8 +123,8 @@ struct ExerciseDetail: View {
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.number(26)).monospacedDigit()
-            Text(note).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.numberLarge).monospacedDigit()
+            Text(note).font(.note).foregroundStyle(.secondary)
         }
     }
 }

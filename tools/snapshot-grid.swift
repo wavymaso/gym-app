@@ -6,7 +6,7 @@ import ImageIO
 // Appearance (THEME-SNAPSHOTS-light/dark/black.png) plus all three stacked (THEME-SNAPSHOTS.png).
 let dir = CommandLine.arguments[1], out = CommandLine.arguments[2]
 let appearances = ["light", "dark", "black"], finishes = ["titanium", "silver", "graphite", "gold", "roseGold"]
-let screens = ["today", "food", "workout", "weight", "settings"]
+let screens = ["today", "food", "plan", "swap", "workout", "weight", "settings"]
 let cw = 300, ch = 652, label = 150, gap = 12, head = 44
 
 func load(_ p: String) -> CGImage? {

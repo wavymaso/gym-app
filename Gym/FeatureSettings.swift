@@ -13,16 +13,16 @@ struct RadioRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(title).font(.body.weight(.semibold))
+            HStack(spacing: Space.l) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(spacing: Space.s) {
+                        Text(title).font(.bodyEmphasis)
                         if let badge {
-                            Text(badge).font(.caption.weight(.semibold)).padding(.horizontal, 7).padding(.vertical, 3)
-                                .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 6))
+                            Text(badge).font(.label).padding(.horizontal, Space.s).padding(.vertical, Space.xs)
+                                .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                         }
                     }
-                    Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(detail).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 ZStack {
@@ -33,7 +33,7 @@ struct RadioRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.vertical, 4)
+        .padding(.vertical, Space.xs)
     }
 }
 
@@ -104,9 +104,9 @@ struct ExpenditureSettingsView: View {
                     NavigationLink {
                         BMREquationView(profile: p)
                     } label: {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: Space.xxs) {
                             Text("BMR equation")
-                            Text((BMREquation(rawValue: p.bmrEquation) ?? .mifflin).label).font(.callout).foregroundStyle(.secondary)
+                            Text((BMREquation(rawValue: p.bmrEquation) ?? .mifflin).label).font(.secondaryText).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -119,17 +119,17 @@ struct ExpenditureSettingsView: View {
                 }
                 Section("Expenditure modifiers") {
                     Toggle(isOn: Binding(get: { p.stepInformed }, set: { p.stepInformed = $0; ctx.commit() })) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Step-informed updates").font(.body.weight(.semibold))
+                        VStack(alignment: .leading, spacing: Space.xs) {
+                            Text("Step-informed updates").font(.bodyEmphasis)
                             Text("Uses your step trend (Apple Health) to move expenditure sooner when you walk more or less; your weight data confirms the rest.")
-                                .font(.callout).foregroundStyle(.secondary)
+                                .font(.secondaryText).foregroundStyle(.secondary)
                         }
                     }
                     if ExpenditureAlgorithm.from(p.expAlgorithm) != .engine { Toggle(isOn: Binding(get: { p.predictiveGoal }, set: { p.predictiveGoal = $0; ctx.commit() })) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Predictive goal adjustment").font(.body.weight(.semibold))
+                        VStack(alignment: .leading, spacing: Space.xs) {
+                            Text("Predictive goal adjustment").font(.bodyEmphasis)
                             Text("When you change goal, expects expenditure to follow your new intake a little over the next two weeks (more food, more movement and digestion).")
-                                .font(.callout).foregroundStyle(.secondary)
+                                .font(.secondaryText).foregroundStyle(.secondary)
                         }
                     } }
                 }
@@ -144,9 +144,9 @@ struct ExpenditureSettingsView: View {
 
     private func editRow(_ title: String, _ value: String, action: @escaping () -> Void) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(title)
-                Text(value).font(.callout).foregroundStyle(.secondary)
+                Text(value).font(.secondaryText).foregroundStyle(.secondary)
             }
             Spacer()
             Button("Edit", action: action).buttonStyle(.bordered).buttonBorderShape(.capsule)
@@ -172,17 +172,17 @@ struct ExpenditureEditor: View {
                     Picker("Method", selection: $custom) { Text("Default (formula)").tag(false); Text("Manual").tag(true) }.pickerStyle(.inline).labelsHidden()
                     if custom { amountField }
                     Text("Only the starting point. If you've been logging for a while, also set a recent calculation start date for it to matter now.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.secondaryText).foregroundStyle(.secondary)
                 case .start:
                     Picker("Start", selection: $custom) { Text("Default (your first goal)").tag(false); Text("A date").tag(true) }.pickerStyle(.inline).labelsHidden()
                     if custom { DatePicker("From", selection: $day, in: ...Date(), displayedComponents: .date) }
-                    Text("A fresh start for the calculation (after a long break, say), without losing any data.").font(.callout).foregroundStyle(.secondary)
+                    Text("A fresh start for the calculation (after a long break, say), without losing any data.").font(.secondaryText).foregroundStyle(.secondary)
                 case .mode:
                     Picker("Mode", selection: $custom) { Text("Dynamic").tag(false); Text("Static").tag(true) }.pickerStyle(.inline).labelsHidden()
                     if custom { amountField }
                     Text(custom ? "A fixed number: weekly check-ins won't change your targets. Switch back any time; the dynamic estimate keeps running underneath."
                                 : "Worked out from your weight and intake, updated every day. Recommended.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.secondaryText).foregroundStyle(.secondary)
                 }
             }
             .themedForm()

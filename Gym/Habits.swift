@@ -47,16 +47,16 @@ struct HabitCard: View {
         let now = ctx.habitScore(), before = ctx.habitScore(ending: addDays(dayKey(), -8))
         Card(title: "Habits, last 7 days", systemImage: "checkmark.seal") {
             if let s = now {
-                HStack(spacing: 18) {
+                HStack(spacing: Space.l) {
                     ZStack {
                         Ring(progress: Double(s.total) / 100, color: scoreColor(s.total), lineWidth: 10)
                         VStack(spacing: -2) {
-                            Text("\(s.total)").font(.number(28)).monospacedDigit()
-                            Text("of 100").font(.caption2).foregroundStyle(.secondary)
+                            Text("\(s.total)").font(.numberLarge).monospacedDigit()
+                            Text("of 100").font(.fine).foregroundStyle(.secondary)
                         }
                     }
                     .frame(width: 96, height: 96)
-                    VStack(spacing: 7) {
+                    VStack(spacing: Space.s) {
                         part("Logging", s.logging, palette.accent)
                         part("Calories", s.calories, Macro.calories.color)
                         part("Protein", s.protein, Macro.protein.color)
@@ -66,15 +66,15 @@ struct HabitCard: View {
                 if let b = before {
                     let diff = s.total - b.total
                     Text(diff == 0 ? "Same as the week before." : "\(diff > 0 ? "+" : "−")\(abs(diff)) on the week before (\(b.total)).")
-                        .font(.caption).foregroundStyle(diff >= 0 ? palette.good : palette.warn)
+                        .font(.note).foregroundStyle(diff >= 0 ? palette.good : palette.warn)
                 }
             }
         }
     }
 
     private func part(_ name: String, _ v: Double, _ c: Color) -> some View {
-        HStack(spacing: 8) {
-            Text(name).font(.caption.weight(.semibold)).frame(width: 66, alignment: .leading)
+        HStack(spacing: Space.s) {
+            Text(name).font(.label).frame(width: 66, alignment: .leading)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(c.opacity(0.16))
@@ -82,7 +82,7 @@ struct HabitCard: View {
                 }
             }
             .frame(height: 7)
-            Text("\(Int((v * 100).rounded()))%").font(.caption2).monospacedDigit().foregroundStyle(.secondary).frame(width: 34, alignment: .trailing)
+            Text("\(Int((v * 100).rounded()))%").font(.fine).monospacedDigit().foregroundStyle(.secondary).frame(width: 34, alignment: .trailing)
         }
     }
 
@@ -110,7 +110,7 @@ struct NutrientTimingCard: View {
                 let total = own.reduce(0) { $0 + $1.nutrients.kcal }
                 Chart(0..<24, id: \.self) { h in
                     BarMark(x: .value("Hour", h), y: .value("kcal", byHour[h] ?? 0))
-                        .foregroundStyle(Meal(time: cal.date(bySettingHour: h, minute: 30, second: 0, of: Date())!).color).cornerRadius(3)
+                        .foregroundStyle(Meal(time: cal.date(bySettingHour: h, minute: 30, second: 0, of: Date())!).color).cornerRadius(Radius.xs)
                 }
                 .chartXAxis { AxisMarks(values: [0, 6, 12, 18, 23]) { v in AxisValueLabel { if let h = v.as(Int.self) { Text("\(h):00") } } } }
                 .numberYAxis()
@@ -134,9 +134,9 @@ struct NutrientTimingCard: View {
     private func clock(_ m: Int) -> String { String(format: "%02d:%02d", m / 60, m % 60) }
 
     private func stat(_ v: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(v).font(.number(18, weight: .semibold)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.hairline) {
+            Text(v).font(.numberMedium).monospacedDigit()
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
     }
 }
@@ -163,15 +163,15 @@ struct TopContributorsCard: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(rows.prefix(8).enumerated()), id: \.offset) { i, r in
-                    HStack(spacing: 10) {
-                        Text("\(i + 1)").font(.caption.weight(.bold)).foregroundStyle(.secondary).frame(width: 18)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(r.name).font(.callout.weight(.medium)).lineLimit(1)
-                            Text("\(r.times)× \(r.brand.map { "· \($0)" } ?? "")").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    HStack(spacing: Space.m) {
+                        Text("\(i + 1)").font(.label).foregroundStyle(.secondary).frame(width: 18)
+                        VStack(alignment: .leading, spacing: Space.hairline) {
+                            Text(r.name).font(.secondaryEmphasis).lineLimit(1)
+                            Text("\(r.times)× \(r.brand.map { "· \($0)" } ?? "")").font(.note).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
-                        Text(nutrient.format(r.total, energy)).font(.callout.weight(.semibold)).monospacedDigit()
-                        Text("\(Int((all > 0 ? r.total / all * 100 : 0).rounded()))%").font(.caption).foregroundStyle(.secondary)
+                        Text(nutrient.format(r.total, energy)).font(.secondaryEmphasis).monospacedDigit()
+                        Text("\(Int((all > 0 ? r.total / all * 100 : 0).rounded()))%").font(.note).foregroundStyle(.secondary)
                             .frame(width: 36, alignment: .trailing)
                     }
                 }

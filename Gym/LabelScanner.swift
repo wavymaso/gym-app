@@ -110,8 +110,8 @@ struct LabelScanView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 18) {
-                Image(systemName: "text.viewfinder").font(.system(size: 56)).foregroundStyle(palette.accent).padding(.top, 20)
+            VStack(spacing: Space.l) {
+                Image(systemName: "text.viewfinder").font(.iconHero).foregroundStyle(palette.accent).padding(.top, Space.xl)
                 Text("Photograph the nutrition table, straight on and filling the frame. The numbers per 100 g are read; you check them before saving.")
                     .multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal)
                 #if os(iOS)

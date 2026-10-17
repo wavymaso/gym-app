@@ -76,7 +76,7 @@ struct ExportSection: View {
             ForEach(Export.allCases) { e in
                 Button { document = CSVDocument(text: e.csv(ctx)); exporting = e } label: { Label("\(e.label) (CSV)", systemImage: "square.and.arrow.up") }
             }
-            if let done { Text(done).font(.callout).foregroundStyle(palette.good) }
+            if let done { Text(done).font(.secondaryText).foregroundStyle(palette.good) }
         } header: {
             Text("Export your data")
         } footer: {

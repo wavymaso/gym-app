@@ -23,9 +23,9 @@ struct BarcodeScanner: View {
                         .overlay(alignment: .bottom) {
                             if qr {
                                 Text("Hold the phone about an arm's length from the screen so the whole code fits.")
-                                    .font(.callout.weight(.medium)).multilineTextAlignment(.center)
-                                    .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                                    .padding(24)
+                                    .font(.secondaryEmphasis).multilineTextAlignment(.center)
+                                    .padding(Space.m).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.m))
+                                    .padding(Space.xl)
                             }
                         }
                 } else {
@@ -132,7 +132,7 @@ struct HealthSection: View {
                         }
                     }
                 }
-            if let message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if let message { Text(message).font(.secondaryText).foregroundStyle(.secondary) }
         } header: {
             Text("Apple Health")
         } footer: {

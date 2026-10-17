@@ -28,7 +28,7 @@ struct ImportView: View {
                         line("Target changes", result.targetChanges)
                         if let s = result.historyStart {
                             Text("Your expenditure estimate now learns from your history since \(date(fromKey: s).formatted(.dateTime.day().month(.wide).year().locale(appLocale))).")
-                                .font(.callout).foregroundStyle(.secondary)
+                                .font(.secondaryText).foregroundStyle(.secondary)
                         }
                     }
                 } else if let c = contents {
@@ -44,17 +44,17 @@ struct ImportView: View {
                         }
                         if let w = weighed.last?.weightKg { LabeledContent("Latest weigh-in", value: unit.format(w)) }
                         if !c.skipped.isEmpty {
-                            Text("Not recognised: \(c.skipped.joined(separator: ", "))").font(.callout).foregroundStyle(.secondary)
+                            Text("Not recognised: \(c.skipped.joined(separator: ", "))").font(.secondaryText).foregroundStyle(.secondary)
                         }
                     }
                     Section {
                         Text("Days you've already logged here, weigh-ins you already have, and workouts already in your history are left as they are. Importing the same file again adds nothing.")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.secondaryText).foregroundStyle(.secondary)
                     }
                 } else {
                     Section {
                         Text("In MacroFactor, find Export data in its settings. The Quick Export spreadsheet has weight, trend, calories, macros, expenditure and targets; the Granular Export adds your food log and workouts. Choose all the files at once.")
-                            .font(.callout)
+                            .font(.secondaryText)
                         Button("Choose files…") { choosing = true }
                     }
                 }

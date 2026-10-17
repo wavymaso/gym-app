@@ -82,15 +82,15 @@ struct EditGoalFlow: View {
                 Circle().stroke(palette.raised, lineWidth: 14).frame(width: 190).offset(y: -10)
                 Circle().trim(from: 0, to: 0.62).stroke(palette.accentFill, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                     .frame(width: 190).rotationEffect(.degrees(-90)).offset(y: -10)
-                Image(systemName: "scalemass").font(.system(size: 54, weight: .light)).foregroundStyle(palette.text2).offset(y: -10)
+                Image(systemName: "scalemass").font(.iconHero.weight(.light)).foregroundStyle(palette.text2).offset(y: -10)
             }
             .frame(height: 340).clipped()
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 Text("EDIT GOAL").font(.pageTitle(32)).foregroundStyle(palette.titleStyle)
                 stepRow(1, "Edit goal", "Modify goal weight and rate of weight change", on: true)
                 stepRow(2, "Set new program", "Targets from your current expenditure", on: false)
             }
-            .padding(20)
+            .padding(Space.xl)
             Spacer()
             primary("Edit Goal Parameters") { animate { step = 1 } }
         }
@@ -98,13 +98,13 @@ struct EditGoalFlow: View {
     }
 
     private func stepRow(_ n: Int, _ title: String, _ detail: String, on: Bool) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            Text("\(n)").font(.headline).frame(width: 36, height: 36)
+        HStack(alignment: .top, spacing: Space.l) {
+            Text("\(n)").font(.cardTitle).frame(width: 36, height: 36)
                 .background(on ? Color.primary : Color.raisedBackground, in: Circle())
                 .foregroundStyle(on ? palette.onInverse : .secondary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline).foregroundStyle(on ? .primary : .secondary)
-                Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                Text(title).font(.cardTitle).foregroundStyle(on ? .primary : .secondary)
+                Text(detail).font(.secondaryText).foregroundStyle(.secondary)
             }
         }
     }
@@ -115,37 +115,37 @@ struct EditGoalFlow: View {
         VStack(spacing: 0) {
             progress(0.5)
             ScrollView {
-                VStack(alignment: .leading, spacing: 26) {
-                    HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: Space.xl) {
+                    HStack(spacing: Space.m) {
                         tile(energy.format(budget.kcal), "initial daily budget", palette.good.opacity(0.18))
                         tile(endDate.map { $0.formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)) } ?? (goal == .maintain ? "Ongoing" : "–"),
                              "projected end date", Color.raisedBackground)
                     }
-                    Text("What is your target weight?").font(.title3.weight(.bold))
-                    VStack(spacing: 8) {
-                        Text(unit.format(target, digits: 1)).font(.number(26, weight: .semibold)).monospacedDigit()
+                    Text("What is your target weight?").font(.subsectionTitle)
+                    VStack(spacing: Space.s) {
+                        Text(unit.format(target, digits: 1)).font(.numberLarge).monospacedDigit()
                         WeightRuler(kg: $target, unit: unit, current: current)
                     }
                     if goal != .maintain {
-                        Text("What is your target goal rate?").font(.title3.weight(.bold))
-                        VStack(spacing: 14) {
-                            Text(rateName).font(.headline).padding(.horizontal, 14).padding(.vertical, 8)
+                        Text("What is your target goal rate?").font(.subsectionTitle)
+                        VStack(spacing: Space.l) {
+                            Text(rateName).font(.cardTitle).padding(.horizontal, Space.l).padding(.vertical, Space.s)
                                 .background(palette.good.opacity(0.18), in: RoundedRectangle(cornerRadius: Radius.s))
                             Slider(value: $rate, in: rateRange, step: 0.01).tint(palette.good)
                             if goal == .lose, (ctx.activeProgram?.mode ?? "coached") == "coached",
                                let floor = ctx.bodyInfo(guardrails: true)?.floorKcal, budget.kcal <= floor + 5 {
                                 Label("At this rate the budget hits your calorie floor (\(energy.format(floor))), so it can't go lower. Pick a slower rate, or change the floor in Strategy.",
-                                      systemImage: "shield.lefthalf.filled").font(.caption).foregroundStyle(palette.warn)
+                                      systemImage: "shield.lefthalf.filled").font(.note).foregroundStyle(palette.warn)
                             }
                             rateRow(perWeek: true)
                             rateRow(perWeek: false)
                         }
                     } else {
                         Text("Your target is your current weight: maintenance. Calories match your expenditure.")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.secondaryText).foregroundStyle(.secondary)
                     }
                 }
-                .padding(20)
+                .padding(Space.xl)
             }
             primary("Next") { animate { step = 2 } }
         }
@@ -154,13 +154,13 @@ struct EditGoalFlow: View {
     private func rateRow(perWeek: Bool) -> some View {
         let k = perWeek ? 1.0 : 30.0 / 7
         let sign = goal == .lose ? "−" : "+"
-        return HStack(spacing: 10) {
+        return HStack(spacing: Space.m) {
             Text(sign).frame(width: 14)
             numField(Binding(get: { unit.fromKg(abs(weeklyKg) * k) },
                              set: { v in rate = min(max(unit.toKg(v) / k / current * 100, rateRange.lowerBound), rateRange.upperBound) }),
                      unit.rawValue)
             numField(Binding(get: { rate * k }, set: { v in rate = min(max(v / k, rateRange.lowerBound), rateRange.upperBound) }), "%")
-            Text(perWeek ? "Per Week" : "Per Month").font(.subheadline).frame(width: 82, alignment: .leading)
+            Text(perWeek ? "Per Week" : "Per Month").font(.secondaryText).frame(width: 82, alignment: .leading)
         }
     }
 
@@ -173,16 +173,16 @@ struct EditGoalFlow: View {
                 .monospacedDigit()
             Text(suffix).foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 12).frame(height: 46)
+        .padding(.horizontal, Space.m).frame(height: 46)
         .overlay(RoundedRectangle(cornerRadius: Radius.s).stroke(Color.primary.opacity(0.2)))
     }
 
     private func tile(_ value: String, _ label: String, _ bg: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(value).font(.title3.weight(.bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-            Text(label).font(.caption)
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text(value).font(.subsectionTitle).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+            Text(label).font(.note)
         }
-        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Space.l).frame(maxWidth: .infinity, alignment: .leading)
         .background(bg, in: RoundedRectangle(cornerRadius: Radius.m))
     }
 
@@ -195,8 +195,8 @@ struct EditGoalFlow: View {
         return VStack(spacing: 0) {
             progress(1)
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Edits to your goal").font(.title2.bold())
+                VStack(alignment: .leading, spacing: Space.l) {
+                    Text("Edits to your goal").font(.sectionTitle)
                     card(goal == .lose ? "Weight Loss" : goal == .gain ? "Weight Gain" : "Maintenance",
                          "\(unit.format(current)) » \(unit.format(target))",
                          oldGoal.map { abs($0 - target) < 0.05 && g?.goalValue == goal ? "No Change" : "Was \(unit.format($0))" } ?? "New", highlight: true)
@@ -209,7 +209,7 @@ struct EditGoalFlow: View {
                     card("Start Date", Date().formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)),
                          "A new program starts today from your current expenditure. The coaching algorithm doesn't reset.")
                 }
-                .padding(20)
+                .padding(Space.xl)
             }
             primary("Done", save)
         }
@@ -218,16 +218,16 @@ struct EditGoalFlow: View {
     private func card(_ title: String, _ value: String, _ note: String, highlight: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(title).font(.headline)
+                Text(title).font(.cardTitle)
                 Spacer()
-                Text(value).font(.headline.weight(.regular)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                Text(value).font(.cardTitle).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
             }
-            .padding(16)
+            .padding(Space.l)
             .background(highlight ? palette.good.opacity(0.18) : Color.raisedBackground)
-            Text(note).font(.subheadline).foregroundStyle(.secondary).padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            Text(note).font(.secondaryText).foregroundStyle(.secondary).padding(Space.l).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(highlight ? palette.good.opacity(0.4) : palette.stroke))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.m, style: .continuous).stroke(highlight ? palette.good.opacity(0.4) : palette.stroke))
     }
 
     // MARK: Shared
@@ -239,13 +239,13 @@ struct EditGoalFlow: View {
                 Capsule().fill(Color.primary).frame(width: geo.size.width * v)
             }
         }
-        .frame(height: 4).padding(.horizontal, 20).animation(Motion.snappy, value: v)
+        .frame(height: 4).padding(.horizontal, Space.xl).animation(Motion.snappy, value: v)
     }
 
     private func primary(_ title: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).font(.headline).frame(maxWidth: .infinity, minHeight: 54) }
+        Button(action: action) { Text(title).font(.cardTitle).frame(maxWidth: .infinity, minHeight: 54) }
             .buttonStyle(PadButtonStyle(kind: .primary))
-            .padding(.horizontal, 20).padding(.vertical, 12)
+            .padding(.horizontal, Space.xl).padding(.vertical, Space.m)
     }
 
     private func load() {
@@ -290,7 +290,7 @@ struct WeightRuler: View {
                     let major = i % 10 == 0
                     c.fill(Path(CGRect(x: x, y: major ? 40 : 52, width: 1, height: size.height - (major ? 40 : 52))), with: .color(.secondary.opacity(major ? 0.9 : 0.45)))
                     if major {
-                        c.draw(Text("\(Int(v))").font(.caption2).foregroundStyle(.secondary), at: CGPoint(x: x, y: 26))
+                        c.draw(Text("\(Int(v))").font(.fine).foregroundStyle(.secondary), at: CGPoint(x: x, y: 26))
                     }
                 }
                 c.fill(Path(CGRect(x: w / 2 - 1, y: 18, width: 2.5, height: size.height - 18)), with: .color(palette.good))

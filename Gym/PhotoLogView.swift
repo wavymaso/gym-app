@@ -107,26 +107,26 @@ struct PhotoLogView: View {
 
     private var input: some View {
         ScrollView {
-            VStack(spacing: 18) {
+            VStack(spacing: Space.l) {
                 photoArea
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Space.s) {
                     Text(jpeg == nil ? "Or describe what you ate" : "Anything the photo can't show? (optional)")
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                        .font(.secondaryEmphasis).foregroundStyle(.secondary)
                     TextField(jpeg == nil ? "e.g. 2 fried eggs, 150 g of rice and a glass of orange juice"
                                           : "e.g. cooked in olive oil, I ate half, it's chicken not tofu",
                               text: $details, axis: .vertical)
                         .lineLimit(2...5).focused($typing)
-                        .padding(12).modifier(CardSurface(cornerRadius: 14))
+                        .padding(Space.m).modifier(CardSurface(cornerRadius: Radius.m))
                 }
                 Button { Task { await analyse() } } label: {
                     Label(jpeg == nil ? "Find foods" : "Analyse meal", systemImage: "sparkles")
-                        .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.s)
                 }
                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
                 .disabled(jpeg == nil && details.trimmingCharacters(in: .whitespaces).count < 3)
                 tips
             }
-            .padding(20)
+            .padding(Space.xl)
         }
         .scrollDismissesKeyboard(.interactively)
     }
@@ -138,15 +138,15 @@ struct PhotoLogView: View {
                     .frame(maxWidth: .infinity).frame(height: 260).clipped()
                     .clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                 Button { jpeg = nil; self.preview = nil } label: {
-                    Image(systemName: "xmark.circle.fill").font(.title2).symbolRenderingMode(.palette)
+                    Image(systemName: "xmark.circle.fill").font(.sectionTitle).symbolRenderingMode(.palette)
                         .foregroundStyle(Tokens.onScrim, Tokens.scrim)
                 }
-                .buttonStyle(.plain).padding(10)
+                .buttonStyle(.plain).padding(Space.m)
             }
         } else {
-            VStack(spacing: 12) {
-                Image(systemName: "fork.knife.circle").font(.system(size: 40)).foregroundStyle(palette.accent)
-                HStack(spacing: 10) {
+            VStack(spacing: Space.m) {
+                Image(systemName: "fork.knife.circle").font(.iconHero).foregroundStyle(palette.accent)
+                HStack(spacing: Space.m) {
                     #if os(iOS)
                     Button { camera = true } label: { Label("Camera", systemImage: "camera.fill").lineLimit(1).frame(maxWidth: .infinity) }
                         .buttonStyle(.bordered).controlSize(.large)
@@ -160,21 +160,21 @@ struct PhotoLogView: View {
                     .buttonStyle(.bordered).controlSize(.large)
                 }
                 #if os(macOS)
-                Text("or drop a photo here").font(.caption).foregroundStyle(.secondary)
+                Text("or drop a photo here").font(.note).foregroundStyle(.secondary)
                 #endif
             }
-            .padding(22).frame(maxWidth: .infinity)
+            .padding(Space.xl).frame(maxWidth: .infinity)
             .modifier(CardSurface(cornerRadius: Radius.l))
         }
     }
 
     private var tips: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s) {
             Label("Good light, from above, everything in view", systemImage: "sun.max")
             Label("Barcodes and packets in the photo are read exactly", systemImage: "barcode")
             Label("A fork or your hand in shot helps judge portions", systemImage: "hand.raised")
         }
-        .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+        .font(.note).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func use(_ data: Data) {
@@ -186,16 +186,16 @@ struct PhotoLogView: View {
     // MARK: Analysing
 
     private var working: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: Space.l) {
             if let preview {
                 Image(decorative: preview, scale: 1).resizable().scaledToFill()
                     .frame(width: 180, height: 180).clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Tokens.scrim.opacity(0.45)))
             }
             ProgressView().controlSize(.large)
-            Text(jpeg == nil ? "Finding foods…" : "Looking at your meal…").font(.headline)
+            Text(jpeg == nil ? "Finding foods…" : "Looking at your meal…").font(.cardTitle)
             Text(PhotoAI.engine == .gemini ? "With Gemini" : "On your Mac, usually 10–30 seconds")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.note).foregroundStyle(.secondary)
         }
     }
 
@@ -231,22 +231,22 @@ struct PhotoLogView: View {
     }
 
     private func failed(_ why: String) -> some View {
-        VStack(spacing: 14) {
-            Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(palette.warning)
-            Text(why).multilineTextAlignment(.center).font(.callout)
+        VStack(spacing: Space.l) {
+            Image(systemName: "exclamationmark.triangle").font(.screenTitle).foregroundStyle(palette.warning)
+            Text(why).multilineTextAlignment(.center).font(.secondaryText)
             HStack {
                 Button("Try again") { Task { await analyse() } }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 Button("Back") { stage = .input }.buttonStyle(.bordered)
             }
         }
-        .padding(30)
+        .padding(Space.xxl)
     }
 
     // MARK: The plate
 
     private var plateView: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: Space.m) {
                 summary
                 ForEach($plate) { $item in PlateRow(item: $item, energy: energy, swap: { swapping = item }) }
                 Button { swapping = PlateItem(name: "", per100: .zero, isLiquid: false, grams: 0, suggested: 0, source: .picked, included: false) } label: {
@@ -254,48 +254,48 @@ struct PhotoLogView: View {
                 }
                 .buttonStyle(.bordered).controlSize(.large)
                 Text("Nutrition comes from your foods, products and USDA where they match; the rest is the model's estimate (marked ≈). Portions you change are remembered for next time.")
-                    .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                    .font(.note).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(16)
+            .padding(Space.l)
         }
         .safeAreaInset(edge: .bottom) {
             Button(action: log) {
                 Text("Log \(plate.filter(\.included).count) item\(plate.filter(\.included).count == 1 ? "" : "s")")
-                    .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
+                    .font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.s)
             }
             .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
             .disabled(!plate.contains(where: \.included))
-            .padding(.horizontal, 16).padding(.vertical, 10)
+            .padding(.horizontal, Space.l).padding(.vertical, Space.m)
             .background(.bar)
         }
     }
 
     private var summary: some View {
         let total = plate.filter(\.included).reduce(Nutrients.zero) { $0 + $1.nutrients }
-        return HStack(spacing: 14) {
+        return HStack(spacing: Space.l) {
             if let preview {
                 Image(decorative: preview, scale: 1).resizable().scaledToFill()
                     .frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(energy.format(total.kcal)).font(.number(26))
-                HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text(energy.format(total.kcal)).font(.numberLarge)
+                HStack(spacing: Space.m) {
                     macro("P", total.protein, Macro.protein.color)
                     macro("F", total.fat, Macro.fat.color)
                     macro("C", total.carbs, Macro.carbs.color)
                 }
-                Text("Seen by \(seenBy)").font(.caption2).foregroundStyle(.secondary)
+                Text("Seen by \(seenBy)").font(.fine).foregroundStyle(.secondary)
             }
             Spacer()
         }
-        .padding(14)
+        .padding(Space.l)
         .modifier(CardSurface(cornerRadius: Radius.l))
     }
 
     private func macro(_ l: String, _ g: Double, _ c: Color) -> some View {
-        HStack(spacing: 3) {
-            Text(l).font(.caption.weight(.bold)).foregroundStyle(c)
-            Text("\(number(g)) g").font(.caption.weight(.semibold).monospacedDigit())
+        HStack(spacing: Space.xs) {
+            Text(l).font(.label).foregroundStyle(c)
+            Text("\(number(g)) g").font(.label.monospacedDigit())
         }
     }
 
@@ -319,23 +319,23 @@ struct PlateRow: View {
     let swap: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
+            HStack(alignment: .top, spacing: Space.m) {
                 Button { item.included.toggle() } label: {
                     Image(systemName: item.included ? "checkmark.circle.fill" : "circle")
-                        .font(.title2).foregroundStyle(item.included ? palette.accent : .secondary)
+                        .font(.sectionTitle).foregroundStyle(item.included ? palette.accent : .secondary)
                 }
                 .buttonStyle(.plain)
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(item.name).font(.headline).lineLimit(2)
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(spacing: Space.s) {
+                        Text(item.name).font(.cardTitle).lineLimit(2)
                         if (item.ai?.confidence ?? 1) < 0.5 && item.source != .picked {
                             Image(systemName: "questionmark.circle").foregroundStyle(palette.warning).help("Not sure about this one: check it")
                         }
                     }
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         badge
-                        if let d = item.detail { Text(d).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                        if let d = item.detail { Text(d).font(.note).foregroundStyle(.secondary).lineLimit(1) }
                     }
                 }
                 Spacer(minLength: 4)
@@ -345,35 +345,35 @@ struct PlateRow: View {
                     }
                     Button("Search for another…", systemImage: "magnifyingglass", action: swap)
                 } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath").font(.body.weight(.semibold))
+                    Image(systemName: "arrow.triangle.2.circlepath").font(.bodyEmphasis)
                 }
                 .menuStyle(.borderlessButton).fixedSize()
             }
             if item.included {
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     Button { item.grams = max(0, (item.grams - step).rounded()) } label: { Image(systemName: "minus") }
                         .buttonStyle(.bordered)
-                    VStack(spacing: 2) {
-                        Text("\(number(item.grams)) \(item.unit)").font(.number(20)).monospacedDigit()
+                    VStack(spacing: Space.xxs) {
+                        Text("\(number(item.grams)) \(item.unit)").font(.numberMedium).monospacedDigit()
                         if item.ai != nil, item.grams != item.suggested {
-                            Text("suggested \(number(item.suggested))").font(.caption2).foregroundStyle(.secondary)
+                            Text("suggested \(number(item.suggested))").font(.fine).foregroundStyle(.secondary)
                         }
                     }
                     .frame(minWidth: 90)
                     Button { item.grams = (item.grams + step).rounded() } label: { Image(systemName: "plus") }
                         .buttonStyle(.bordered)
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(energy.format(item.nutrients.kcal)).font(.subheadline.weight(.bold)).monospacedDigit()
+                    VStack(alignment: .trailing, spacing: Space.xxs) {
+                        Text(energy.format(item.nutrients.kcal)).font(.secondaryEmphasis).monospacedDigit()
                         Text("P \(number(item.nutrients.protein)) · F \(number(item.nutrients.fat)) · C \(number(item.nutrients.carbs))")
-                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                            .font(.note).foregroundStyle(.secondary).monospacedDigit()
                     }
                 }
                 Slider(value: $item.grams, in: 0...max(item.suggested * 2.5, item.grams, 60), step: 5)
                     .tint(palette.accent)
             }
         }
-        .padding(14)
+        .padding(Space.l)
         .modifier(CardSurface(cornerRadius: Radius.l))
         .opacity(item.included ? 1 : 0.6)
     }
@@ -391,8 +391,8 @@ struct PlateRow: View {
             case .dish: return ("Dish", palette.calories)
             }
         }()
-        Text(text).font(.caption2.weight(.bold)).foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 2)
+        Text(text).font(.fineLabel).foregroundStyle(color)
+            .padding(.horizontal, Space.s).padding(.vertical, Space.xxs)
             .background(color.opacity(0.15), in: Capsule())
     }
 

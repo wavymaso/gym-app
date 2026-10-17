@@ -8,18 +8,18 @@ struct HourTotals: View {
     let energy: EnergyUnit
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Space.m) {
             chip(number(energy.fromKcal(n.kcal)), icon: "flame.fill", color: palette.calories)
             chip(number(n.protein), letter: "P", color: palette.protein)
             chip(number(n.fat), letter: "F", color: palette.fat)
             chip(number(n.carbs), letter: "C", color: palette.carbs)
         }
-        .font(.subheadline.weight(.medium)).monospacedDigit()
+        .font(.secondaryEmphasis).monospacedDigit()
         .lineLimit(1).minimumScaleFactor(0.7)
     }
 
     private func chip(_ v: String, icon: String? = nil, letter: String? = nil, color: Color) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             Text(v)
             Group {
                 if let icon { Image(systemName: icon).font(.system(size: 10, weight: .bold)) }
@@ -42,23 +42,23 @@ struct EntryCard: View {
     var body: some View {
         let n = entry.nutrients
         Button(action: tap ?? edit) {
-            HStack(spacing: 12) {
+            HStack(spacing: Space.m) {
                 Text(foodEmoji(entry))
-                    .font(.system(size: 26))
+                    .font(.iconMedium)
                     .frame(width: 46, height: 46)
                     .background(dominant(n).opacity(0.16), in: Circle())
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.name).font(.body.weight(.medium)).lineLimit(2).multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text(entry.name).font(.bodyEmphasis).lineLimit(2).multilineTextAlignment(.leading)
                     FoodMacroLine(kcal: energy.fromKcal(n.kcal), protein: n.protein, fat: n.fat, carbs: n.carbs,
                               amount: entry.isQuickAdd ? nil : entry.amountText, colored: true)
                 }
                 Spacer(minLength: 4)
                 if tap == nil {
-                    Image(systemName: "pencil").font(.subheadline.weight(.semibold))
+                    Image(systemName: "pencil").font(.secondaryEmphasis)
                         .frame(width: 36, height: 36).background(Color.raisedBackground, in: Circle())
                 }
             }
-            .padding(.horizontal, 12).padding(.vertical, 11)
+            .padding(.horizontal, Space.m).padding(.vertical, Space.m)
             .modifier(CardSurface(cornerRadius: Radius.l))
             .contentShape(Rectangle())
         }
@@ -103,7 +103,7 @@ struct SelectionBar: View {
             Button {
                 if sel.mode != nil { animate(Motion.snappy) { sel.mode = nil } } else { sel.clear() }
             } label: {
-                Image(systemName: sel.mode == nil ? "xmark" : "chevron.left").font(.headline)
+                Image(systemName: sel.mode == nil ? "xmark" : "chevron.left").font(.cardTitle)
                     .frame(width: 40, height: 40)
                     .background(sel.mode == nil ? Color.primary : Color.clear, in: Circle())
                     .foregroundStyle(sel.mode == nil ? palette.onInverse : .primary)
@@ -111,8 +111,8 @@ struct SelectionBar: View {
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 0) {
-                Text(sel.mode == .copy ? "Copy" : sel.mode == .move ? "Move" : "Select").font(.subheadline.weight(.semibold))
-                Text(countText).font(.caption).foregroundStyle(.secondary)
+                Text(sel.mode == .copy ? "Copy" : sel.mode == .move ? "Move" : "Select").font(.secondaryEmphasis)
+                Text(countText).font(.note).foregroundStyle(.secondary)
             }
             .contentTransition(.opacity)
             Divider().frame(height: 36)
@@ -148,7 +148,7 @@ struct SelectionBar: View {
                 .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
             }
         }
-        .padding(.horizontal, Space.m).padding(.vertical, 10)
+        .padding(.horizontal, Space.m).padding(.vertical, Space.m)
         .background(.bar)
         .animation(Motion.pick(Motion.smooth), value: sel.mode)
         .sheet(isPresented: $picking) {
@@ -180,8 +180,8 @@ struct SelectionBar: View {
     }
 
     private func pill(_ t: String, destructive: Bool = false) -> some View {
-        Text(t).font(.subheadline.weight(.semibold)).foregroundStyle(destructive ? palette.warn : .primary)
-            .padding(.horizontal, 18).frame(height: 40).background(Color.raisedBackground, in: Capsule())
+        Text(t).font(.secondaryEmphasis).foregroundStyle(destructive ? palette.warn : .primary)
+            .padding(.horizontal, Space.l).frame(height: 40).background(Color.raisedBackground, in: Capsule())
     }
 
     private func remove() {

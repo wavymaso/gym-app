@@ -78,9 +78,9 @@ struct AddFoodView: View {
     private var panel: some View {
         VStack(spacing: 0) {
             if showsTop {
-            VStack(spacing: 10) {
+            VStack(spacing: Space.m) {
                 if embedded == nil {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Space.s) {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                         TextField("Search foods, brands or a barcode", text: $query)
                             .textFieldStyle(.plain).focused($focused)
@@ -92,7 +92,7 @@ struct AddFoodView: View {
                             Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 14).padding(.vertical, 11)
+                    .padding(.horizontal, Space.l).padding(.vertical, Space.m)
                     .background(Color.raisedBackground, in: Capsule())
                 }
                 if embedded != .search {
@@ -103,11 +103,11 @@ struct AddFoodView: View {
                 }
                 if tab == .search && LocalFoods.shared.available && (embedded == nil || !query.trimmingCharacters(in: .whitespaces).isEmpty) {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: Space.s) {
                             ForEach(LocalFoods.Scope.allCases) { s in
                                 Button(s.label) { scope = s; local = LocalFoods.shared.search(query, scope: s) }
-                                    .font(.caption.weight(.semibold)).buttonStyle(.plain)
-                                    .padding(.horizontal, 10).padding(.vertical, 5)
+                                    .font(.label).buttonStyle(.plain)
+                                    .padding(.horizontal, Space.m).padding(.vertical, Space.xs)
                                     .background(scope == s ? palette.accentFill : AnyShapeStyle(Color.raisedBackground), in: Capsule())
                                     .foregroundStyle(scope == s ? palette.onAccent : .primary)
                             }
@@ -115,14 +115,14 @@ struct AddFoodView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, embedded == nil ? 16 : 10)
+            .padding(.horizontal, Space.l).padding(.vertical, embedded == nil ? Space.l : Space.m)
             .background { if embedded == nil { Color.pageBackground } }
             }
             List {
                 if embedded == .library {
                     Button { recipeLink = true } label: {
                         Label("Recipe from a TikTok or Instagram link", systemImage: "link")
-                            .font(.subheadline).foregroundStyle(.secondary)
+                            .font(.secondaryText).foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                     .listRowBackground(Color.clear)
@@ -148,10 +148,10 @@ struct AddFoodView: View {
         }
         .safeAreaInset(edge: .bottom) {
             if embedded != nil {
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     if embedded == .search {
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass").font(.headline)
+                        HStack(spacing: Space.m) {
+                            Image(systemName: "magnifyingglass").font(.cardTitle)
                             TextField("Search for a food", text: $query)
                                 .textFieldStyle(.plain).focused($focused)
                                 #if os(iOS)
@@ -161,19 +161,19 @@ struct AddFoodView: View {
                                 Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 18).frame(height: 54)
+                        .padding(.horizontal, Space.l).frame(height: 54)
                         .modifier(GlassCapsule())
                     } else { Spacer() }
                     if cartCount > 0, let logFoods {
                         Button(action: logFoods) {
-                            Text("Log Foods").font(.headline).padding(.horizontal, 20).frame(height: 54)
+                            Text("Log Foods").font(.cardTitle).padding(.horizontal, Space.xl).frame(height: 54)
                                 .background(palette.inverseFill, in: Capsule()).foregroundStyle(palette.onInverse)
                         }
                         .buttonStyle(.plain)
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .padding(.horizontal, 14).padding(.bottom, 6)
+                .padding(.horizontal, Space.l).padding(.bottom, Space.s)
                 .animation(Motion.snappy, value: cartCount)
             }
         }
@@ -275,10 +275,10 @@ struct AddFoodView: View {
             Section { ForEach(foods.filter { $0.lastUsed != nil && !usual.foods.contains($0) }.prefix(25).map { $0 }) { f in foodRow(f) } } header: { sectionTitle("Latest") }
         } else if query.trimmingCharacters(in: .whitespaces).count < 2 {
             Text("Type at least two letters. Plain foods (rice, chicken breast) come from USDA, in English; supermarket products from Open Food Facts, in Spanish.")
-                .font(.callout).foregroundStyle(.secondary).listRowSeparator(.hidden)
+                .font(.secondaryText).foregroundStyle(.secondary).listRowSeparator(.hidden)
         } else {
             if let correction {
-                Label("Showing results for “\(correction)”", systemImage: "wand.and.stars").font(.callout).foregroundStyle(.secondary)
+                Label("Showing results for “\(correction)”", systemImage: "wand.and.stars").font(.secondaryText).foregroundStyle(.secondary)
             }
             if nothingAnywhere {
                 NoMatch(query: query.trimmingCharacters(in: .whitespaces), describe: { photo = .describe },
@@ -296,13 +296,13 @@ struct AddFoodView: View {
             }
             Section {
                 ForEach(generic) { r in resultRow(r) }
-                if let genericError { Text(genericError).font(.callout).foregroundStyle(.secondary) }
-                else if generic.isEmpty && !searching && !nothingAnywhere { Text("Nothing here").font(.callout).foregroundStyle(.tertiary) }
+                if let genericError { Text(genericError).font(.secondaryText).foregroundStyle(.secondary) }
+                else if generic.isEmpty && !searching && !nothingAnywhere { Text("Nothing here").font(.secondaryText).foregroundStyle(.tertiary) }
             } header: { header("Common foods · USDA") }
             Section {
                 ForEach(products.filter { p in !mine.contains(p.key) && !local.contains { $0.key == p.key } }) { r in resultRow(r) }
-                if let productError { Text(productError).font(.callout).foregroundStyle(.secondary) }
-                else if products.isEmpty && !searching && !nothingAnywhere { Text("Nothing here").font(.callout).foregroundStyle(.tertiary) }
+                if let productError { Text(productError).font(.secondaryText).foregroundStyle(.secondary) }
+                else if products.isEmpty && !searching && !nothingAnywhere { Text("Nothing here").font(.secondaryText).foregroundStyle(.tertiary) }
             } header: { header(local.isEmpty ? "Products · Open Food Facts" : "More products online · Open Food Facts") }
         }
     }
@@ -314,7 +314,7 @@ struct AddFoodView: View {
     @ViewBuilder private var myFoods: some View {
         let mine = foods.filter { $0.source == "custom" || $0.source == "recipe" }.sorted { $0.name < $1.name }
         if mine.isEmpty {
-            Text("Foods and recipes you create appear here. Use New (top right).").font(.callout).foregroundStyle(.secondary)
+            Text("Foods and recipes you create appear here. Use New (top right).").font(.secondaryText).foregroundStyle(.secondary)
         }
         ForEach(mine) { f in
             foodRow(f).contextMenu {
@@ -331,7 +331,7 @@ struct AddFoodView: View {
 
     private func localList(_ list: [Food], empty: String) -> some View {
         Group {
-            if list.isEmpty { Text(empty).font(.callout).foregroundStyle(.secondary) }
+            if list.isEmpty { Text(empty).font(.secondaryText).foregroundStyle(.secondary) }
             ForEach(list) { f in foodRow(f) }
         }
     }
@@ -344,7 +344,7 @@ struct AddFoodView: View {
     }
 
     private func sectionTitle(_ t: String) -> some View {
-        Text(t).font(.title3.weight(.semibold)).foregroundStyle(.primary).textCase(nil)
+        Text(t).font(.subsectionTitle).foregroundStyle(.primary).textCase(nil)
     }
 
     private func foodRow(_ f: Food) -> some View {

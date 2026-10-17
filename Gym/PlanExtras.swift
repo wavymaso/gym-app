@@ -82,23 +82,23 @@ struct StaplesView: View {
         List {
             Section {
                 Text("Pick 15–25 foods you eat most weeks. Set how much you usually have and at which meal. The planner builds your meals from these until your log has about two weeks of history; then it learns from what you actually eat.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
                 HStack {
                     Text("\(staples.count) picked").font(.secondaryText.weight(.semibold)).monospacedDigit()
                     Spacer()
                     Text(staples.count < 15 ? "aim for at least 15" : staples.count > 25 ? "25 is plenty" : "good")
-                        .font(.caption).foregroundStyle(staples.count < 15 || staples.count > 25 ? palette.warn : palette.good)
+                        .font(.note).foregroundStyle(staples.count < 15 || staples.count > 25 ? palette.warn : palette.good)
                 }
             }
             Section {
                 if suggestions.isEmpty {
-                    Text("Nothing logged on \(minDays) or more of the last \(window) days yet. Foods you log often will show up here.").font(.caption).foregroundStyle(.secondary)
+                    Text("Nothing logged on \(minDays) or more of the last \(window) days yet. Foods you log often will show up here.").font(.note).foregroundStyle(.secondary)
                 }
                 ForEach(suggestions, id: \.key) { s in
                     HStack {
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: Space.hairline) {
                             Text(s.name).lineLimit(1)
-                            Text("\(s.days) of the last \(window) days · usually \(Int(s.grams)) g at \(s.band.label.lowercased())").font(.caption).foregroundStyle(.secondary)
+                            Text("\(s.days) of the last \(window) days · usually \(Int(s.grams)) g at \(s.band.label.lowercased())").font(.note).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button { confirm(s) } label: { Image(systemName: "checkmark.circle.fill") }.buttonStyle(.borderless).foregroundStyle(palette.good)
@@ -122,9 +122,9 @@ struct StaplesView: View {
                 ForEach(foods.filter { f in !staples.contains { $0.key == f.key } && (search.isEmpty || f.name.localizedCaseInsensitiveContains(search)) }.prefix(80)) { f in
                     Button { add(f) } label: {
                         HStack {
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: Space.hairline) {
                                 Text(f.name).lineLimit(1)
-                                Text("\(Int(f.per100.kcal)) kcal · \(Int(f.per100.protein)) g protein per 100 g").font(.caption).foregroundStyle(.secondary)
+                                Text("\(Int(f.per100.kcal)) kcal · \(Int(f.per100.protein)) g protein per 100 g").font(.note).foregroundStyle(.secondary)
                             }
                             Spacer()
                             Image(systemName: "plus.circle").foregroundStyle(palette.accent)

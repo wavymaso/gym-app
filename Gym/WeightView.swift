@@ -14,10 +14,10 @@ struct WeightView: View {
         let unit = profiles.first?.weight ?? .kg
         let series = trendSeries(entries.map { DayValue(day: $0.day, value: $0.trendKg) }, through: dayKey())
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 hero(series, unit)
                 if !series.isEmpty {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16, alignment: .top)], spacing: 16) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: Space.l, alignment: .top)], spacing: Space.l) {
                         stat("Per week", weeklyTrendChange(series).map { signed(unit, $0) } ?? "–", "Over the last 2 weeks")
                         stat("30 days", change(series, 30).map { signed(unit, $0) } ?? "–", "Trend change")
                         stat("Since start", change(series, series.count).map { signed(unit, $0) } ?? "–",
@@ -27,11 +27,11 @@ struct WeightView: View {
                         Picker("", selection: $range) { ForEach(ChartRange.allCases, id: \.self) { Text($0.label).tag($0) } }
                             .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
                         WeightChart(series: range.clip(series), unit: unit, goalKg: profiles.first?.goalWeightKg).frame(height: 260)
-                        HStack(spacing: 16) {
+                        HStack(spacing: Space.l) {
                             Label("Scale", systemImage: "circle.fill").labelStyle(DotLabel(color: Color.primary.opacity(0.4)))
                             Label("Trend", systemImage: "circle.fill").labelStyle(DotLabel(color: palette.accent))
                         }
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                     }
                 }
                 BodySection()
@@ -58,36 +58,36 @@ struct WeightView: View {
     }
 
     private func hero(_ series: [(day: String, scale: Double, trend: Double, logged: Bool)], _ unit: WeightUnit) -> some View {
-        let layout = isPhone ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14)) : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+        let layout = isPhone ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.l)) : AnyLayout(HStackLayout(alignment: .center, spacing: Space.l))
         return layout {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("TREND WEIGHT").font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(.secondary)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(series.last.map { number(unit.fromKg($0.trend), digits: 1) } ?? "–").font(.number(44)).monospacedDigit()
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("TREND WEIGHT").font(.label).tracking(0.6).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                    Text(series.last.map { number(unit.fromKg($0.trend), digits: 1) } ?? "–").font(.numberHero).monospacedDigit()
                         .lineLimit(1).fixedSize()
-                    Text(unit.rawValue).font(.title3.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(unit.rawValue).font(.subsectionTitle).foregroundStyle(.secondary)
                     if let wk = weeklyTrendChange(series) { Delta(text: signed(unit, wk) + "/wk", good: nil) }
                 }
                 if let w = entries.first {
-                    Text("Last weigh-in \(unit.format(w.kg)) \(relative(w.day))").font(.callout).foregroundStyle(.secondary)
+                    Text("Last weigh-in \(unit.format(w.kg)) \(relative(w.day))").font(.secondaryText).foregroundStyle(.secondary)
                 }
             }
             if !isPhone { Spacer() }
             Button { weighing = true } label: {
-                Label("Weigh in", systemImage: "plus").font(.headline).padding(.horizontal, 6).padding(.vertical, 4)
+                Label("Weigh in", systemImage: "plus").font(.cardTitle).padding(.horizontal, Space.s).padding(.vertical, Space.xs)
                     .frame(maxWidth: isPhone ? .infinity : nil)
             }
             .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
         }
-        .padding(18)
-        .modifier(CardSurface(cornerRadius: 20))
+        .padding(Space.l)
+        .modifier(CardSurface(cornerRadius: Radius.l))
         .sheet(isPresented: $weighing) { WeighInSheet() }
     }
 
     private func stat(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.number(26)).monospacedDigit()
-            Text(note).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.numberLarge).monospacedDigit()
+            Text(note).font(.note).foregroundStyle(.secondary)
         }
     }
 
@@ -119,7 +119,7 @@ struct WeightChart: View {
         Chart {
             if showGoal, let goal {
                 RuleMark(y: .value("Goal", goal)).foregroundStyle(palette.good.opacity(0.8)).lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                    .annotation(position: .top, alignment: .leading) { Text("Goal").font(.caption2.weight(.bold)).foregroundStyle(palette.good) }
+                    .annotation(position: .top, alignment: .leading) { Text("Goal").font(.fineLabel).foregroundStyle(palette.good) }
             }
             ForEach(series.filter(\.logged), id: \.day) { p in
                 PointMark(x: .value("Day", date(fromKey: p.day)), y: .value("Scale", unit.fromKg(p.scale)))

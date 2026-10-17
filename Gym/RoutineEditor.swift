@@ -28,14 +28,14 @@ struct RoutineEditor: View {
                 TextField("Routine name, e.g. Push", text: $name)
                 Section("Exercises") {
                     ForEach($items) { $item in
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: Space.s) {
                             HStack {
-                                Text(ctx.exercise(item.exerciseKey)?.name ?? "?").font(.headline)
+                                Text(ctx.exercise(item.exerciseKey)?.name ?? "?").font(.cardTitle)
                                 Spacer()
                                 Button(role: .destructive) { items.removeAll { $0.id == item.id } } label: { Image(systemName: "minus.circle") }
                                     .buttonStyle(.borderless)
                             }
-                            HStack(spacing: 14) {
+                            HStack(spacing: Space.l) {
                                 Stepper("\(item.sets) sets", value: $item.sets, in: 1...10)
                                 Stepper("\(item.repLow)–\(item.repHigh) reps", onIncrement: { item.repLow += 1; item.repHigh += 1 },
                                         onDecrement: { if item.repLow > 1 { item.repLow -= 1; item.repHigh -= 1 } })
@@ -44,7 +44,7 @@ struct RoutineEditor: View {
                                 }
                                 .frame(maxWidth: 140)
                             }
-                            .font(.callout)
+                            .font(.secondaryText)
                         }
                     }
                     .onMove { items.move(fromOffsets: $0, toOffset: $1) }
@@ -128,7 +128,7 @@ struct StrengthCard: View {
             Card(title: "Strength, last 12 weeks", systemImage: "chart.line.uptrend.xyaxis") {
                 Chart(weeks, id: \.self) { w in
                     BarMark(x: .value("Week", date(fromKey: w), unit: .weekOfYear), y: .value("Volume", unit.fromKg(volume[w] ?? 0) / 1000))
-                        .foregroundStyle(w == weeks.last ? palette.accent : palette.accent.opacity(0.55)).cornerRadius(4)
+                        .foregroundStyle(w == weeks.last ? palette.accent : palette.accent.opacity(0.55)).cornerRadius(Radius.xs)
                 }
                 .numberYAxis(digits: 1)
                 .chartYAxisLabel("Volume, t")
@@ -141,23 +141,23 @@ struct StrengthCard: View {
                     let recent = rows.filter { $0.day >= cut }.map { estimatedOneRepMax(kg: $0.kg, reps: $0.reps) }.max()
                     let before = rows.filter { $0.day < cut }.map { estimatedOneRepMax(kg: $0.kg, reps: $0.reps) }.max()
                     HStack {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(ctx.exercise(key)?.name ?? "Exercise").font(.callout.weight(.medium)).lineLimit(1)
-                            Text("\(rows.count) sets").font(.caption).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: Space.hairline) {
+                            Text(ctx.exercise(key)?.name ?? "Exercise").font(.secondaryEmphasis).lineLimit(1)
+                            Text("\(rows.count) sets").font(.note).foregroundStyle(.secondary)
                         }
                         Spacer()
                         if let r = recent {
-                            Text("\(number(unit.fromKg(r), digits: 1)) \(unit.rawValue)").font(.callout.weight(.semibold)).monospacedDigit()
+                            Text("\(number(unit.fromKg(r), digits: 1)) \(unit.rawValue)").font(.secondaryEmphasis).monospacedDigit()
                         }
                         if let r = recent, let b = before, b > 0 {
                             let pct = (r - b) / b * 100
                             Delta(text: (pct >= 0 ? "+" : "−") + "\(number(abs(pct), digits: 1))%", good: abs(pct) < 0.5 ? nil : pct > 0)
                         } else {
-                            Text("new").font(.caption).foregroundStyle(.secondary)
+                            Text("new").font(.note).foregroundStyle(.secondary)
                         }
                     }
                 }
-                Text("Estimated 1-rep max: best of the last 4 weeks, against the 8 weeks before.").font(.caption).foregroundStyle(.secondary)
+                Text("Estimated 1-rep max: best of the last 4 weeks, against the 8 weeks before.").font(.note).foregroundStyle(.secondary)
             }
         }
     }

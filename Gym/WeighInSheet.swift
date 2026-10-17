@@ -17,7 +17,7 @@ struct WeighInSheet: View {
         let unit = profiles.first?.weight ?? .kg
         let names = profiles.first?.scaleNames ?? []
         NavigationStack {
-            VStack(spacing: 18) {
+            VStack(spacing: Space.l) {
                 if !names.isEmpty {
                     Picker("Scale", selection: $scale) {
                         Text("Main").tag("")
@@ -25,9 +25,9 @@ struct WeighInSheet: View {
                     }
                     .pickerStyle(.segmented).frame(maxWidth: 320)
                 }
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                     TextField("", text: $text, prompt: Text(weights.first.map { number(unit == .kg ? $0.kg : $0.kg / 0.45359237, digits: 1) } ?? "78,4"))
-                        .font(.number(56)).multilineTextAlignment(.center).focused($focused).frame(maxWidth: 220)
+                        .font(.numberHero).multilineTextAlignment(.center).focused($focused).frame(maxWidth: 220)
                         #if os(iOS)
                         .keyboardType(.decimalPad)
                         .toolbar {
@@ -41,16 +41,16 @@ struct WeighInSheet: View {
                         }
                         #endif
                         .onSubmit(save)
-                    Text(unit.rawValue).font(.title2.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(unit.rawValue).font(.sectionTitle).foregroundStyle(.secondary)
                 }
                 DatePicker("Day", selection: $day, in: ...Date(), displayedComponents: .date)
                     .frame(maxWidth: 280)
                 if let w = weights.first {
-                    Text("Last: \(unit.format(w.kg)) \(relative(w.day))").font(.callout).foregroundStyle(.secondary)
+                    Text("Last: \(unit.format(w.kg)) \(relative(w.day))").font(.secondaryText).foregroundStyle(.secondary)
                 }
                 Spacer()
             }
-            .padding(24)
+            .padding(Space.xl)
             .frame(maxWidth: .infinity)
             .pageBackground()
             .navigationTitle("Weigh in")

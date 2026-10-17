@@ -14,7 +14,7 @@ struct TodayRings: View {
 
     private var rings: some View {
         Card(title: "") {
-            let layout = isPhone ? AnyLayout(VStackLayout(spacing: 16)) : AnyLayout(HStackLayout(spacing: 36))
+            let layout = isPhone ? AnyLayout(VStackLayout(spacing: Space.l)) : AnyLayout(HStackLayout(spacing: Space.xxl))
             layout {
                 calorieRing
                 HStack(spacing: isPhone ? 0 : 28) {
@@ -25,7 +25,7 @@ struct TodayRings: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .padding(.vertical, isPhone ? 0 : 8)
+            .padding(.vertical, isPhone ? 0 : Space.s)
             .frame(maxWidth: .infinity)
             if target.protein > 0, eaten.protein < target.protein * 0.9 {
                 // A soft guide (registry protein.perMeal: ~0.4 g/kg over at least four meals).
@@ -40,31 +40,31 @@ struct TodayRings: View {
         return ZStack {
             Ring(progress: target.kcal > 0 ? eaten.kcal / target.kcal : 0, color: Macro.calories.color, lineWidth: 18)
             VStack(spacing: 0) {
-                Text(number(energy.fromKcal(abs(left)))).font(.number(44)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                Text(number(energy.fromKcal(abs(left)))).font(.numberHero).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
                     .contentTransition(.numericText(value: left)).animation(Motion.snappy, value: left)
-                Text("\(energy.rawValue) \(left >= 0 ? "left" : "over")").font(.subheadline.weight(.semibold))
+                Text("\(energy.rawValue) \(left >= 0 ? "left" : "over")").font(.secondaryEmphasis)
                     .foregroundStyle(left >= 0 ? Color.secondary : palette.warn)
-                Text("\(number(energy.fromKcal(eaten.kcal))) of \(energy.format(target.kcal))").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
+                Text("\(number(energy.fromKcal(eaten.kcal))) of \(energy.format(target.kcal))").font(.note).foregroundStyle(.secondary).padding(.top, Space.xs)
             }
-            .padding(30)
+            .padding(Space.xxl)
         }
         .frame(width: isPhone ? 180 : 210, height: isPhone ? 180 : 210)
     }
 
     private func macroRing(_ m: Macro) -> some View {
         let e = m.value(eaten), t = m.value(target)
-        return VStack(spacing: 8) {
+        return VStack(spacing: Space.s) {
             ZStack {
                 Ring(progress: t > 0 ? e / t : 0, color: m.color, lineWidth: 9)
                 VStack(spacing: -2) {
-                    Text(number(e)).font(.number(18)).monospacedDigit()
+                    Text(number(e)).font(.numberMedium).monospacedDigit()
                         .contentTransition(.numericText(value: e)).animation(Motion.snappy, value: e)
-                    Text("/\(number(t))").font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+                    Text("/\(number(t))").font(.fine).foregroundStyle(.secondary).monospacedDigit()
                 }
             }
             .frame(width: isPhone ? 72 : 92, height: isPhone ? 72 : 92)
-            Text(m.label).font(.subheadline.weight(.semibold))
-            Text(e <= t ? "\(number(t - e)) g left" : "\(number(e - t)) g over").font(.caption)
+            Text(m.label).font(.secondaryEmphasis)
+            Text(e <= t ? "\(number(t - e)) g left" : "\(number(e - t)) g over").font(.note)
                 .foregroundStyle(e <= t ? Color.secondary : palette.warn).monospacedDigit()
         }
     }
@@ -79,12 +79,12 @@ struct QuickAction: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon).font(.title3.weight(.semibold)).foregroundStyle(color)
+            VStack(spacing: Space.s) {
+                Image(systemName: icon).font(.subsectionTitle).foregroundStyle(color)
                     .frame(width: 40, height: 40).background(color.opacity(0.16), in: Circle())
-                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
+                Text(title).font(.label).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
-            .frame(maxWidth: .infinity).padding(.vertical, 12)
+            .frame(maxWidth: .infinity).padding(.vertical, Space.m)
             .modifier(CardSurface(cornerRadius: Radius.l))
             .contentShape(Rectangle())
         }
@@ -98,8 +98,8 @@ struct Delta: View {
     let good: Bool?
     var body: some View {
         let c: Color = good == nil ? .secondary : (good! ? palette.good : palette.warn)
-        Text(text).font(.caption.weight(.bold)).monospacedDigit().foregroundStyle(c)
-            .padding(.horizontal, 8).padding(.vertical, 4).background(c.opacity(0.14), in: Capsule())
+        Text(text).font(.label).monospacedDigit().foregroundStyle(c)
+            .padding(.horizontal, Space.s).padding(.vertical, Space.xs).background(c.opacity(0.14), in: Capsule())
     }
 }
 
@@ -120,15 +120,15 @@ struct WeekNutritionCard: View {
             return abs(k - t) / t <= 0.1
         }.count
         Card(title: "Last 7 days", systemImage: "chart.bar") {
-            HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: Space.s) {
                 ForEach(days, id: \.self) { d in
                     let k = byDay[d]?.kcal ?? 0, t = target(d)?.kcal ?? 0
-                    VStack(spacing: 5) {
+                    VStack(spacing: Space.xs) {
                         GeometryReader { g in
                             let h = g.size.height, top = max(t * 1.25, k, 1)
                             ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 5).fill(Color.raisedBackground)
-                                RoundedRectangle(cornerRadius: 5)
+                                RoundedRectangle(cornerRadius: Radius.xs).fill(Color.raisedBackground)
+                                RoundedRectangle(cornerRadius: Radius.xs)
                                     .fill(d == dayKey() ? Macro.calories.color.opacity(0.5) : (t > 0 && abs(k - t) / t <= 0.1 ? Macro.calories.color : Macro.calories.color.opacity(0.75)))
                                     .frame(height: h * k / top)
                                 if t > 0 {
@@ -138,7 +138,7 @@ struct WeekNutritionCard: View {
                         }
                         .frame(height: 90)
                         Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
-                            .font(.caption2.weight(d == dayKey() ? .bold : .regular)).foregroundStyle(d == dayKey() ? .primary : .secondary)
+                            .font(d == dayKey() ? Font.fineLabel : Font.fine).foregroundStyle(d == dayKey() ? .primary : .secondary)
                     }
                 }
             }
@@ -153,9 +153,9 @@ struct WeekNutritionCard: View {
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value).font(.number(17, weight: .semibold)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.hairline) {
+            Text(value).font(.numberSmall).monospacedDigit()
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
     }
 }
@@ -179,15 +179,15 @@ struct TrainingCard: View {
         let volume = weekSets.filter { $0.kindValue != .warmup }.reduce(0.0) { $0 + $1.kg * Double($1.reps) }
         let minutes = thisWeek.reduce(0) { $0 + $1.duration } / 60
         Card(title: "Training this week", systemImage: "dumbbell") {
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 ForEach(0..<7, id: \.self) { i in
                     let d = addDays(monday, i)
                     let trained = thisWeek.contains { $0.day == d }
-                    VStack(spacing: 4) {
+                    VStack(spacing: Space.xs) {
                         Circle().fill(trained ? Macro.protein.color : Color.raisedBackground).frame(width: 26, height: 26)
-                            .overlay { if trained { Image(systemName: "checkmark").font(.caption2.weight(.heavy)).foregroundStyle(palette.onData) } }
+                            .overlay { if trained { Image(systemName: "checkmark").font(.fineLabel).foregroundStyle(palette.onData) } }
                             .overlay { if d == dayKey() && !trained { Circle().stroke(Macro.protein.color, lineWidth: 2) } }
-                        Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale))).font(.caption2).foregroundStyle(.secondary)
+                        Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale))).font(.fine).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -207,7 +207,7 @@ struct TrainingCard: View {
                 }
                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large)
             } else if let last = finished.first {
-                Text("Last: \(last.name), \(relative(last.day))").font(.callout).foregroundStyle(.secondary)
+                Text("Last: \(last.name), \(relative(last.day))").font(.secondaryText).foregroundStyle(.secondary)
             }
         }
     }
@@ -226,9 +226,9 @@ struct TrainingCard: View {
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value).font(.number(17, weight: .semibold)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Space.hairline) {
+            Text(value).font(.numberSmall).monospacedDigit()
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
     }
 }
@@ -265,38 +265,38 @@ struct WeekTargetsWidget: View {
         let weekEaten = days.reduce(0.0) { $0 + (byDay[$1]?.kcal ?? 0) }
         let weekTarget = days.reduce(0.0) { $0 + (target($1)?.kcal ?? 0) }
         let today = byDay[dayKey()] ?? .zero, tt = target(dayKey())
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .bottom, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.m) {
+            HStack(alignment: .bottom, spacing: Space.s) {
                 ForEach(days, id: \.self) { d in
                     let k = byDay[d]?.kcal ?? 0, t = target(d)?.kcal ?? 0
                     let top = max(days.compactMap { target($0)?.kcal }.max() ?? 1, 1) * 1.2
-                    VStack(spacing: 5) {
+                    VStack(spacing: Space.xs) {
                         GeometryReader { g in
                             ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 5).fill(Color.raisedBackground).frame(height: g.size.height * t / top)
-                                RoundedRectangle(cornerRadius: 5).fill(k >= t * 0.98 && t > 0 ? Macro.calories.color : Macro.calories.color.opacity(0.7))
+                                RoundedRectangle(cornerRadius: Radius.xs).fill(Color.raisedBackground).frame(height: g.size.height * t / top)
+                                RoundedRectangle(cornerRadius: Radius.xs).fill(k >= t * 0.98 && t > 0 ? Macro.calories.color : Macro.calories.color.opacity(0.7))
                                     .frame(height: g.size.height * min(k, top) / top)
                                 Rectangle().fill(k >= t && t > 0 ? Color.primary : Color.primary.opacity(0.35)).frame(height: 2)
                                     .offset(y: -g.size.height * t / top + 1).opacity(t > 0 ? 1 : 0)
                             }
                             .frame(width: g.size.width, height: g.size.height, alignment: .bottom)
                         }
-                        .padding(3)
-                        .overlay { if d == dayKey() { RoundedRectangle(cornerRadius: 7).stroke(palette.accent, lineWidth: 1.5) } }
+                        .padding(Space.xs)
+                        .overlay { if d == dayKey() { RoundedRectangle(cornerRadius: Radius.s).stroke(palette.accent, lineWidth: 1.5) } }
                         Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
-                            .font(.caption2.weight(d == dayKey() ? .bold : .regular)).foregroundStyle(d == dayKey() ? .primary : .secondary)
+                            .font(d == dayKey() ? Font.fineLabel : Font.fine).foregroundStyle(d == dayKey() ? .primary : .secondary)
                     }
                 }
             }
             .frame(height: 150)
             HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("This week").font(.caption).foregroundStyle(.secondary)
-                    Text("\(number(energy.fromKcal(weekEaten))) / \(energy.format(weekTarget))").font(.number(15, weight: .semibold)).monospacedDigit()
+                VStack(alignment: .leading, spacing: Space.hairline) {
+                    Text("This week").font(.note).foregroundStyle(.secondary)
+                    Text("\(number(energy.fromKcal(weekEaten))) / \(energy.format(weekTarget))").font(.numberSmall).monospacedDigit()
                 }
                 Spacer()
                 if let tt {
-                    HStack(spacing: 10) {
+                    HStack(spacing: Space.m) {
                         mini("flame.fill", today.kcal, tt.kcal, Macro.calories.color)
                         mini("P", today.protein, tt.protein, Macro.protein.color)
                         mini("F", today.fat, tt.fat, Macro.fat.color)
@@ -309,9 +309,9 @@ struct WeekTargetsWidget: View {
 
     private func mini(_ label: String, _ v: Double, _ t: Double, _ c: Color) -> some View {
         VStack(spacing: 0) {
-            if label.count > 1 { Image(systemName: label).font(.caption2).foregroundStyle(c) } else { Text(label).font(.caption2.weight(.bold)).foregroundStyle(c) }
-            Text(number(v)).font(.caption.weight(.bold)).monospacedDigit()
-            Text(number(t)).font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+            if label.count > 1 { Image(systemName: label).font(.fine).foregroundStyle(c) } else { Text(label).font(.fineLabel).foregroundStyle(c) }
+            Text(number(v)).font(.label).monospacedDigit()
+            Text(number(t)).font(.fine).foregroundStyle(.secondary).monospacedDigit()
         }
     }
 }

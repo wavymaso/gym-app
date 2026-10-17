@@ -60,49 +60,49 @@ struct AIPanel: View {
 
     private var input: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 Picker("", selection: $mode) { Text("Snap").tag(0); Text("Describe").tag(1) }
                     .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 240)
-                HStack { Text("Photos").font(.headline); Spacer(); Text("\(photos.count)/3").foregroundStyle(.secondary) }
+                HStack { Text("Photos").font(.cardTitle); Spacer(); Text("\(photos.count)/3").foregroundStyle(.secondary) }
                 if !photos.isEmpty {
-                    HStack(spacing: 10) {
+                    HStack(spacing: Space.m) {
                         ForEach(photos.indices, id: \.self) { i in
                             Image(decorative: photos[i].image, scale: 1).resizable().scaledToFill()
-                                .frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                                 .overlay(alignment: .topTrailing) {
                                     Button { photos.remove(at: i) } label: {
                                         Image(systemName: "xmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(Tokens.onScrim, Tokens.scrim)
                                     }
-                                    .buttonStyle(.plain).padding(4)
+                                    .buttonStyle(.plain).padding(Space.xs)
                                 }
                         }
                     }
                 }
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     #if os(iOS)
                     Button { camera = true } label: {
-                        Label("Capture", systemImage: "camera.fill").font(.headline).frame(maxWidth: .infinity, minHeight: 54)
-                            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        Label("Capture", systemImage: "camera.fill").font(.cardTitle).frame(maxWidth: .infinity, minHeight: 54)
+                            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                     }
                     .buttonStyle(.plain).disabled(photos.count >= 3)
                     #endif
                     PhotosPicker(selection: $library, maxSelectionCount: max(1, 3 - photos.count), matching: .images) {
-                        Image(systemName: "icloud.and.arrow.up.fill").font(.title3).frame(width: 64, height: 54)
+                        Image(systemName: "icloud.and.arrow.up.fill").font(.subsectionTitle).frame(width: 64, height: 54)
                             #if os(macOS)
                             .frame(maxWidth: .infinity)
                             #endif
-                            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                     }
                     .buttonStyle(.plain).disabled(photos.count >= 3)
                 }
                 if mode == 1 || !text.isEmpty {
-                    HStack { Text("Description").font(.headline); Spacer(); Text("\(text.count)/500").foregroundStyle(.secondary) }
+                    HStack { Text("Description").font(.cardTitle); Spacer(); Text("\(text.count)/500").foregroundStyle(.secondary) }
                     TextField(mode == 1 ? "Describe your meal" : "Anything the photo can't show", text: $text, axis: .vertical)
-                        .lineLimit(3...8).padding(14)
-                        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .lineLimit(3...8).padding(Space.l)
+                        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                         .onChange(of: text) { _, t in if t.count > 500 { text = String(t.prefix(500)) } }
                 } else {
-                    Button("Add a description") { mode = 1 }.font(.callout)
+                    Button("Add a description") { mode = 1 }.font(.secondaryText)
                 }
                 if let error, !working {
                     ProblemCard(title: "The AI couldn't read this", message: error, actions: problemActions)
@@ -112,15 +112,15 @@ struct AIPanel: View {
                                 detail: "Splitting it into foods and ingredients. Usually 5–20 seconds; longer when Gemini is busy.")
                 }
             }
-            .padding(16)
+            .padding(Space.l)
         }
         .safeAreaInset(edge: .bottom) {
             Button { Task { await analyse() } } label: {
-                Text("Analyze").font(.headline).frame(maxWidth: .infinity, minHeight: 54)
+                Text("Analyze").font(.cardTitle).frame(maxWidth: .infinity, minHeight: 54)
             }
             .buttonStyle(PadButtonStyle(kind: canAnalyse ? .primary : .dark))
             .disabled(!canAnalyse || working)
-            .padding(.horizontal, 16).padding(.vertical, 8)
+            .padding(.horizontal, Space.l).padding(.vertical, Space.s)
         }
     }
 
@@ -173,37 +173,37 @@ struct AIPanel: View {
         let energy = profiles.first?.energy ?? .kcal
         let total = plate.filter(\.included).reduce(Nutrients.zero) { $0 + $1.nutrients }
         return ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: Space.m) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(energy.format(total.kcal)).font(.number(28))
+                    VStack(alignment: .leading, spacing: Space.xxs) {
+                        Text(energy.format(total.kcal)).font(.numberLarge)
                         Text("P \(number(total.protein)) · F \(number(total.fat)) · C \(number(total.carbs)) · seen by \(seenBy)")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.note).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("Start over") { plate = []; photos = []; text = "" }.font(.callout)
+                    Button("Start over") { plate = []; photos = []; text = "" }.font(.secondaryText)
                 }
-                Text("AI Plate").font(.title2.bold()).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 4)
+                Text("AI Plate").font(.sectionTitle).frame(maxWidth: .infinity, alignment: .leading).padding(.top, Space.xs)
                 ForEach($plate) { $item in AIPlateCard(item: $item, energy: energy, swap: { swapping = $0 }) }
                 if plate.contains(where: { $0.children.contains(where: \.assumed) }) {
                     Label("Rows marked ✦ are inferred, not seen: mostly cooking oil and butter, with how likely they are. Change or remove them if you know better.",
-                          systemImage: "drop.fill").font(.caption).foregroundStyle(.secondary)
+                          systemImage: "drop.fill").font(.note).foregroundStyle(.secondary)
                 }
-                Text("AI can make mistakes, so always check its results.").font(.caption).foregroundStyle(.secondary)
+                Text("AI can make mistakes, so always check its results.").font(.note).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 PlateNutrition(plate: total, day: ctx.entries(on: dayKey()).reduce(Nutrients.zero) { $0 + $1.nutrients },
                                target: ctx.dayTargets(on: dayKey()), energy: energy)
             }
-            .padding(16)
+            .padding(Space.l)
         }
         .safeAreaInset(edge: .bottom) {
             Button {
                 add(plate); plate = []; photos = []; text = ""
             } label: {
-                Text("Add \(plate.filter(\.included).count) to cart").font(.headline).frame(maxWidth: .infinity, minHeight: 54)
+                Text("Add \(plate.filter(\.included).count) to cart").font(.cardTitle).frame(maxWidth: .infinity, minHeight: 54)
             }
             .buttonStyle(PadButtonStyle(kind: .primary)).disabled(!plate.contains(where: \.included))
-            .padding(.horizontal, 16).padding(.vertical, 8)
+            .padding(.horizontal, Space.l).padding(.vertical, Space.s)
         }
     }
 
@@ -230,14 +230,14 @@ struct AIPlateCard: View {
         VStack(spacing: 0) {
             row($item, top: true)
             if item.isDish {
-                Divider().padding(.leading, 16)
+                Divider().padding(.leading, Space.l)
                 Button { animate(Motion.snappy) { open.toggle() } } label: {
                     HStack {
-                        Text(open ? "Collapse Ingredients" : "Show \(item.children.count) Ingredients").font(.subheadline)
+                        Text(open ? "Collapse Ingredients" : "Show \(item.children.count) Ingredients").font(.secondaryText)
                         Spacer()
-                        Image(systemName: open ? "chevron.up" : "chevron.down").font(.subheadline.weight(.semibold))
+                        Image(systemName: open ? "chevron.up" : "chevron.down").font(.secondaryEmphasis)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
+                    .padding(.horizontal, Space.l).padding(.vertical, Space.m).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 if open {
@@ -254,31 +254,31 @@ struct AIPlateCard: View {
 
     private func row(_ x: Binding<PlateItem>, top: Bool) -> some View {
         let v = x.wrappedValue, n = v.nutrients
-        return HStack(spacing: 12) {
+        return HStack(spacing: Space.m) {
             Button { animate { x.wrappedValue.included.toggle() } } label: {
-                Text(foodEmoji(name: v.name, brand: nil)).font(.system(size: top ? 30 : 26)).frame(width: 44)
+                Text(foodEmoji(name: v.name, brand: nil)).font(top ? Font.iconMedium : Font.subsectionTitle).frame(width: 44)
                     .overlay(alignment: .bottomTrailing) {
-                        if !v.included { Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(palette.warn) }
+                        if !v.included { Image(systemName: "xmark.circle.fill").font(.note).foregroundStyle(palette.warn) }
                     }
             }
             .buttonStyle(.plain)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 4) {
-                    if v.assumed { Image(systemName: "sparkles").font(.caption).foregroundStyle(palette.fat) }
-                    Text(v.name).font(.body).lineLimit(2)
-                    if v.source == .estimate { Text("≈").font(.caption.weight(.bold)).foregroundStyle(palette.warn) }
+            VStack(alignment: .leading, spacing: Space.xs) {
+                HStack(spacing: Space.xs) {
+                    if v.assumed { Image(systemName: "sparkles").font(.note).foregroundStyle(palette.fat) }
+                    Text(v.name).font(.bodyText).lineLimit(2)
+                    if v.source == .estimate { Text("≈").font(.label).foregroundStyle(palette.warn) }
                 }
-                (Text("\(number(energy.fromKcal(n.kcal)))") + Text(Image(systemName: "flame.fill")).font(.caption2)
+                (Text("\(number(energy.fromKcal(n.kcal)))") + Text(Image(systemName: "flame.fill")).font(.fine)
                  + Text("  \(number(n.protein))P  \(number(n.fat))F  \(number(n.carbs))C  •  \(number(v.totalGrams)) \(v.unit)"))
-                    .font(.subheadline).foregroundStyle(.secondary).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                    .font(.secondaryText).foregroundStyle(.secondary).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
                 if v.assumed {
-                    Text("Likely \(Int((v.ai?.likelihood ?? 0.6) * 100))%: inferred from how it's usually cooked").font(.caption2).foregroundStyle(.secondary)
+                    Text("Likely \(Int((v.ai?.likelihood ?? 0.6) * 100))%: inferred from how it's usually cooked").font(.fine).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 4)
             amountChip(x)
         }
-        .padding(.horizontal, 12).padding(.vertical, 10)
+        .padding(.horizontal, Space.m).padding(.vertical, Space.m)
         .contextMenu {
             if !v.isDish { Button("Swap for another food", systemImage: "arrow.triangle.2.circlepath") { swap(v) } }
             Button(v.included ? "Leave out" : "Include", systemImage: v.included ? "minus.circle" : "plus.circle") { x.wrappedValue.included.toggle() }
@@ -306,12 +306,12 @@ struct AIPlateCard: View {
         } label: {
             VStack(spacing: 0) {
                 Text(v.isDish ? number(v.servings, digits: v.servings == v.servings.rounded() ? 0 : 2) : (v.amount.isEmpty ? number(v.grams) : leadingNumber(v.amount)))
-                    .font(.subheadline.weight(.semibold)).monospacedDigit()
+                    .font(.secondaryEmphasis).monospacedDigit()
                 Text(v.isDish ? (v.servings == 1 ? "serving" : "servings") : (v.amount.isEmpty ? v.unit : unitWord(v.amount)))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    .font(.note).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(width: 92, height: 50)
-            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         }
         .menuStyle(.button).buttonStyle(.plain)
     }
@@ -329,27 +329,27 @@ struct PlateNutrition: View {
     @State private var showDay = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.m) {
             HStack {
-                Text("Nutrition").font(.title2.bold())
+                Text("Nutrition").font(.sectionTitle)
                 Spacer()
                 Picker("", selection: $showDay) { Text("Plate").tag(false); Text("Day").tag(true) }
                     .pickerStyle(.segmented).labelsHidden().frame(width: 160)
             }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.m), GridItem(.flexible(), spacing: Space.m)], spacing: Space.m) {
                 ForEach(Macro.allCases, id: \.self) { m in tile(m) }
             }
         }
-        .padding(.top, 8)
+        .padding(.top, Space.s)
     }
 
     private func tile(_ m: Macro) -> some View {
         let p = m.value(plate.targets), d = m.value(day.targets), t = target.map { m.value($0) } ?? 0
         let conv: (Double) -> Double = { m == .calories ? energy.fromKcal($0) : $0 }
         let u = m == .calories ? energy.rawValue : "g"
-        return VStack(alignment: .leading, spacing: 10) {
-            Text(m.label).font(.headline)
-            Text(showDay ? "\(number(conv(d + p))) / \(number(conv(t))) \(u)" : "\(number(conv(p))) \(u)").font(.subheadline).monospacedDigit()
+        return VStack(alignment: .leading, spacing: Space.m) {
+            Text(m.label).font(.cardTitle)
+            Text(showDay ? "\(number(conv(d + p))) / \(number(conv(t))) \(u)" : "\(number(conv(p))) \(u)").font(.secondaryText).monospacedDigit()
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.raisedBackground)
@@ -361,7 +361,7 @@ struct PlateNutrition: View {
             }
             .frame(height: 6)
         }
-        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(CardSurface(cornerRadius: 16))
+        .padding(Space.l).frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(CardSurface(cornerRadius: Radius.l))
     }
 }

@@ -12,7 +12,7 @@ struct GoalEditor: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: Space.xl) {
                     GoalStep(draft: draft)
                     DietStep(draft: draft)
                     Card(title: "New daily targets", systemImage: "target") {
@@ -78,7 +78,7 @@ struct GoalWeightSheet: View {
                     Text(profile.weight.rawValue).foregroundStyle(.secondary)
                 }
                 Text("Used for a projected date on your dashboard and a line on the weight chart. Your weekly targets still come from your goal and rate.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.secondaryText).foregroundStyle(.secondary)
                 if profile.goalWeightKg != nil {
                     Button("Remove goal weight", role: .destructive) { profile.goalWeightKg = nil; ctx.commit(); dismiss() }
                 }
@@ -116,20 +116,20 @@ struct DistributionCard: View {
     var body: some View {
         Card(title: "Calorie distribution", systemImage: "calendar") {
             Text("Eat more on training days and less on the others; your week's calories stay the same.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.secondaryText).foregroundStyle(.secondary)
             Toggle(isOn: Binding(get: { profile.planner.highDaysFollowTraining }, set: { v in
                 var s = profile.planner; s.highDaysFollowTraining = v; profile.planner = s
                 if v && profile.highDayExtra == 0 { profile.highDayExtra = 250 }
                 ctx.commit() })) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Training days follow my training week").font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text("Training days follow my training week").font(.secondaryEmphasis)
                     Text(profile.planner.trainingWeekdays == nil
                          ? (profile.planner.highDaysFollowTraining ? "No training week yet (log workouts or set it in Food log → Plan), so the days below are used." : "Using the days below.")
                          : "From your training week (\(profile.planner.scheduleSet ? "set by you" : "your workouts")). Change it in Food log → Plan.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                 }
             }
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 ForEach(order, id: \.self) { wd in
                     let high = profile.highDaySet.contains(wd), fast = profile.fastDaySet.contains(wd)
                     let day = dayFor(weekday: wd)
@@ -139,15 +139,15 @@ struct DistributionCard: View {
                         Button { set(wd, high: false, fast: false) } label: { Label("Normal day", systemImage: "circle") }
                         Button { set(wd, high: false, fast: true) } label: { Label("Fasting day", systemImage: "moon.zzz") }
                     } label: {
-                        VStack(spacing: 4) {
-                            Text(String(weekdayName(wd).prefix(1))).font(.caption.weight(.bold))
-                            Image(systemName: fast ? "moon.zzz.fill" : high ? "dumbbell.fill" : "circle").font(.caption)
-                            Text(number(profile.energy.fromKcal(k))).font(.caption2).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                        VStack(spacing: Space.xs) {
+                            Text(String(weekdayName(wd).prefix(1))).font(.label)
+                            Image(systemName: fast ? "moon.zzz.fill" : high ? "dumbbell.fill" : "circle").font(.note)
+                            Text(number(profile.energy.fromKcal(k))).font(.fine).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                         }
                         .foregroundStyle(fast ? Color.secondary : high ? palette.onData : Color.primary)
-                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .frame(maxWidth: .infinity).padding(.vertical, Space.s)
                         .background(high ? palette.accent : (fast ? Color.raisedBackground.opacity(0.6) : Color.raisedBackground),
-                                    in: RoundedRectangle(cornerRadius: 10))
+                                    in: RoundedRectangle(cornerRadius: Radius.m))
                     }
                     .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
                 }
@@ -177,13 +177,13 @@ struct DistributionCard: View {
                     Button("Same every day") { profile.highDays = ""; profile.fastDays = ""; ctx.commit() }.buttonStyle(.borderless).controlSize(.small)
                 }
             }
-            Text("Tap a day to change it. Extra calories come as carbs; protein stays the same every day.").font(.caption).foregroundStyle(.secondary)
+            Text("Tap a day to change it. Extra calories come as carbs; protein stays the same every day.").font(.note).foregroundStyle(.secondary)
             Divider()
             Toggle(isOn: Binding(get: { profile.weeklyBudget }, set: { profile.weeklyBudget = $0; ctx.commit() })) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Weekly budget").font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text("Weekly budget").font(.secondaryEmphasis)
                     Text("Ate less (or more) earlier in the week? Off by default. A small share of the difference is spread over the days left: up to 10% a day more, and at most 150 kcal a day less after a big day.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                 }
             }
         }

@@ -50,6 +50,11 @@ struct PlanDayView: View {
             ctx.refreshTrainingWeek()
             inferred = ctx.inferredSchedule(); source = ctx.planSource
             result = ctx.dayPlan(day); if let r = result { ctx.recordPlan(day, r.plan); ctx.recordMeals(day, r) }
+            #if DEBUG
+            // Snapshots: -openPlanItem YES opens the first open food's sheet (swap, keep, portion).
+            if UserDefaults.standard.bool(forKey: "openPlanItem"), selected == nil, let r = result,
+               let s = r.plan.slots.first(where: { !$0.eaten && !$0.locked }), let it = s.items.first { selected = ItemRef(slot: s.index, item: it) }
+            #endif
             adherence = ctx.weekAdherence()
             // The week view, ready before you open it.
             _ = await ctx.weekPlans(from: day)
@@ -129,7 +134,7 @@ struct PlanDayView: View {
         let t = s.training(on: day, inferred: inferred)
         let why = s.overrides[day] != nil ? "today only" : s.scheduleSet ? "your schedule" : t != nil ? "from your workouts" : inferred.isEmpty ? "no workout history yet" : nil
         return HStack {
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: Space.hairline) {
                 Label(t.map { "Training \(planClock($0.start)) · \($0.minutes) min" } ?? "Rest day", systemImage: t == nil ? "bed.double" : "dumbbell")
                     .font(.secondaryText.weight(.semibold))
                 if let why { Text(why).font(.fine).foregroundStyle(.secondary) }
@@ -188,7 +193,7 @@ struct PlanDayView: View {
                 Text(planClock(s.minute)).font(.numberSmall).monospacedDigit()
                 Text(label(s.kind)).font(.label).foregroundStyle(.secondary).textCase(.uppercase)
                 if s.kind == .preWorkout || s.kind == .postWorkout {
-                    Image(systemName: "bolt.fill").font(.caption2).foregroundStyle(palette.accent).accessibilityLabel(s.kind == .preWorkout ? "Before training" : "After training")
+                    Image(systemName: "bolt.fill").font(.fine).foregroundStyle(palette.accent).accessibilityLabel(s.kind == .preWorkout ? "Before training" : "After training")
                 }
                 Spacer()
                 Text("\(number(energy.fromKcal(m.kcal))) \(energy.rawValue) · \(Int(m.protein)) P · \(Int(m.carbs)) C").font(.fine).foregroundStyle(.secondary).monospacedDigit()
@@ -207,7 +212,7 @@ struct PlanDayView: View {
                         Text(kind.label).font(.fine).foregroundStyle(.tertiary).frame(width: 74, alignment: .leading).lineLimit(1)
                     }
                     Text(r.foods[it.key]?.name ?? it.key).lineLimit(1)
-                    if it.isPinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(palette.accent).accessibilityLabel("Kept at this portion") }
+                    if it.isPinned { Image(systemName: "pin.fill").font(.fine).foregroundStyle(palette.accent).accessibilityLabel("Kept at this portion") }
                     Spacer()
                     Text(it.grams > 1 ? (r.foods[it.key]?.shown(it.grams) ?? "\(Int(it.grams)) g") : "\(Int(r.foods[it.key]?.macros(it.grams).kcal ?? 0)) kcal").monospacedDigit().foregroundStyle(.secondary)
                     if !s.eaten && !s.locked {
@@ -248,9 +253,9 @@ struct PlanDayView: View {
             if let t { Text("target \(number(energy.fromKcal(t.kcal))) · \(Int(t.protein)) g").foregroundStyle(.secondary) }
         }
         .font(.fine).monospacedDigit()
-        .safeAreaInset(edge: .bottom, spacing: 4) {
+        .safeAreaInset(edge: .bottom, spacing: Space.xs) {
             if let c = r.plan.carbs {
-                HStack(spacing: 4) {
+                HStack(spacing: Space.xs) {
                     Text("Carbs \(Int(r.plan.totals.carbs)) g · \(String(format: "%.1f", c.gPerKg)) g/kg")
                     Text(c.rangeIsTarget ? "(target \(Int(c.range.lowerBound))–\(Int(c.range.upperBound)))" : "(cut range \(Int(c.range.lowerBound))–\(Int(c.range.upperBound)); 4–7 for performance)")
                         .foregroundStyle(c.gPerKg < c.range.lowerBound ? palette.warn : Color.secondary)
@@ -285,7 +290,7 @@ struct PlanWhyView: View {
             }
             Section("Rules") {
                 ForEach(Array(plan.reasons.enumerated()), id: \.offset) { _, r in
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: Space.xxs) {
                         Text(r.rule.capitalized).font(.secondaryText.weight(.semibold))
                         Text(r.detail).font(.secondaryText).foregroundStyle(.secondary)
                     }
@@ -316,19 +321,19 @@ struct WeekPlanView: View {
                     let training = d.plan.slots.contains { $0.kind == .preWorkout || $0.kind == .postWorkout }
                     BarMark(x: .value("Day", String(date(fromKey: d.day).formatted(.dateTime.weekday(.abbreviated).locale(appLocale)))), y: .value("Carbs", d.plan.totals.carbs))
                         .foregroundStyle(training ? palette.carbs : palette.carbs.opacity(0.4))
-                        .annotation(position: .top) { Text(training ? "🏋" : "").font(.caption2) }
+                        .annotation(position: .top) { Text(training ? "🏋" : "").font(.fine) }
                 }
                 .frame(height: 140)
                 Text("Carbs per day; solid bars are training days. Same weekly calories: training days take more carbs, rest days more fat.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             } header: { Text("Carbs this week") }
             Section("Next 7 days") {
                 ForEach(days, id: \.day) { d in
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: Space.xs) {
                         Text(date(fromKey: d.day).formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale))).font(.secondaryText.weight(.semibold))
                         let training = d.plan.slots.contains { $0.kind == .preWorkout || $0.kind == .postWorkout }
                         Text("\(training ? "🏋 " : "")\(Int(d.plan.totals.kcal)) kcal · \(Int(d.plan.totals.protein)) P · \(Int(d.plan.totals.carbs)) C\(d.plan.carbs.map { String(format: " (%.1f g/kg)", $0.gPerKg) } ?? "") · \(d.plan.slots.count) meals\(d.plan.feasible ? "" : " · doesn't fully fit")")
-                            .font(.caption).foregroundStyle(d.plan.feasible ? Color.secondary : palette.warn).monospacedDigit()
+                            .font(.note).foregroundStyle(d.plan.feasible ? Color.secondary : palette.warn).monospacedDigit()
                     }
                 }
             }
@@ -438,7 +443,7 @@ struct PlannerSettingsView: View {
                 Toggle("Protein before bed", isOn: $s.preSleepProtein)
                 VStack(alignment: .leading) {
                     Text("Variety")
-                    Slider(value: $s.variety, in: 0...1) { Text("Variety") } minimumValueLabel: { Text("Same").font(.caption) } maximumValueLabel: { Text("Varied").font(.caption) }
+                    Slider(value: $s.variety, in: 0...1) { Text("Variety") } minimumValueLabel: { Text("Same").font(.note) } maximumValueLabel: { Text("Varied").font(.note) }
                 }
             } header: { Text("Preferences") } footer: { Text("Pre-sleep protein has some evidence but it's weak once total protein is the same; off by default.") }
             Section {
@@ -496,7 +501,7 @@ struct AdherenceCard: View {
             Label("Plan, last 7 days", systemImage: "calendar.badge.checkmark").font(.cardTitle)
             HStack(spacing: Space.l) {
                 ForEach(MealOutcome.allCases, id: \.self) { o in
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: Space.hairline) {
                         Text("\(summary.counts[o] ?? 0)").font(.numberSmall).monospacedDigit()
                         Text(o.label).font(.fine).foregroundStyle(.secondary)
                     }

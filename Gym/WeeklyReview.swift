@@ -52,9 +52,9 @@ struct WeeklyReview: View {
         let trendKg = trend.last?.trend ?? 75
         let target = program.map { weeklyChangeKg(goal: $0.goalValue, ratePercent: $0.ratePercent, weightKg: trendKg) } ?? 0
         let exp = Array(ctx.expenditureEstimates().suffix(28))
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Your week").font(.title2.bold())
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.l) {
+            Text("Your week").font(.sectionTitle)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.m), GridItem(.flexible(), spacing: Space.m)], spacing: Space.m) {
                 stat("Fully logged", "\(full.count)/7", "days", good: full.count >= 6)
                 stat("Protein hit", "\(proteinHit.count)/\(max(full.count, 1))", "logged days", good: proteinHit.count >= max(full.count - 1, 1))
                 stat("Rate", rate.map { signed(unit, $0) } ?? "–", "a week · goal \(signed(unit, target))",
@@ -75,30 +75,30 @@ struct WeeklyReview: View {
                 }
                 .frame(height: 90)
                 Text("Expenditure, last 4 weeks. The band is how unsure the estimate still is; it narrows as you log.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             }
             musclesCard
             sleepCard
             StrengthRetentionCard(unit: unit)
             ForEach(flags(rate: rate, trendKg: trendKg, goal: program?.goalValue, target: target), id: \.self) { f in
-                Label(f, systemImage: "lightbulb.fill").font(.callout)
-                    .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                Label(f, systemImage: "lightbulb.fill").font(.secondaryText)
+                    .padding(Space.m).frame(maxWidth: .infinity, alignment: .leading)
                     .background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.m))
             }
         }
     }
 
     private func stat(_ title: String, _ value: String, _ note: String, good: Bool?) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: Space.xs) {
             HStack {
-                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text(title).font(.label).foregroundStyle(.secondary)
                 Spacer()
                 if let good { Image(systemName: good ? "checkmark.circle.fill" : "exclamationmark.circle.fill").foregroundStyle(good ? palette.good : palette.warn) }
             }
-            Text(value).font(.number(22)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-            Text(note).font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+            Text(value).font(.numberMedium).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+            Text(note).font(.fine).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
         }
-        .padding(12).modifier(CardSurface(cornerRadius: 14))
+        .padding(Space.m).modifier(CardSurface(cornerRadius: Radius.m))
     }
 
     /// Working sets per muscle this past week against each muscle's range.
@@ -110,8 +110,8 @@ struct WeeklyReview: View {
         return Card(title: "Sets per muscle", systemImage: "chart.bar.fill") {
             ForEach(rows) { m in
                 let n = counts[m] ?? 0, r = volumeRange(m)
-                HStack(spacing: 10) {
-                    Text(m.label).font(.caption.weight(.semibold)).frame(width: 82, alignment: .leading)
+                HStack(spacing: Space.m) {
+                    Text(m.label).font(.label).frame(width: 82, alignment: .leading)
                     GeometryReader { g in
                         let w = g.size.width, top = max(r.upperBound + 4, n)
                         ZStack(alignment: .leading) {
@@ -123,10 +123,10 @@ struct WeeklyReview: View {
                         }
                     }
                     .frame(height: 8)
-                    Text(number(n, digits: n == n.rounded() ? 0 : 1)).font(.caption.weight(.bold)).monospacedDigit().frame(width: 30, alignment: .trailing)
+                    Text(number(n, digits: n == n.rounded() ? 0 : 1)).font(.label).monospacedDigit().frame(width: 30, alignment: .trailing)
                 }
             }
-            Text("Shaded: the range that grows each muscle for most people. Helper muscles count as half a set.").font(.caption).foregroundStyle(.secondary)
+            Text("Shaded: the range that grows each muscle for most people. Helper muscles count as half a set.").font(.note).foregroundStyle(.secondary)
         }
     }
 
@@ -141,17 +141,17 @@ struct WeeklyReview: View {
     @ViewBuilder private var sleepCard: some View {
         let s = sleep
         if let now = s.now {
-            HStack(spacing: 12) {
-                Image(systemName: "bed.double.fill").font(.title3).foregroundStyle(Color.calmTone)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Sleep \(number(now, digits: 1)) h a night").font(.headline)
+            HStack(spacing: Space.m) {
+                Image(systemName: "bed.double.fill").font(.subsectionTitle).foregroundStyle(Color.calmTone)
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text("Sleep \(number(now, digits: 1)) h a night").font(.cardTitle)
                     Text(s.before.map { "\($0 <= now ? "+" : "−")\(number(abs(now - $0), digits: 1)) h on the week before" } ?? "from Apple Health")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Image(systemName: now >= 7 ? "checkmark.circle.fill" : "exclamationmark.circle.fill").foregroundStyle(now >= 7 ? palette.good : palette.warn)
             }
-            .padding(12).modifier(CardSurface(cornerRadius: 14))
+            .padding(Space.m).modifier(CardSurface(cornerRadius: Radius.m))
         }
     }
 

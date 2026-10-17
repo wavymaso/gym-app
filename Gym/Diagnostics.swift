@@ -75,9 +75,9 @@ struct DiagnosticsView: View {
                     Text("Nothing has gone wrong recently.").foregroundStyle(.secondary)
                 } else {
                     ForEach(problems.prefix(30)) { p in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(p.message).font(.callout)
-                            Text("\(p.area) · \(p.at.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: Space.xxs) {
+                            Text(p.message).font(.secondaryText)
+                            Text("\(p.area) · \(p.at.formatted(date: .abbreviated, time: .shortened))").font(.note).foregroundStyle(.secondary)
                         }
                     }
                     Button("Clear", role: .destructive) { Log.clearProblems(); animate { problems = [] } }

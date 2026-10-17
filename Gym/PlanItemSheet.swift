@@ -22,10 +22,10 @@ struct PlanItemSheet: View {
             Section {
                 VStack(alignment: .leading, spacing: Space.s) {
                     HStack {
-                        Button { grams = max(lo, ((grams - step) / step).rounded() * step) } label: { Image(systemName: "minus.circle.fill").font(.title2) }
+                        Button { grams = max(lo, ((grams - step) / step).rounded() * step) } label: { Image(systemName: "minus.circle.fill").font(.sectionTitle) }
                             .buttonStyle(.borderless).disabled(grams <= lo + 0.01).accessibilityLabel("Less")
                         Spacer()
-                        VStack(spacing: 2) {
+                        VStack(spacing: Space.xxs) {
                             Text(food?.shown(grams) ?? "\(Int(grams)) g").font(.numberLarge).monospacedDigit()
                             if food?.unitName != nil { Text("\(Int(grams)) g").font(.fine).foregroundStyle(.secondary) }
                             if let m = food?.macros(grams) {
@@ -33,7 +33,7 @@ struct PlanItemSheet: View {
                             }
                         }
                         Spacer()
-                        Button { grams = min(hi, ((grams + step) / step).rounded() * step) } label: { Image(systemName: "plus.circle.fill").font(.title2) }
+                        Button { grams = min(hi, ((grams + step) / step).rounded() * step) } label: { Image(systemName: "plus.circle.fill").font(.sectionTitle) }
                             .buttonStyle(.borderless).disabled(grams >= hi - 0.01).accessibilityLabel("More")
                     }
                     HStack {
@@ -50,19 +50,19 @@ struct PlanItemSheet: View {
             if kind != nil {
                 Section {
                     if options.isEmpty {
-                        Text("No other food fits this slot in your style. Add a staple, or allow more foods in the meal's template.").font(.caption).foregroundStyle(.secondary)
+                        Text("No other food fits this slot in your style. Add a staple, or allow more foods in the meal's template.").font(.note).foregroundStyle(.secondary)
                     }
                     ForEach(options, id: \.food.key) { o in
                         let m = o.food.macros(o.grams)
                         Button { act(.swap(o.food, o.grams)); dismiss() } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 1) {
-                                    HStack(spacing: 4) {
+                                VStack(alignment: .leading, spacing: Space.hairline) {
+                                    HStack(spacing: Space.xs) {
                                         Text(o.food.name).lineLimit(1)
-                                        if o.food.staple { Image(systemName: "basket.fill").font(.caption2).foregroundStyle(palette.accent).accessibilityLabel("Staple") }
+                                        if o.food.staple { Image(systemName: "basket.fill").font(.fine).foregroundStyle(palette.accent).accessibilityLabel("Staple") }
                                         if o.food.basic { Text("basic").font(.fine).foregroundStyle(.tertiary) }
                                     }
-                                    Text("\(Int(m.kcal)) kcal · \(Int(m.protein)) P · \(Int(m.carbs)) C · \(Int(m.fat)) F").font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                                    Text("\(Int(m.kcal)) kcal · \(Int(m.protein)) P · \(Int(m.carbs)) C · \(Int(m.fat)) F").font(.note).foregroundStyle(.secondary).monospacedDigit()
                                 }
                                 Spacer()
                                 Text(o.food.shown(o.grams)).foregroundStyle(.secondary).monospacedDigit()

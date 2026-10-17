@@ -21,8 +21,8 @@ struct FoodAmountView: View {
         let n = food.nutrients(amount, unit: unit)
         Form {
             Section {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(food.name).font(.title3.bold())
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(food.name).font(.subsectionTitle)
                     if let b = food.brand { Text(b).foregroundStyle(.secondary) }
                 }
                 HStack {
@@ -38,15 +38,15 @@ struct FoodAmountView: View {
             }
             Section("Nutrition") {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(energy.format(n.kcal)).font(.title2.bold()).monospacedDigit()
+                    Text(energy.format(n.kcal)).font(.sectionTitle).monospacedDigit()
                     Spacer()
                     Text("\(number(food.grams(amount, unit: unit))) \(food.baseUnit)").foregroundStyle(.secondary)
                 }
-                HStack(spacing: 24) {
+                HStack(spacing: Space.xl) {
                     ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
                         VStack(alignment: .leading) {
-                            Text("\(number(m.value(n.targets), digits: 1)) g").font(.headline).monospacedDigit()
-                            Label(m.label, systemImage: "circle.fill").labelStyle(DotLabel(color: m.color)).font(.caption).foregroundStyle(.secondary)
+                            Text("\(number(m.value(n.targets), digits: 1)) g").font(.cardTitle).monospacedDigit()
+                            Label(m.label, systemImage: "circle.fill").labelStyle(DotLabel(color: m.color)).font(.note).foregroundStyle(.secondary)
                         }
                     }
                 }

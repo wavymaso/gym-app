@@ -9,24 +9,24 @@ struct RecoveryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.l) {
-            Image(systemName: "externaldrive.badge.exclamationmark").font(.system(size: 44)).foregroundStyle(palette.warn)
-            Text("Your data didn't open").font(.title.bold())
+            Image(systemName: "externaldrive.badge.exclamationmark").font(.iconHero).foregroundStyle(palette.warn)
+            Text("Your data didn't open").font(.sectionTitle)
             Text("Nothing has been deleted. The app can put this database aside (kept in Backups) and restore your newest daily backup\(StoreSafety.latestBackup.map { " (\($0.deletingPathExtension().lastPathComponent.replacingOccurrences(of: "Gym backup ", with: "")))" } ?? "").")
                 .foregroundStyle(.secondary)
-            Text(reason).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+            Text(reason).font(.note.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
             if done {
-                Label("Done. Close the app completely and open it again.", systemImage: "checkmark.circle.fill").foregroundStyle(palette.good).font(.headline)
+                Label("Done. Close the app completely and open it again.", systemImage: "checkmark.circle.fill").foregroundStyle(palette.good).font(.cardTitle)
             } else {
                 Button {
                     StoreSafety.quarantineAndRestoreNextLaunch(store: ModelConfiguration().url)
                     done = true
                 } label: {
-                    Text("Restore my newest backup").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
+                    Text("Restore my newest backup").font(.cardTitle).frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 .disabled(StoreSafety.latestBackup == nil)
                 if StoreSafety.latestBackup == nil {
-                    Text("No backup on this device. If your Mac has your data, set up sync again after restoring.").font(.caption).foregroundStyle(.secondary)
+                    Text("No backup on this device. If your Mac has your data, set up sync again after restoring.").font(.note).foregroundStyle(.secondary)
                 }
             }
             Spacer()

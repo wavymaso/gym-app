@@ -24,7 +24,7 @@ struct MiniArea: View {
 struct TintIconLabel: LabelStyle {
     let color: Color
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 6) { configuration.icon.foregroundStyle(color); configuration.title }
+        HStack(spacing: Space.s) { configuration.icon.foregroundStyle(color); configuration.title }
     }
 }
 

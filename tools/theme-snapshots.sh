@@ -1,7 +1,7 @@
 #!/bin/bash
-# Screenshots every distinct Appearance × Finish (15) on five screens (Today, Food log, Workout,
-# Weight, Settings) in the simulator, and lays them out in one grid: THEME-SNAPSHOTS.png.
-# Uses demo data (in memory). Takes ~12 minutes.
+# Screenshots every distinct Appearance × Finish (15) on seven screens (Today, Food log, Plan, the
+# plan's swap sheet, Workout, Weight, Settings) in the simulator, and lays them out in one grid: THEME-SNAPSHOTS.png.
+# Uses demo data (in memory). Takes ~17 minutes.
 set -e
 cd "$(dirname "$0")/.."
 S=${SIM:-EEC525B0-A6E7-4500-A3E5-C7215EBB1EF1}
@@ -18,7 +18,9 @@ shot() {   # appearance finish name args…
 for a in light dark black; do
   for f in titanium silver graphite gold roseGold; do
     shot $a $f today -page dashboard
-    shot $a $f food -page food
+    shot $a $f food -page food -phoneLogStyle timeline
+    shot $a $f plan -page food -phoneLogStyle plan
+    shot $a $f swap -page food -phoneLogStyle plan -openPlanItem YES
     shot $a $f workout -page workouts -activeWorkout YES
     shot $a $f weight -insight weightTrend
     shot $a $f settings -page settings

@@ -44,7 +44,7 @@ struct DashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 header
                 SigningBanner()
                 PartialDaysCard()
@@ -58,8 +58,8 @@ struct DashboardView: View {
                     ForEach(DashLayout.load(layoutJSON).sections) { sec in
                         if !sec.items.isEmpty { section(sec, todayN, tt, t, p) }
                     }
-                    Button { sheet = .layout } label: { Label("Customize dashboard", systemImage: "slider.horizontal.3").font(.callout.weight(.semibold)) }
-                        .buttonStyle(.bordered).buttonBorderShape(.capsule).frame(maxWidth: .infinity).padding(.top, 4)
+                    Button { sheet = .layout } label: { Label("Customize dashboard", systemImage: "slider.horizontal.3").font(.secondaryEmphasis) }
+                        .buttonStyle(.bordered).buttonBorderShape(.capsule).frame(maxWidth: .infinity).padding(.top, Space.xs)
                 }
             }
             .padding(pagePadding)
@@ -88,39 +88,39 @@ struct DashboardView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Space.xs) {
                 Text("DASHBOARD").font(.pageTitle(isPhone ? 30 : 34)).foregroundStyle(palette.titleStyle).lineLimit(1).minimumScaleFactor(0.6)
                 Text("\(greeting) · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(appLocale)))")
-                    .font(.subheadline.weight(.medium)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+                    .font(.secondaryEmphasis).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer()
             let s = streak
             if s > 1 {
-                HStack(spacing: 5) {
+                HStack(spacing: Space.xs) {
                     Image(systemName: "flame.fill").foregroundStyle(palette.warn)
-                    Text("\(s)").font(.number(17)).monospacedDigit()
-                    if !isPhone { Text("day streak").font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
+                    Text("\(s)").font(.numberSmall).monospacedDigit()
+                    if !isPhone { Text("day streak").font(.label).foregroundStyle(.secondary) }
                 }
-                .padding(.horizontal, 12).padding(.vertical, 7)
+                .padding(.horizontal, Space.m).padding(.vertical, Space.s)
                 .background(Color.cardBackground, in: Capsule())
                 .overlay(Capsule().stroke(palette.stroke))
                 .help("Days in a row you've logged food")
             }
             Button { sheet = .layout } label: {
-                Image(systemName: "slider.horizontal.3").font(.headline).frame(width: 44, height: 44)
+                Image(systemName: "slider.horizontal.3").font(.cardTitle).frame(width: 44, height: 44)
                     .modifier(GlassCapsule())
             }
             .buttonStyle(.plain)
             if isPhone {
                 // More: profile, settings, weight, insights, exercises, data
                 Button { openPage(.settings) } label: {
-                    Image(systemName: "person.crop.circle").font(.title3).frame(width: 44, height: 44)
+                    Image(systemName: "person.crop.circle").font(.subsectionTitle).frame(width: 44, height: 44)
                         .modifier(GlassCapsule())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.top, isPhone ? 8 : 0)
+        .padding(.top, isPhone ? Space.s : 0)
         .capType()
     }
 
@@ -143,29 +143,29 @@ struct DashboardView: View {
 
     private var checkInBanner: some View {
         Button { sheet = .checkIn } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "calendar.badge.checkmark").font(.title2).foregroundStyle(palette.accent)
+            HStack(spacing: Space.l) {
+                Image(systemName: "calendar.badge.checkmark").font(.sectionTitle).foregroundStyle(palette.accent)
                     .frame(width: 44, height: 44).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(isPhone ? "Weekly check-in ready" : "Your weekly check-in is ready").font(.headline).foregroundStyle(palette.text1)
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(isPhone ? "Weekly check-in ready" : "Your weekly check-in is ready").font(.cardTitle).foregroundStyle(palette.text1)
                     Text(isPhone ? "Review the week, update targets" : "See how the week went and update your targets.")
-                        .font(.callout).foregroundStyle(palette.text2)
+                        .font(.secondaryText).foregroundStyle(palette.text2)
                 }
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(palette.text2)
             }
-            .padding(16)
+            .padding(Space.l)
             .modifier(CardSurface())
             .overlay(alignment: .leading) {
                 // The finish's metal as a thin edge: "this needs you" without a coloured slab.
-                Capsule().fill(palette.accentFill).frame(width: 3).padding(.vertical, 14)
+                Capsule().fill(palette.accentFill).frame(width: 3).padding(.vertical, Space.l)
             }
         }
         .buttonStyle(.plain)
     }
 
     private var quickActions: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Space.m) {
             QuickAction(title: "Log food", icon: "plus", color: palette.accent) { sheet = .addFood }
             QuickAction(title: "Quick add", icon: "bolt.fill", color: Macro.fat.color) { sheet = .quickAdd }
             QuickAction(title: "Weigh in", icon: "scalemass.fill", color: Macro.carbs.color) { sheet = .weighIn }
@@ -179,7 +179,7 @@ struct DashboardView: View {
     /// Daily nutrition, the week against targets, and energy balance: swipe between them on the
     /// phone; on the Mac, the rings across the top and the other two side by side.
     private func heroPage<V: View>(_ v: V, _ i: Int) -> some View {
-        v.padding(.horizontal, 2).fixedSize(horizontal: false, vertical: true)
+        v.padding(.horizontal, Space.xxs).fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heroHeights[i] = $0 }
             .frame(maxHeight: .infinity, alignment: .top).tag(i)
     }
@@ -200,7 +200,7 @@ struct DashboardView: View {
                 // Pinned to the top: cards of different heights don't float in the middle of the pager.
                 heroPage(rings, 0)
                 heroPage(week, 1)
-                balance.padding(.horizontal, 2).fixedSize(horizontal: false, vertical: true)
+                balance.padding(.horizontal, Space.xxs).fixedSize(horizontal: false, vertical: true)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { heroHeights[2] = $0 }
                     .frame(maxHeight: .infinity, alignment: .top).tag(2)
             }
@@ -212,27 +212,27 @@ struct DashboardView: View {
             .animation(Motion.pick(Motion.smooth), value: heroPage)
         } else {
             rings
-            HStack(alignment: .top, spacing: 16) { week; balance }
+            HStack(alignment: .top, spacing: Space.l) { week; balance }
         }
     }
 
     @ViewBuilder private func section(_ sec: DashLayout.Section, _ eaten: Nutrients, _ t: Targets, _ set: TargetSet, _ p: Profile) -> some View {
         switch sec.kind {
         case .nutrition:
-            Button { detail = .nutrition } label: { Label("Calories & macros history", systemImage: "chart.bar.xaxis").font(.caption.weight(.semibold)) }
+            Button { detail = .nutrition } label: { Label("Calories & macros history", systemImage: "chart.bar.xaxis").font(.label) }
                 .buttonStyle(.borderless)
             NutritionSection(items: sec.items, remaining: sec.remaining, eaten: eaten, target: t, energy: p.energy,
                              waterMl: ctx.water(on: dayKey()).reduce(0) { $0 + $1.ml }, waterGoal: ctx.waterGoalMl, sex: p.sexValue, profile: p)
         case .insights where isPhone:
-            Text(sec.kind.label).font(.title2.bold()).padding(.top, 6)
+            Text(sec.kind.label).font(.sectionTitle).padding(.top, Space.s)
             let small = sec.items.filter { ["expenditure", "weight", "scale", "nutritionTrend", "energyBalance", "goal"].contains($0) }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.m), GridItem(.flexible(), spacing: Space.m)], spacing: Space.m) {
                 ForEach(small, id: \.self) { id in sparkCard(id, set, p) }
             }
             ForEach(sec.items.filter { !small.contains($0) }, id: \.self) { id in card(id, set, p) }
         case .insights, .habits:
-            Text(sec.kind.label).font(.title3.bold()).padding(.top, 6)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 320), spacing: 16, alignment: .top)], spacing: 16) {
+            Text(sec.kind.label).font(.subsectionTitle).padding(.top, Space.s)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 300 : 320), spacing: Space.l, alignment: .top)], spacing: Space.l) {
                 ForEach(sec.items, id: \.self) { id in card(id, set, p) }
             }
         }
@@ -321,12 +321,12 @@ struct DashboardView: View {
         return Card(title: "Trend weight", systemImage: "scalemass") {
             if let now = series.last, let w = weights.first {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(p.weight.format(now.trend)).font(.number(28)).monospacedDigit()
+                    Text(p.weight.format(now.trend)).font(.numberLarge).monospacedDigit()
                     Spacer()
                     if let wk = weeklyTrendChange(series) { Delta(text: signed(p.weight, wk) + "/wk", good: goodDirection(wk)) }
                 }
                 if series.count > 2 { Sparkline(values: series.suffix(60).map(\.trend), color: palette.accent) }
-                Text("Scale \(p.weight.format(w.kg)) \(relative(w.day))").font(.callout).foregroundStyle(.secondary)
+                Text("Scale \(p.weight.format(w.kg)) \(relative(w.day))").font(.secondaryText).foregroundStyle(.secondary)
             } else {
                 Text("Weigh in to start your trend.").foregroundStyle(.secondary)
                 Button("Weigh in") { sheet = .weighIn }
@@ -339,14 +339,14 @@ struct DashboardView: View {
         let exp = ExpenditureSummary(ctx.expenditureEstimates())
         return Card(title: "Expenditure", systemImage: "flame") {
             HStack(alignment: .firstTextBaseline) {
-                Text(p.energy.format(exp?.current ?? t.expenditure)).font(.number(28)).monospacedDigit()
+                Text(p.energy.format(exp?.current ?? t.expenditure)).font(.numberLarge).monospacedDigit()
                 Spacer()
-                Text("a day").font(.callout).foregroundStyle(.secondary)
+                Text("a day").font(.secondaryText).foregroundStyle(.secondary)
             }
             if let exp, exp.series.count > 2 {
                 Sparkline(values: exp.series.suffix(60).map(\.kcal), color: Macro.calories.color)
             }
-            Text(exp?.status ?? "Starting estimate.").font(.callout).foregroundStyle(.secondary)
+            Text(exp?.status ?? "Starting estimate.").font(.secondaryText).foregroundStyle(.secondary)
         }
         .onTapGesture { detail = .expenditure }
     }
@@ -356,28 +356,28 @@ struct DashboardView: View {
         let weeks = max(0, Calendar.current.dateComponents([.day], from: date(fromKey: g.startDay), to: Date()).day ?? 0) / 7
         return Card(title: "Goal", systemImage: "target") {
             HStack(alignment: .firstTextBaseline) {
-                Text(g.goalValue.label).font(.number(24))
+                Text(g.goalValue.label).font(.numberLarge)
                 Spacer()
-                Text("week \(weeks + 1)").font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+                Text("week \(weeks + 1)").font(.secondaryEmphasis).foregroundStyle(.secondary)
             }
-            Text(goalDetail(g, p)).font(.callout).foregroundStyle(.secondary)
+            Text(goalDetail(g, p)).font(.secondaryText).foregroundStyle(.secondary)
             // Where the trend stood on the day this goal started (imports can move that day back).
             let startKg = series.first { $0.day >= g.startDay }?.trend ?? g.startWeightKg
             if let now = series.last?.trend, startKg > 0 {
                 let change = now - startKg
                 HStack {
-                    Text("Since you started").font(.callout)
+                    Text("Since you started").font(.secondaryText)
                     Spacer()
                     Delta(text: signed(p.weight, change), good: goodDirection(change))
                 }
                 if let goal = p.goalWeightKg {
                     let start = startKg, total = goal - start
                     let done = total != 0 ? max(0, min(1, (now - start) / total)) : 1
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         HStack {
-                            Text("To \(p.weight.format(goal))").font(.callout)
+                            Text("To \(p.weight.format(goal))").font(.secondaryText)
                             Spacer()
-                            Text("\(Int((done * 100).rounded()))%").font(.callout.weight(.bold)).monospacedDigit()
+                            Text("\(Int((done * 100).rounded()))%").font(.secondaryEmphasis).monospacedDigit()
                         }
                         GeometryReader { g in
                             ZStack(alignment: .leading) {
@@ -388,7 +388,7 @@ struct DashboardView: View {
                         .frame(height: 8)
                         if let wk = weeklyTrendChange(series), let d = goalDate(trendKg: now, goalKg: goal, weeklyKg: wk) {
                             Text("At this rate: \(d.formatted(.dateTime.day().month(.abbreviated).year().locale(appLocale)))")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.note).foregroundStyle(.secondary)
                         }
                     }
                 }

@@ -11,7 +11,7 @@ struct TemplatesView: View {
         List {
             Section {
                 Text("Each meal is built from these slots, then the portions are sized to hit your targets. Pre- and post-workout replace the meal in the training window; they never add meals.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
                 Toggle("Evening treat (one a day, after dinner)", isOn: Binding(get: { settings.treatsEnabled }, set: { settings.treatsEnabled = $0; save() }))
             }
             ForEach(settings.mealTemplates) { t in
@@ -22,9 +22,9 @@ struct TemplatesView: View {
                         save()
                     }
                 } label: {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: Space.xxs) {
                         Text(t.name + (settings.templates.contains { $0.id == t.id } ? " · edited" : ""))
-                        Text(t.slots.map { ($0.required ? "" : "optional ") + $0.kind.label.lowercased() }.joined(separator: " + ")).font(.caption).foregroundStyle(.secondary)
+                        Text(t.slots.map { ($0.required ? "" : "optional ") + $0.kind.label.lowercased() }.joined(separator: " + ")).font(.note).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -51,7 +51,7 @@ struct TemplateEditor: View {
 
     var body: some View {
         Form {
-            if !template.note.isEmpty { Section { Text(template.note).font(.caption).foregroundStyle(.secondary) } }
+            if !template.note.isEmpty { Section { Text(template.note).font(.note).foregroundStyle(.secondary) } }
             ForEach($template.slots) { $slot in
                 Section(slot.kind.label) {
                     Toggle("Required", isOn: $slot.required)
@@ -83,7 +83,7 @@ struct AllowedFoodsView: View {
                 } else { slot.allowed.append(c.id) }
             } label: {
                 HStack {
-                    VStack(alignment: .leading, spacing: 1) { Text(c.name); Text(c.role.label).font(.caption).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading, spacing: Space.hairline) { Text(c.name); Text(c.role.label).font(.note).foregroundStyle(.secondary) }
                     Spacer()
                     if slot.allowed.contains(c.id) { Image(systemName: "checkmark").foregroundStyle(palette.accent) }
                 }

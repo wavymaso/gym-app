@@ -26,8 +26,8 @@ struct LockGate: ViewModifier {
                     ZStack {
                         Rectangle().fill(.ultraThickMaterial).ignoresSafeArea()
                         VStack(spacing: Space.l) {
-                            Image(systemName: "lock.fill").font(.system(size: 40)).foregroundStyle(palette.accent)
-                            Text("Gym is locked").font(.title2.bold())
+                            Image(systemName: "lock.fill").font(.iconHero).foregroundStyle(palette.accent)
+                            Text("Gym is locked").font(.sectionTitle)
                             Button("Unlock") { Task { await tryUnlock() } }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                         }
                     }
@@ -56,9 +56,9 @@ struct AppLockToggle: View {
     @AppStorage("appLock") private var on = false
     var body: some View {
         Toggle(isOn: $on) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text("Lock with Face ID")
-                Text("When the app opens, and after a minute away.").font(.caption).foregroundStyle(.secondary)
+                Text("When the app opens, and after a minute away.").font(.note).foregroundStyle(.secondary)
             }
         }
         .disabled(!AppLock.available && !on)

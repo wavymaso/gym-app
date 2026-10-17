@@ -18,9 +18,9 @@ struct QuickActionsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Quick add").font(.number(22)).padding(.top, 22)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.l) {
+            Text("Quick add").font(.numberMedium).padding(.top, Space.xl)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 3), spacing: Space.m) {
                 tile("Log food", "magnifyingglass", palette.accent) { pick(.food) }
                 tile("Photo", "camera.fill", Color.weightTone) { pick(.photo) }
                 tile("Describe", "text.bubble.fill", Color.calmTone) { pick(.describe) }
@@ -35,7 +35,7 @@ struct QuickActionsSheet: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Space.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
         .pageBackground()
         #if os(iOS)
@@ -51,13 +51,13 @@ struct QuickActionsSheet: View {
 
     private func tile(_ title: String, _ icon: String, _ c: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: Space.s) {
                 // Monochrome symbols on a tonal tile (no rainbow).
-                Image(systemName: icon).font(.title2.weight(.regular)).foregroundStyle(palette.text1)
+                Image(systemName: icon).font(.sectionTitle).foregroundStyle(palette.text1)
                     .frame(width: 50, height: 50).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m + 2, style: .continuous))
-                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
+                Text(title).font(.label).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
             }
-            .frame(maxWidth: .infinity).padding(.vertical, 12)
+            .frame(maxWidth: .infinity).padding(.vertical, Space.m)
             .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
             .contentShape(Rectangle())
         }
@@ -97,7 +97,7 @@ struct PhoneTabBar: View {
             item(.dashboard, "Dashboard", "square.grid.2x2")
             item(.food, "Food log", "fork.knife")
             Button(action: plus) {
-                Image(systemName: "plus").font(.title2.weight(.bold)).foregroundStyle(palette.onAccent)
+                Image(systemName: "plus").font(.sectionTitle).foregroundStyle(palette.onAccent)
                     .frame(width: 58, height: 58)
                     .background(palette.accentFill, in: Circle())
                     .floatShadow()
@@ -107,7 +107,7 @@ struct PhoneTabBar: View {
             item(.strategy, "Strategy", "target")
             item(.training, "Training", "dumbbell")
         }
-        .padding(.top, 8).padding(.horizontal, 6)
+        .padding(.top, Space.s).padding(.horizontal, Space.s)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .background { Rectangle().fill(.bar).ignoresSafeArea() }     // a material: content scrolls behind the tab bar
         .overlay(alignment: .top) { Rectangle().fill(palette.hairline).frame(height: 0.5) }
@@ -115,8 +115,8 @@ struct PhoneTabBar: View {
 
     private func item(_ t: PhoneTab, _ title: String, _ icon: String) -> some View {
         Button { animate(Motion.smooth) { tab = t } } label: {
-            VStack(spacing: 4) {
-                Image(systemName: tab == t && icon != "fork.knife" && icon != "target" ? icon + ".fill" : icon).font(.system(size: 21, weight: .medium))
+            VStack(spacing: Space.xs) {
+                Image(systemName: tab == t && icon != "fork.knife" && icon != "target" ? icon + ".fill" : icon).font(.iconSmall)
                     .symbolRenderingMode(.hierarchical)
                     .symbolEffect(.bounce.down, options: .speed(1.4), value: tab == t)
                     .frame(width: 56, height: 30)
@@ -126,7 +126,7 @@ struct PhoneTabBar: View {
                             Capsule().fill(palette.accent.opacity(0.16)).matchedGeometryEffect(id: "pill", in: pill)
                         }
                     }
-                Text(title).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(.fineLabel).lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundStyle(tab == t ? palette.accent : Color.secondary)
             .frame(maxWidth: .infinity).contentShape(Rectangle())
@@ -183,21 +183,21 @@ struct SidebarToday: View {
         if let p = profiles.first, let base = targetSets.first(where: { $0.fromDay <= dayKey() })?.targets {
             let t = p.adjust(base, on: dayKey())
             let eaten = today.reduce(0) { $0 + $1.nutrients.kcal }
-            HStack(spacing: 12) {
+            HStack(spacing: Space.m) {
                 ZStack {
                     Ring(progress: t.kcal > 0 ? eaten / t.kcal : 0, color: Macro.calories.color, lineWidth: 5)
-                    Image(systemName: "flame.fill").font(.caption).foregroundStyle(Macro.calories.color)
+                    Image(systemName: "flame.fill").font(.note).foregroundStyle(Macro.calories.color)
                 }
                 .frame(width: 40, height: 40)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(number(p.energy.fromKcal(abs(t.kcal - eaten)))).font(.number(18)).monospacedDigit()
-                    Text("\(p.energy.rawValue) \(eaten <= t.kcal ? "left today" : "over today")").font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: Space.hairline) {
+                    Text(number(p.energy.fromKcal(abs(t.kcal - eaten)))).font(.numberMedium).monospacedDigit()
+                    Text("\(p.energy.rawValue) \(eaten <= t.kcal ? "left today" : "over today")").font(.note).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(12)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .padding(10)
+            .padding(Space.m)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+            .padding(Space.m)
         }
     }
 }
@@ -260,25 +260,25 @@ struct WhatsNewSheet: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("What's new").font(.number(30)).padding(.top, 24)
+        VStack(alignment: .leading, spacing: Space.l) {
+            Text("What's new").font(.numberLarge).padding(.top, Space.xl)
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     ForEach(items, id: \.1) { icon, title, text in
-                        HStack(alignment: .top, spacing: 14) {
-                            Image(systemName: icon).font(.title3.weight(.semibold)).foregroundStyle(palette.accent).frame(width: 32)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(title).font(.headline)
-                                Text(text).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        HStack(alignment: .top, spacing: Space.l) {
+                            Image(systemName: icon).font(.subsectionTitle).foregroundStyle(palette.accent).frame(width: 32)
+                            VStack(alignment: .leading, spacing: Space.xxs) {
+                                Text(title).font(.cardTitle)
+                                Text(text).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }
                 }
             }
-            Button { dismiss() } label: { Text("Continue").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6) }
-                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large).padding(.bottom, 20)
+            Button { dismiss() } label: { Text("Continue").font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.s) }
+                .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large).padding(.bottom, Space.xl)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, Space.xl)
         .pageBackground()
         #if os(macOS)
         .frame(width: 460, height: 560)

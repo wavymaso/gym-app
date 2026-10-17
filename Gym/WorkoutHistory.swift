@@ -16,12 +16,12 @@ struct WorkoutSummary: View {
         let prs = records(sets)
         NavigationStack {
             ScrollView {
-                VStack(spacing: 18) {
-                    Image(systemName: "checkmark.seal.fill").font(.system(size: 56)).foregroundStyle(palette.good)
-                        .padding(.top, 10)
-                    Text("Workout complete").font(.number(28))
-                    Text(workout.name).font(.headline).foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
+                VStack(spacing: Space.l) {
+                    Image(systemName: "checkmark.seal.fill").font(.iconHero).foregroundStyle(palette.good)
+                        .padding(.top, Space.m)
+                    Text("Workout complete").font(.numberLarge)
+                    Text(workout.name).font(.cardTitle).foregroundStyle(.secondary)
+                    HStack(spacing: Space.m) {
                         tile(clock(workout.duration), "Time", palette.accent)
                         tile("\(sets.filter { $0.kindValue.counts }.count)", "Sets", palette.good)
                         tile(number(unit.fromKg(volume(sets.map(\.lift)))), "Volume \(unit.rawValue)", Macro.fat.color)
@@ -30,9 +30,9 @@ struct WorkoutSummary: View {
                         Card(title: "New records", systemImage: "trophy.fill") {
                             ForEach(prs, id: \.0) { name, what in
                                 HStack {
-                                    Text(name).font(.body.weight(.medium))
+                                    Text(name).font(.bodyEmphasis)
                                     Spacer()
-                                    Text(what.joined(separator: " · ")).font(.callout).foregroundStyle(Macro.fat.color)
+                                    Text(what.joined(separator: " · ")).font(.secondaryText).foregroundStyle(Macro.fat.color)
                                 }
                             }
                         }
@@ -50,12 +50,12 @@ struct WorkoutSummary: View {
     }
 
     private func tile(_ value: String, _ label: String, _ color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value).font(.number(22)).monospacedDigit().foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.6)
-            Text(label).font(.caption).foregroundStyle(.secondary)
+        VStack(spacing: Space.xxs) {
+            Text(value).font(.numberMedium).monospacedDigit().foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.6)
+            Text(label).font(.note).foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 14)
-        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 16))
+        .frame(maxWidth: .infinity).padding(.vertical, Space.l)
+        .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.l))
     }
 
     /// Per exercise, the records set today (best of each kind).
@@ -83,15 +83,15 @@ struct WorkoutRow: View {
     var body: some View {
         let sets = ctx.sets(of: workout.key)
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(workout.name).font(.headline)
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                Text(workout.name).font(.cardTitle)
                 Text(workout.start.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(appLocale)))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: Space.xxs) {
                 Text("\(clock(workout.duration)) · \(sets.filter { $0.kindValue.counts }.count) sets").monospacedDigit()
-                Text("\(number(unit.fromKg(volume(sets.map(\.lift))))) \(unit.rawValue) volume").font(.caption).foregroundStyle(.secondary)
+                Text("\(number(unit.fromKg(volume(sets.map(\.lift))))) \(unit.rawValue) volume").font(.note).foregroundStyle(.secondary)
             }
         }
         .contentShape(Rectangle())
@@ -117,17 +117,17 @@ struct WeekCard: View {
         })
         let rows = Muscle.allCases.filter { (counts[$0] ?? 0) > 0 && $0 != .cardio }
         Card(title: "This week", systemImage: "calendar",
-             accessory: AnyView(Button("Ranges") { editingRanges = true }.buttonStyle(.borderless).font(.caption.weight(.semibold)))) {
+             accessory: AnyView(Button("Ranges") { editingRanges = true }.buttonStyle(.borderless).font(.label))) {
             if rows.isEmpty {
                 Text("Sets you finish this week show up here by muscle. Helper muscles count as half a set.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.secondaryText).foregroundStyle(.secondary)
             } else {
                 let top = max(20, rows.map { counts[$0] ?? 0 }.max() ?? 0)
-                VStack(spacing: 10) {
+                VStack(spacing: Space.m) {
                     ForEach(rows) { m in
                         let n = counts[m] ?? 0
-                        HStack(spacing: 10) {
-                            Text(m.label).font(.callout).frame(width: isPhone ? 86 : 110, alignment: .leading).lineLimit(1)
+                        HStack(spacing: Space.m) {
+                            Text(m.label).font(.secondaryText).frame(width: isPhone ? 86 : 110, alignment: .leading).lineLimit(1)
                             GeometryReader { g in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.raisedBackground)
@@ -141,12 +141,12 @@ struct WeekCard: View {
                                 .clipShape(Capsule())
                             }
                             .frame(height: 10)
-                            Text(number(n, digits: n.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1)).font(.callout.weight(.semibold)).monospacedDigit()
+                            Text(number(n, digits: n.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1)).font(.secondaryEmphasis).monospacedDigit()
                                 .frame(width: 34, alignment: .trailing)
                         }
                     }
                 }
-                Text("Working sets; helper muscles count as half. Shaded: each muscle's growth range (tap Ranges to fit how you recover).").font(.caption).foregroundStyle(.secondary)
+                Text("Working sets; helper muscles count as half. Shaded: each muscle's growth range (tap Ranges to fit how you recover).").font(.note).foregroundStyle(.secondary)
             }
         }
         .sheet(isPresented: $editingRanges) { VolumeRangesSheet() }
@@ -174,12 +174,12 @@ struct WorkoutDetail: View {
                     Section(ctx.exercise(rows[0].exerciseKey)?.name ?? "Exercise") {
                         ForEach(rows) { s in
                             HStack {
-                                Text(s.kindValue == .normal ? "" : s.kindValue.label).font(.caption).foregroundStyle(.secondary).frame(width: 70, alignment: .leading)
+                                Text(s.kindValue == .normal ? "" : s.kindValue.label).font(.note).foregroundStyle(.secondary).frame(width: 70, alignment: .leading)
                                 Text("\(trimmed(unit.fromKg(s.kg))) \(unit.rawValue) × \(s.reps)").monospacedDigit()
-                                if let rir = s.rir { Text("RIR \(number(rir, digits: 1))").font(.caption).foregroundStyle(.secondary) }
+                                if let rir = s.rir { Text("RIR \(number(rir, digits: 1))").font(.note).foregroundStyle(.secondary) }
                                 Spacer()
                                 Text("e1RM \(number(unit.fromKg(estimatedOneRepMax(kg: s.kg, reps: s.reps)), digits: 1))")
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.note).foregroundStyle(.secondary)
                             }
                         }
                     }

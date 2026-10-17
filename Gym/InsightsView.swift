@@ -15,10 +15,10 @@ struct InsightsView: View {
         let energy = profiles.first?.energy ?? .kcal
         let d = InsightData(ctx: ctx, entries: entries, targetSets: targetSets, days: range.days, profile: profiles.first)
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 Picker("", selection: $range) { ForEach(InsightRange.allCases, id: \.self) { Text($0.label).tag($0) } }
                     .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 150 : 150), spacing: 12, alignment: .top)], spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: isPhone ? 150 : 150), spacing: Space.m, alignment: .top)], spacing: Space.m) {
                     tile("Average intake", d.avg.map { energy.format($0.kcal) } ?? "–", "\(d.logged.count) of \(d.span.count) days logged")
                     tile("On target", d.adherence.map { "\(Int(($0 * 100).rounded()))%" } ?? "–", "Days within 10% of your calories")
                     tile("Average protein", d.avg.map { "\(number($0.protein)) g" } ?? "–",
@@ -77,7 +77,7 @@ struct InsightsView: View {
                     .frame(height: 200)
                     legend([("Expenditure", Macro.fat.color), ("Intake, 7-day average", Macro.calories.color)])
                     Text("When intake sits below expenditure you lose weight, above it you gain. The gap is your daily deficit or surplus.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.secondaryText).foregroundStyle(.secondary)
                 }
                 Card(title: "Macros", systemImage: "chart.bar.doc.horizontal") {
                     Chart {
@@ -104,7 +104,7 @@ struct InsightsView: View {
                                 MacroBar(macro: m, eaten: m.value(a.targets), target: m.value(t), energy: energy)
                             }
                         }
-                        Text("Daily averages against your average targets.").font(.caption).foregroundStyle(.secondary)
+                        Text("Daily averages against your average targets.").font(.note).foregroundStyle(.secondary)
                     }
                 }
                 EnergyBalanceCard(d: d, weights: weights, energy: energy, unit: profiles.first?.weight ?? .kg)
@@ -115,7 +115,7 @@ struct InsightsView: View {
                     NutrientPanel(total: finishedInRange.reduce(Nutrients.zero) { $0 + $1.nutrients }, entries: finishedInRange,
                                   days: max(1, Set(finishedInRange.map(\.day)).count), title: "Nutrients, daily average")
                 }
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: Space.l, alignment: .top)], spacing: Space.l) {
                     NutrientTimingCard(entries: inRange, energy: energy)
                     TopContributorsCard(entries: inRange, energy: energy)
                 }
@@ -132,16 +132,16 @@ struct InsightsView: View {
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.number(26)).monospacedDigit()
-            Text(note).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.numberLarge).monospacedDigit()
+            Text(note).font(.note).foregroundStyle(.secondary)
         }
     }
 
     private func legend(_ items: [(String, Color)]) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Space.l) {
             ForEach(items, id: \.0) { Label($0.0, systemImage: "circle.fill").labelStyle(DotLabel(color: $0.1)) }
         }
-        .font(.caption).foregroundStyle(.secondary)
+        .font(.note).foregroundStyle(.secondary)
     }
 }
 
@@ -237,7 +237,7 @@ struct EnergyBalanceCard: View {
                 let byDay = Dictionary(series.map { ($0.day, $0.trend) }, uniquingKeysWith: { a, _ in a })
                 let actual = (byDay[days.last!.day] ?? 0) - (byDay[days.first!.day] ?? 0)
                 HStack(alignment: .firstTextBaseline) {
-                    Text(signedKcal(avg, energy)).font(.number(28)).monospacedDigit().foregroundStyle(avg < 0 ? palette.good : palette.warn)
+                    Text(signedKcal(avg, energy)).font(.numberLarge).monospacedDigit().foregroundStyle(avg < 0 ? palette.good : palette.warn)
                     Text(avg < 0 ? "a day, deficit" : "a day, surplus").foregroundStyle(.secondary)
                 }
                 Chart(days, id: \.day) { x in
@@ -252,18 +252,18 @@ struct EnergyBalanceCard: View {
                 }
                 .frame(height: 140)
                 HStack {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(signed(unit, implied)).font(.number(18, weight: .semibold)).monospacedDigit()
-                        Text("Implied by the balance").font(.caption).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: Space.hairline) {
+                        Text(signed(unit, implied)).font(.numberMedium).monospacedDigit()
+                        Text("Implied by the balance").font(.note).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(byDay.isEmpty ? "–" : signed(unit, actual)).font(.number(18, weight: .semibold)).monospacedDigit()
-                        Text("What your trend did").font(.caption).foregroundStyle(.secondary)
+                    VStack(alignment: .trailing, spacing: Space.hairline) {
+                        Text(byDay.isEmpty ? "–" : signed(unit, actual)).font(.numberMedium).monospacedDigit()
+                        Text("What your trend did").font(.note).foregroundStyle(.secondary)
                     }
                 }
                 Text("Expenditure is estimated from your weight trend and intake, so these agree over time; big gaps usually mean days logged incompletely or water swings.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             }
         }
     }
@@ -288,7 +288,7 @@ struct WeeklyTable: View {
                     GridRow {
                         Text("Week").gridColumnAlignment(.leading); Text(energy.rawValue); Text("Protein"); Text("Days"); Text("Trend")
                     }
-                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    .font(.label).foregroundStyle(.secondary)
                     ForEach(Array(weeks), id: \.key) { monday, items in
                         let n = Double(items.count)
                         let kcal = items.reduce(0) { $0 + $1.n.kcal } / n
@@ -302,7 +302,7 @@ struct WeeklyTable: View {
                             Text("\(items.count)/7")
                             Text(change.map { signed(unit, $0) } ?? "–")
                         }
-                        .font(.callout).monospacedDigit()
+                        .font(.secondaryText).monospacedDigit()
                     }
                 }
             }

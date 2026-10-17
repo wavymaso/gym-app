@@ -40,7 +40,7 @@ struct FoodLogView: View {
     private var macBody: some View {
         let energy = profiles.first?.energy ?? .kcal
         return ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 if isPhone { header }
                 WeekStrip(day: $day)
                 DayLog(day: day, energy: energy, target: ctx.dayTargets(on: day),
@@ -93,11 +93,11 @@ extension FoodLogView {
             .menuStyle(.button).buttonStyle(.plain)
             Button { sheet = .add(nil) } label: { roundIcon("plus") }.buttonStyle(.plain)
         }
-        .padding(.top, 8)
+        .padding(.top, Space.s)
     }
 
     func roundIcon(_ name: String) -> some View {
-        Image(systemName: name).font(.headline).frame(width: 44, height: 44).modifier(GlassCapsule())
+        Image(systemName: name).font(.cardTitle).frame(width: 44, height: 44).modifier(GlassCapsule())
     }
 }
 
@@ -120,9 +120,9 @@ struct WeekStrip: View {
 
     var body: some View {
         let kcal = Dictionary(grouping: entries, by: \.day).mapValues { $0.reduce(0) { $0 + $1.nutrients.kcal } }
-        VStack(spacing: 10) {
+        VStack(spacing: Space.m) {
             HStack {
-                Text(title).font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(.subsectionTitle).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer()
                 if day != dayKey() {
                     Button("Today") { animate { day = dayKey() } }.buttonStyle(.bordered).controlSize(.small)
@@ -130,24 +130,24 @@ struct WeekStrip: View {
                 Button { move(-7) } label: { Image(systemName: "chevron.left") }.buttonStyle(.borderless)
                 Button { move(7) } label: { Image(systemName: "chevron.right") }.buttonStyle(.borderless)
             }
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 ForEach(0..<7, id: \.self) { i in
                     let d = addDays(monday, i)
                     let base = targetSets.first { $0.fromDay <= d }?.targets
                     let t = base.map { b in profiles.first.map { $0.adjust(b, on: d) } ?? b }?.kcal ?? 0
                     Button { animate(Motion.snappy) { day = d } } label: {
-                        VStack(spacing: 6) {
+                        VStack(spacing: Space.s) {
                             Text(date(fromKey: d).formatted(.dateTime.weekday(.narrow).locale(appLocale)))
-                                .font(.caption2.weight(.semibold)).foregroundStyle(d == day ? .primary : .secondary)
+                                .font(.fineLabel).foregroundStyle(d == day ? .primary : .secondary)
                             ZStack {
                                 Ring(progress: t > 0 ? (kcal[d] ?? 0) / t : 0, color: Macro.calories.color, lineWidth: 3.5)
                                 Text(date(fromKey: d).formatted(.dateTime.day().locale(appLocale)))
-                                    .font(.caption.weight(.bold)).monospacedDigit()
+                                    .font(.label).monospacedDigit()
                                     .foregroundStyle(d == dayKey() && d != day ? palette.accent : .primary)
                             }
                             .frame(width: 34, height: 34)
                         }
-                        .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        .frame(maxWidth: .infinity).padding(.vertical, Space.s)
                         .overlay(RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
                             .stroke(d == day ? Color.primary.opacity(0.85) : .clear, lineWidth: 2))
                         .contentShape(Rectangle())
@@ -156,7 +156,7 @@ struct WeekStrip: View {
                     .opacity(d > dayKey() ? 0.45 : 1)
                 }
             }
-            .padding(6)
+            .padding(Space.s)
             .modifier(CardSurface(cornerRadius: Radius.l))
             .capType()
         }
@@ -202,10 +202,10 @@ struct DayLog: View {
             DayNoteCard(day: day)
         } else {
             // The Mac: the day's food on the left, its totals and nutrients beside it.
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 16) { log }
+            HStack(alignment: .top, spacing: Space.l) {
+                VStack(alignment: .leading, spacing: Space.l) { log }
                     .frame(maxWidth: .infinity)
-                VStack(spacing: 16) {
+                VStack(spacing: Space.l) {
                     summary(total)
                     DayNoteCard(day: day)
                     if !entries.isEmpty { NutrientPanel(total: total, entries: entries) }
@@ -242,7 +242,7 @@ struct DayLog: View {
             if entries.isEmpty {
                 ContentUnavailableView("Nothing logged", systemImage: "fork.knife",
                                        description: Text("Add a food (⌘N), a quick add, or copy another day."))
-                    .padding(.top, 20)
+                    .padding(.top, Space.xl)
             } else {
                 timeline
             }
@@ -297,14 +297,14 @@ struct DayLog: View {
     private func section(title: String, icon: String, color: Color, items: [FoodEntry], meal: Meal?) -> some View {
         let n = items.reduce(Nutrients.zero) { $0 + $1.nutrients }
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                Image(systemName: icon).font(.callout).foregroundStyle(color)
-                    .frame(width: 30, height: 30).background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: 9))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.headline)
+            HStack(spacing: Space.m) {
+                Image(systemName: icon).font(.secondaryText).foregroundStyle(color)
+                    .frame(width: 30, height: 30).background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: Radius.s))
+                VStack(alignment: .leading, spacing: Space.hairline) {
+                    Text(title).font(.cardTitle)
                     if !items.isEmpty {
                         Text("\(energy.format(n.kcal)) · P \(number(n.protein)) · F \(number(n.fat)) · C \(number(n.carbs))")
-                            .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                            .font(.note).foregroundStyle(.secondary).monospacedDigit()
                     }
                 }
                 Spacer()
@@ -321,7 +321,7 @@ struct DayLog: View {
                             Button { savingMeal = (meal, items); mealName = meal.label } label: { Label("Save as meal…", systemImage: "square.and.arrow.down") }
                         }
                     } label: {
-                        Image(systemName: "plus").font(.body.weight(.bold)).foregroundStyle(palette.accent)
+                        Image(systemName: "plus").font(.bodyEmphasis).foregroundStyle(palette.accent)
                             .frame(width: 32, height: 32).background(palette.accent.opacity(0.14), in: Circle())
                     } primaryAction: {
                         open(.add(meal.time(on: day)))
@@ -329,9 +329,9 @@ struct DayLog: View {
                     .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
                 }
             }
-            .padding(14)
+            .padding(Space.l)
             if !items.isEmpty {
-                Divider().padding(.leading, 14)
+                Divider().padding(.leading, Space.l)
                 rows(items, showTime: false, framed: false)
             }
         }
@@ -394,8 +394,8 @@ struct CompactMacroBar: View {
     let target: Double
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(macro.label).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6).frame(width: 52, alignment: .leading)
+        HStack(spacing: Space.m) {
+            Text(macro.label).font(.label).lineLimit(1).minimumScaleFactor(0.6).frame(width: 52, alignment: .leading)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(macro.color.opacity(0.16))
@@ -408,7 +408,7 @@ struct CompactMacroBar: View {
                 Text(number(eaten)).fontWeight(.semibold)
                 Text("/\(number(target))").foregroundStyle(.secondary)
             }
-            .font(.caption).monospacedDigit().frame(width: 64, alignment: .trailing)
+            .font(.note).monospacedDigit().frame(width: 64, alignment: .trailing)
         }
     }
 }
@@ -419,23 +419,23 @@ struct EntryRow: View {
     var showTime = true
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: Space.l) {
             if showTime {
                 Text(entry.time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(appLocale)))
-                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary).frame(width: 44, alignment: .leading)
+                    .font(.secondaryText.monospacedDigit()).foregroundStyle(.secondary).frame(width: 44, alignment: .leading)
             }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(entry.name).font(.body.weight(.medium)).lineLimit(1)
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text(entry.name).font(.bodyEmphasis).lineLimit(1)
                 Text([entry.brand, entry.amountText].compactMap { $0 }.joined(separator: " · "))
-                    .font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    .font(.secondaryText).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(energy.format(entry.nutrients.kcal)).font(.body.weight(.semibold)).monospacedDigit()
+            VStack(alignment: .trailing, spacing: Space.xs) {
+                Text(energy.format(entry.nutrients.kcal)).font(.bodyEmphasis).monospacedDigit()
                 MacroLine(n: entry.nutrients)
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 10)
+        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
     }
 }
 
@@ -443,15 +443,15 @@ struct EntryRow: View {
 struct MacroLine: View {
     let n: Nutrients
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
-                HStack(spacing: 3) {
+                HStack(spacing: Space.xs) {
                     Circle().fill(m.color).frame(width: 6, height: 6)
                     Text(number(m.value(n.targets))).monospacedDigit()
                 }
             }
         }
-        .font(.caption).foregroundStyle(.secondary)
+        .font(.note).foregroundStyle(.secondary)
     }
 }
 
@@ -502,14 +502,14 @@ struct HourRow: View {
 
     var body: some View {
         let kcal = items.reduce(0) { $0 + $1.nutrients.kcal }
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(String(format: "%02d:00", hour)).font(.caption.weight(.semibold)).monospacedDigit()
+        HStack(alignment: .top, spacing: Space.m) {
+            VStack(alignment: .leading, spacing: Space.hairline) {
+                Text(String(format: "%02d:00", hour)).font(.label).monospacedDigit()
                     .foregroundStyle(items.isEmpty ? .tertiary : .secondary)
-                if !items.isEmpty { Text(number(energy.fromKcal(kcal))).font(.caption2).foregroundStyle(.secondary).monospacedDigit() }
+                if !items.isEmpty { Text(number(energy.fromKcal(kcal))).font(.fine).foregroundStyle(.secondary).monospacedDigit() }
             }
             .frame(width: 44, alignment: .leading)
-            .padding(.top, items.isEmpty ? 0 : 10)
+            .padding(.top, items.isEmpty ? 0 : Space.m)
             if items.isEmpty {
                 Rectangle().fill(.clear).frame(height: 26).frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
@@ -521,14 +521,14 @@ struct HourRow: View {
                             .contentShape(Rectangle())
                             .onTapGesture { open(e) }
                             .draggable(e.syncID) {
-                                Text(e.name).font(.callout.weight(.semibold)).padding(8)
+                                Text(e.name).font(.secondaryEmphasis).padding(Space.s)
                                     .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.s))
                             }
                     }
                 }
             }
         }
-        .padding(.horizontal, 12).padding(.vertical, items.isEmpty ? 4 : 2)
+        .padding(.horizontal, Space.m).padding(.vertical, items.isEmpty ? Space.xs : Space.xxs)
         .background(targeted ? palette.accent.opacity(0.18) : .clear)
         .dropDestination(for: String.self) { ids, _ in drop(ids) } isTargeted: { targeted = $0 }
     }
@@ -544,18 +544,18 @@ struct DaySummary: View {
 
     var body: some View {
         Button { animate(Motion.snappy) { remaining.toggle() } } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: Space.m) {
                 HStack {
-                    Text(remaining ? "Remaining" : "Consumed").font(.caption.weight(.bold)).textCase(.uppercase).tracking(0.6)
+                    Text(remaining ? "Remaining" : "Consumed").font(.label).textCase(.uppercase).tracking(0.6)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Image(systemName: "arrow.left.arrow.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
+                    Image(systemName: "arrow.left.arrow.right").font(.label).foregroundStyle(.tertiary)
                 }
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: Space.m) {
                     ForEach(Macro.allCases, id: \.self) { m in column(m) }
                 }
             }
-            .padding(16)
+            .padding(Space.l)
             .modifier(CardSurface())
             .contentShape(Rectangle())
         }
@@ -568,14 +568,14 @@ struct DaySummary: View {
         let shown = remaining ? goal - eaten : eaten
         let conv: (Double) -> Double = { m == .calories ? energy.fromKcal($0) : $0 }
         let frac = goal > 0 ? eaten / goal : 0
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 2) {
+        return VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(spacing: Space.xxs) {
                 Text(number(conv(abs(shown)))).font(.number(m == .calories ? 22 : 20, weight: .semibold)).monospacedDigit()
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .liveNumber(shown).foregroundStyle(remaining && shown < 0 ? palette.warn : .primary)
-                if m != .calories { Text(m.short).font(.subheadline.weight(.semibold)).foregroundStyle(m.color) }
+                if m != .calories { Text(m.short).font(.secondaryEmphasis).foregroundStyle(m.color) }
             }
-            Text(remaining && shown < 0 ? "over" : "of \(number(conv(goal)))").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text(remaining && shown < 0 ? "over" : "of \(number(conv(goal)))").font(.note).foregroundStyle(.secondary).lineLimit(1)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(m.color.opacity(0.18))

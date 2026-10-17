@@ -7,9 +7,9 @@ struct CheckInQuestionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            Text("How was your week?").font(.title2.bold())
+            Text("How was your week?").font(.sectionTitle)
             ForEach(CheckInQuestions.questions, id: \.key) { q in
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     HStack {
                         Text(q.label).font(.secondaryText.weight(.semibold))
                         Spacer()
@@ -31,7 +31,7 @@ struct CheckInQuestionsView: View {
                 }
             }
             if answers.hunger >= Int(Evidence.value("checkin.q.hunger.high")) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text("When are you hungriest?").font(.secondaryText.weight(.semibold))
                     Picker("When are you hungriest?", selection: $answers.hungriest) {
                         Text("Not sure").tag(MealBand?.none)
@@ -66,7 +66,7 @@ struct CheckInProposalsView: View {
     var body: some View {
         if !proposals.isEmpty {
             VStack(alignment: .leading, spacing: Space.m) {
-                Text("Suggestions from your answers").font(.title3.bold())
+                Text("Suggestions from your answers").font(.subsectionTitle)
                 ForEach(proposals) { p in
                     VStack(alignment: .leading, spacing: Space.s) {
                         Text(p.title).font(.cardTitle)

@@ -17,9 +17,9 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             if let p = profiles.first {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: Space.xl) {
                     if isPhone {
-                        Text("MORE").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).padding(.top, 8)
+                        Text("MORE").font(.pageTitle(30)).foregroundStyle(palette.titleStyle).padding(.top, Space.s)
                     }
                     profileHeader(p)
                     group("General", [
@@ -40,9 +40,9 @@ struct SettingsView: View {
                         rowAction("square.grid.2x2", "Dashboard", "Sections, cards, consumed or remaining") { customizing = true },
                         row("mic.fill", "Siri & Shortcuts", "What you can say") { siriPage },
                     ])
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Theme").font(.title2.bold())
-                        VStack { AppearanceSection.Grid() }.padding(14).modifier(CardSurface())
+                    VStack(alignment: .leading, spacing: Space.m) {
+                        Text("Theme").font(.sectionTitle)
+                        VStack { AppearanceSection.Grid() }.padding(Space.l).modifier(CardSurface())
                     }
                     group("Progress & tools", [
                         row("scalemass", "Weight & body", "Weigh-ins, measurements, photos") { WeightView() },
@@ -58,7 +58,7 @@ struct SettingsView: View {
                         row("stethoscope", "Diagnostics", "Version, data health, recent problems") { DiagnosticsView() },
                         rowAction("trash", "Start over", "Delete everything on this device", destructive: true) { confirmReset = true },
                     ])
-                    Text("Gym · your data stays on your devices").font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                    Text("Gym · your data stays on your devices").font(.note).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                 }
                 .padding(pagePadding)
                 .frame(maxWidth: 720, alignment: .leading)
@@ -87,21 +87,21 @@ struct SettingsView: View {
     private func profileHeader(_ p: Profile) -> some View {
         let first = (try? ctx.fetch(FetchDescriptor<FoodEntry>(sortBy: [SortDescriptor(\.day)])).first?.day)
         let name = UserDefaults.standard.string(forKey: "displayName") ?? ""
-        return HStack(spacing: 16) {
+        return HStack(spacing: Space.l) {
             Text(initials(name)).font(.system(size: 26, weight: .black).width(.expanded)).foregroundStyle(palette.onInverse)
                 .frame(width: 70, height: 70).background(palette.inverseFill, in: Circle())
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: Space.xs) {
                 TextField("Your name", text: Binding(get: { UserDefaults.standard.string(forKey: "displayName") ?? "" },
                                                      set: { UserDefaults.standard.set($0, forKey: "displayName") }))
-                    .font(.title3.weight(.semibold)).textFieldStyle(.plain)
+                    .font(.subsectionTitle).textFieldStyle(.plain)
                 if let f = first {
                     Text("Logging since \(date(fromKey: f).formatted(.dateTime.day().month(.wide).year().locale(appLocale)))")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                        .font(.secondaryText).foregroundStyle(.secondary)
                 }
             }
             Spacer()
         }
-        .padding(16).modifier(CardSurface())
+        .padding(Space.l).modifier(CardSurface())
     }
 
     private func initials(_ name: String) -> String {
@@ -126,8 +126,8 @@ struct SettingsView: View {
     }
 
     private func group(_ title: String, _ rows: [Row]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.title2.bold())
+        VStack(alignment: .leading, spacing: Space.m) {
+            Text(title).font(.sectionTitle)
             VStack(spacing: 0) {
                 ForEach(rows) { r in
                     Group {
@@ -146,16 +146,16 @@ struct SettingsView: View {
     }
 
     private func label(_ r: Row) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: r.icon).font(.title3).frame(width: 28).foregroundStyle(r.destructive ? palette.warn : .primary)
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: Space.l) {
+            Image(systemName: r.icon).font(.subsectionTitle).frame(width: 28).foregroundStyle(r.destructive ? palette.warn : .primary)
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(r.title).foregroundStyle(r.destructive ? palette.warn : .primary)
-                Text(r.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(r.detail).font(.note).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+            Image(systemName: "chevron.right").font(.secondaryEmphasis).foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 16).padding(.vertical, 13)
+        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
         .contentShape(Rectangle())
     }
 
@@ -218,7 +218,7 @@ struct SettingsView: View {
                 if LocalFoods.shared.available {
                     LabeledContent("Built-in products", value: "\(number(Double(LocalFoods.shared.count))) · \(LocalFoods.shared.built)")
                     Text("Spain (Alcampo, Mercadona, Costco and more), Saudi Arabia and the Gulf, from Open Food Facts, plus USDA's common foods with Spanish names. Searched first, works offline, forgives typos.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                 }
             } footer: {
                 Text("Plain foods come from USDA FoodData Central. The shared demo key allows only a few searches an hour; your own key is free and unlimited.")
@@ -286,9 +286,9 @@ struct AppearanceSection: View {
                         VStack(spacing: Space.s) {
                             Circle().fill(MetalTexture.paint(ft)).frame(width: 34, height: 34)
                                 .overlay(Circle().strokeBorder(t.separator.color.opacity(t.isDark ? 0 : 1), lineWidth: 0.5))
-                                .padding(4)
+                                .padding(Space.xs)
                                 .overlay(Circle().strokeBorder(f == finish ? t.accent.color : .clear, lineWidth: 1.5))
-                            Text(f.label).font(.caption2.weight(f == finish ? .semibold : .regular))
+                            Text(f.label).font(f == finish ? Font.fineLabel : Font.fine)
                                 .foregroundStyle(f == finish ? Color.primary : .secondary).lineLimit(1).fixedSize()
                         }
                         .frame(maxWidth: .infinity)
@@ -299,9 +299,9 @@ struct AppearanceSection: View {
                 }
             }
             Toggle(isOn: $reduceDepth) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Space.xxs) {
                     Text("Reduce depth")
-                    Text("Flat: no highlights or edge sheens.").font(.caption).foregroundStyle(.secondary)
+                    Text("Flat: no highlights or edge sheens.").font(.note).foregroundStyle(.secondary)
                 }
             }
         }
@@ -324,7 +324,7 @@ struct ThemePreview: View {
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 0) {
                     Text("1 557").font(.system(.title3, design: .rounded).weight(.semibold)).monospacedDigit().foregroundStyle(t.text1.color)
-                    Text("kcal left").font(.caption2.weight(.medium)).foregroundStyle(t.text2.color)
+                    Text("kcal left").font(.fineLabel).foregroundStyle(t.text2.color)
                 }
             }
             .frame(width: 86, height: 86)
@@ -349,11 +349,11 @@ struct ThemePreview: View {
     }
 
     private func bar(_ l: String, _ v: String, _ c: RGB, _ f: Double) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: Space.xs) {
             HStack {
-                Text(l).font(.caption2.weight(.medium)).foregroundStyle(t.text2.color)
+                Text(l).font(.fineLabel).foregroundStyle(t.text2.color)
                 Spacer()
-                Text(v).font(.caption2.weight(.semibold)).monospacedDigit().foregroundStyle(t.text1.color)
+                Text(v).font(.fineLabel).monospacedDigit().foregroundStyle(t.text1.color)
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
@@ -375,7 +375,7 @@ struct PrivacySection: View {
             Label("Food photos go to the AI you choose in Photo logging: your Mac only, or Gemini (Google may use free-tier inputs).", systemImage: "sparkles")
             Label("API keys are kept in the Keychain.", systemImage: "key")
         } header: { Text("What leaves this device") }
-        .font(.callout)
+        .font(.secondaryText)
     }
 }
 
@@ -397,10 +397,10 @@ struct DayStartSection: View {
                 UserDefaults.standard.set(on ? addDays(dayKey(Date()), 30) : nil, forKey: "ramadanUntil")
                 ramadan = on; dataVersion += 1
             })) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Space.xxs) {
                     Text("Ramadan")
                     Text(ramadan ? "On until \(date(fromKey: UserDefaults.standard.string(forKey: "ramadanUntil") ?? dayKey()).formatted(.dateTime.day().month(.wide).locale(appLocale)))" : "Iftar to suhoor counts as one day")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                 }
             }
         } footer: {

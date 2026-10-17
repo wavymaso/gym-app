@@ -14,7 +14,7 @@ struct TaxonomyReviewView: View {
         List {
             Section {
                 Text("Least certain first. The planner uses the role to build meals (a protein main and a carb side, condiments only alongside) and NOVA for the whole-food preference. Your corrections always win.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
                 #if os(macOS)
                 Button(asking ? "Asking the local model…" : "Ask the local model about uncertain foods") {
                     asking = true; Task { await ctx.suggestTaxonomy(); asking = false }
@@ -34,12 +34,12 @@ struct TaxonomyReviewView: View {
 
     private func row(_ f: Food, _ t: Taxonomy.Result) -> some View {
         HStack(alignment: .top, spacing: Space.m) {
-            Circle().fill(t.confidence >= 0.9 ? palette.good : t.confidence >= 0.7 ? palette.under : palette.warn).frame(width: 8, height: 8).padding(.top, 6)
-            VStack(alignment: .leading, spacing: 2) {
+            Circle().fill(t.confidence >= 0.9 ? palette.good : t.confidence >= 0.7 ? palette.under : palette.warn).frame(width: 8, height: 8).padding(.top, Space.s)
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(f.name).lineLimit(1)
                 Text("\(t.canonicalName ?? "no canonical food") · \(t.role.label) · NOVA \(t.nova)\(t.novaEstimated ? " (estimated)" : "")\(t.state.map { " · \($0 == .raw ? "raw" : "cooked")" } ?? "")")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(t.roleSource == .user ? "your correction" : "\(Int(t.confidence * 100))% · \(t.why.joined(separator: "; "))").font(.caption2).foregroundStyle(.tertiary).lineLimit(2)
+                    .font(.note).foregroundStyle(.secondary)
+                Text(t.roleSource == .user ? "your correction" : "\(Int(t.confidence * 100))% · \(t.why.joined(separator: "; "))").font(.fine).foregroundStyle(.tertiary).lineLimit(2)
             }
         }
     }

@@ -49,12 +49,12 @@ struct FoodDetailView: View {
         let n = food.nutrients(amount, unit: unit)
         let energy = profiles.first?.energy ?? .kcal
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: Space.xl) {
                 header(n, energy)
                 impact(n)
                 breakdown(n)
             }
-            .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 20)
+            .padding(.horizontal, Space.l).padding(.top, Space.s).padding(.bottom, Space.xl)
         }
         .pageBackground()
         .safeAreaInset(edge: .bottom, spacing: 0) { bottom }
@@ -73,8 +73,8 @@ struct FoodDetailView: View {
     /// Raw or cooked: what the values are per, the ratio, and what you're logging converted.
     private var cookingLine: some View {
         Button { cooking = true } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: Space.xxs) {
+                HStack(spacing: Space.s) {
                     Image(systemName: "flame")
                     if let st = food.state {
                         Text("Values per \(st == .raw ? "raw / dry" : "cooked") weight\(food.ratio.map { " · cooked = \(number($0.value, digits: 2))× raw (\($0.measured ? "your batch" : "typical"))" } ?? "")")
@@ -82,13 +82,13 @@ struct FoodDetailView: View {
                         Text("Raw or cooked? Set it to log either weight")
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").font(.caption2)
+                    Image(systemName: "chevron.right").font(.fine)
                 }
                 if unit == Cooking.cookedUnit || unit == Cooking.rawUnit {
                     Text("\(number(amount)) \(unit) = \(number(food.grams(amount, unit: unit))) g \(food.state == .raw ? "raw / dry" : "cooked")").foregroundStyle(palette.accent)
                 }
             }
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.note).foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $cooking) { NavigationStack { CookingSheet(food: food) }.appStyle().presentationDetents([.medium, .large]) }
@@ -97,41 +97,41 @@ struct FoodDetailView: View {
     private func header(_ n: Nutrients, _ energy: EnergyUnit) -> some View {
         let kcal = max(n.kcal, 0.001)
         let share: [Macro: Double] = [.protein: n.protein * 4 / kcal, .fat: n.fat * 9 / kcal, .carbs: n.carbs * 4 / kcal]
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             if food.per100.looksWrong && !food.verified {
                 VStack(alignment: .leading, spacing: Space.s) {
                     Label("Calories and macros don't add up (\(number(food.per100.kcal)) kcal vs \(number(food.per100.protein * 4 + food.per100.carbs * 4 + food.per100.fat * 9)) from macros per 100 g). The entry may be wrong: check the packet.",
-                          systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(palette.warn)
+                          systemImage: "exclamationmark.triangle.fill").font(.note).foregroundStyle(palette.warn)
                     Button("I checked: the numbers are right") { animate { food.verified = true }; ctx.commit(); Haptics.tap() }
-                        .font(.caption.weight(.semibold))
+                        .font(.label)
                 }
             } else if food.verified {
-                Label("Checked against the packet", systemImage: "checkmark.seal.fill").font(.caption).foregroundStyle(palette.good)
+                Label("Checked against the packet", systemImage: "checkmark.seal.fill").font(.note).foregroundStyle(palette.good)
             }
             HStack {
-                if let b = food.brand { Text(b).font(.subheadline).foregroundStyle(.secondary) }
+                if let b = food.brand { Text(b).font(.secondaryText).foregroundStyle(.secondary) }
                 Spacer()
                 if let time { DatePicker("Time", selection: time, displayedComponents: .hourAndMinute).labelsHidden() }
             }
             if !food.isLiquid { cookingLine }
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(number(energy.fromKcal(n.kcal))).font(.number(46)).liveNumber(n.kcal)
-                    Text(energy == .kcal ? "Calories" : "kJ").font(.subheadline).foregroundStyle(.secondary)
+                    Text(number(energy.fromKcal(n.kcal))).font(.numberHero).liveNumber(n.kcal)
+                    Text(energy == .kcal ? "Calories" : "kJ").font(.secondaryText).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
                 ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
-                    VStack(spacing: 4) {
-                        Text("\(Int((share[m] ?? 0) * 100 + 0.5))%").font(.caption2.weight(.bold))
-                            .padding(.horizontal, 8).padding(.vertical, 3)
+                    VStack(spacing: Space.xs) {
+                        Text("\(Int((share[m] ?? 0) * 100 + 0.5))%").font(.fineLabel)
+                            .padding(.horizontal, Space.s).padding(.vertical, Space.xs)
                             .background(m.color.opacity(0.28), in: Capsule()).foregroundStyle(m.color)
-                        Text(number(m.value(n.targets), digits: 1)).font(.number(22)).liveNumber(m.value(n.targets))
-                        Text(m.label).font(.caption).foregroundStyle(.secondary)
+                        Text(number(m.value(n.targets), digits: 1)).font(.numberMedium).liveNumber(m.value(n.targets))
+                        Text(m.label).font(.note).foregroundStyle(.secondary)
                     }
                     .frame(minWidth: 62)
                 }
             }
-            HStack(spacing: 18) {
+            HStack(spacing: Space.l) {
                 actionButton(food.isFavorite ? "heart.fill" : "heart", food.isFavorite ? "Favourite" : "Favourite") {
                     food.isFavorite.toggle(); ctx.commit()
                 }
@@ -144,10 +144,10 @@ struct FoodDetailView: View {
 
     private func actionButton(_ icon: String, _ title: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 6) {
-                Image(systemName: icon).font(.title3).frame(width: 46, height: 40)
+            VStack(spacing: Space.s) {
+                Image(systemName: icon).font(.subsectionTitle).frame(width: 46, height: 40)
                     .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-                Text(title).font(.caption)
+                Text(title).font(.note)
             }
         }
         .buttonStyle(.plain)
@@ -164,13 +164,13 @@ struct FoodDetailView: View {
 
     @ViewBuilder private func impact(_ n: Nutrients) -> some View {
         if let t = targets {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Impact on Targets").font(.title3.weight(.bold))
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text("Impact on Targets").font(.subsectionTitle)
                 HStack {
                     ForEach(Macro.allCases, id: \.self) { m in
                         let target = max(m.value(t), 1)
                         let before = m.value(alreadyToday.targets) / target, adds = m.value(n.targets) / target
-                        VStack(spacing: 6) {
+                        VStack(spacing: Space.s) {
                             ZStack {
                                 Circle().stroke(Color.raisedBackground, lineWidth: 6)
                                 Circle().trim(from: 0, to: min(before, 1)).stroke(m.color.opacity(0.35), style: StrokeStyle(lineWidth: 6, lineCap: .round))
@@ -178,17 +178,17 @@ struct FoodDetailView: View {
                                 Circle().trim(from: min(before, 1), to: min(before + adds, 1))
                                     .stroke(before + adds > 1.05 ? palette.warn : m.color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                                     .rotationEffect(.degrees(-90))
-                                Text("\(Int(adds * 100 + 0.5))%").font(.callout.weight(.semibold)).monospacedDigit()
+                                Text("\(Int(adds * 100 + 0.5))%").font(.secondaryEmphasis).monospacedDigit()
                             }
                             .frame(width: 66, height: 66)
                             .animation(Motion.snappy, value: adds)
-                            Text(m.label).font(.caption).foregroundStyle(.secondary)
+                            Text(m.label).font(.note).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                     }
                 }
                 Text("Of today's target. The faint part is what you've already eaten\(alreadyToday.kcal > 0 ? " or added" : "").")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             }
         }
     }
@@ -199,8 +199,8 @@ struct FoodDetailView: View {
         let sex = profiles.first?.sexValue ?? .male
         let p = profiles.first
         let kcal = targets?.kcal ?? 2000
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Nutrients").font(.title3.weight(.bold))
+        VStack(alignment: .leading, spacing: Space.l) {
+            Text("Nutrients").font(.subsectionTitle)
             group("Carbs", [
                 ("Carbs", n.carbs, targets?.carbs, "g", false),
                 ("Fibre", n.fiber, nutrientTarget("fiber", kcal: kcal, sex: sex, profile: p).value, "g", false),
@@ -224,12 +224,12 @@ struct FoodDetailView: View {
     @ViewBuilder private func group(_ title: String, _ rows: [(String, Double?, Double?, String, Bool)]) -> some View {
         let shown = rows.filter { $0.1 != nil }
         if !shown.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(title).font(.headline)
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text(title).font(.cardTitle)
                 ForEach(shown, id: \.0) { r in bar(r.0, r.1!, r.2, r.3, limit: r.4) }
             }
-            .padding(14)
-            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(Space.l)
+            .background(Color.cardBackground, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
         }
     }
 
@@ -237,13 +237,13 @@ struct FoodDetailView: View {
         let digits = unit == "g" && v < 100 ? 1 : 0
         let frac = target.map { v / max($0, 0.0001) } ?? 0
         let color: Color = limit ? (frac > 1 ? palette.warn : Color.secondary) : palette.good
-        return VStack(spacing: 5) {
+        return VStack(spacing: Space.xs) {
             HStack {
-                Text(label).font(.callout)
+                Text(label).font(.secondaryText)
                 Spacer()
                 Text(target.map { "\(number(v, digits: digits)) / \(number($0, digits: unit == "g" ? 0 : 0)) \(unit)" } ?? "\(number(v, digits: digits)) \(unit)")
-                    .font(.callout).monospacedDigit().foregroundStyle(.secondary)
-                Text(target == nil ? "No target" : "\(Int(frac * 100 + 0.5))%").font(.callout.weight(.semibold)).monospacedDigit()
+                    .font(.secondaryText).monospacedDigit().foregroundStyle(.secondary)
+                Text(target == nil ? "No target" : "\(Int(frac * 100 + 0.5))%").font(.secondaryEmphasis).monospacedDigit()
                     .frame(minWidth: 62, alignment: .trailing)
             }
             if target != nil {
@@ -261,17 +261,17 @@ struct FoodDetailView: View {
     // MARK: Amount: the field, unit chips, the pad
 
     private var bottom: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 8) {
+        VStack(spacing: Space.m) {
+            HStack(spacing: Space.s) {
                 Button { animate(Motion.snappy) { keypad.toggle() } } label: {
                     HStack {
-                        Text(text.isEmpty ? "0" : text).font(.title3.weight(.semibold)).monospacedDigit()
+                        Text(text.isEmpty ? "0" : text).font(.subsectionTitle).monospacedDigit()
                         Spacer()
-                        Text(unitLabel(unit)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                        Text(unitLabel(unit)).font(.secondaryText).foregroundStyle(.secondary).lineLimit(1)
                     }
-                    .padding(.horizontal, 16).frame(height: 52)
-                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(keypad ? palette.accent : .clear, lineWidth: 2))
+                    .padding(.horizontal, Space.l).frame(height: 52)
+                    .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.m, style: .continuous).stroke(keypad ? palette.accent : .clear, lineWidth: 2))
                 }
                 .buttonStyle(.plain)
                 if !keypad { actions }
@@ -281,7 +281,7 @@ struct FoodDetailView: View {
                 pad
             }
         }
-        .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 8)
+        .padding(.horizontal, Space.m).padding(.top, Space.m).padding(.bottom, Space.s)
         .background(.bar)
     }
 
@@ -296,11 +296,11 @@ struct FoodDetailView: View {
 
     private var unitChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: Space.s) {
                 ForEach(food.units, id: \.self) { u in
                     Button(unitLabel(u)) { switchUnit(to: u) }
-                        .font(.callout.weight(.medium)).lineLimit(1)
-                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .font(.secondaryEmphasis).lineLimit(1)
+                        .padding(.horizontal, Space.l).padding(.vertical, Space.m)
                         .background(u == unit ? Color.primary : Color.raisedBackground, in: Capsule())
                         .foregroundStyle(u == unit ? Color.pageBackground : .primary)
                         .buttonStyle(.plain)
@@ -407,7 +407,7 @@ struct PadButtonStyle: ButtonStyle {
             .font(kind == .key ? .title2.weight(.regular) : .headline)
             .lineLimit(1).minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity, minHeight: 50)
-            .background(fillFor(configuration.isPressed), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(fillFor(configuration.isPressed), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
             .opacity(configuration.isPressed && kind == .primary ? 0.75 : 1)
             .foregroundStyle(kind == .primary ? palette.onAccent : .primary)
             .opacity(enabled ? 1 : 0.45)

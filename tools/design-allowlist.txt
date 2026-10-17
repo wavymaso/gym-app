@@ -1,0 +1,27 @@
+Gym/TokenGallery.swift: *  # the token gallery draws every theme at fixed sizes for THEME-TOKENS.png
+GymWidget/RestLiveActivity.swift: *  # widget target: no Design.swift; Live Activity layout is fixed by the system
+GymWidget/GymWidget.swift: *  # widget target: no Design.swift; widget families have fixed sizes
+Gym/Theme.swift: .system(size:  # Font.number's definition (Dynamic Type scaled, capped)
+Gym/DashboardMF.swift: static func pageTitle  # the old wide title font's definition
+Gym/SettingsView.swift: .font(.system(size: 26, weight: .black).width(.expanded))  # initials inside the fixed 70 pt avatar circle
+Gym/Navigation.swift: .font(.system(size: size * 0.52  # an icon sized to its tile (size is the tile's)
+Gym/WorkoutParts.swift: .font(.system(size: 8, weight: .bold))  # plate weight drawn inside a plate of fixed height
+Gym/MicrosView.swift: .font(.system(size: 10, weight: .bold, design: .rounded))  # percentage inside a fixed 30 pt ring
+Gym/FoodSelection.swift: .font(.system(size: 10, weight: .bold))  # icon inside a fixed 18 pt badge
+Gym/FoodSelection.swift: .font(.system(size: 11, weight: .heavy))  # letter inside a fixed 18 pt badge
+Gym/WorkoutsView.swift: .font(.system(size: 90, weight: .bold))  # watermark art behind the hero card
+Gym/StrategyView.swift: .font(.system(size: 110, weight: .bold))  # watermark art behind the goal card
+Gym/FoodLogger.swift: .padding(.top, 200)  # positions the barcode frame over the camera's centre
+Gym/FoodLogger.swift: .padding(-6)  # a ring drawn outside the shutter button
+Gym/WorkoutsView.swift: .padding(-3)  # a ring drawn outside today's dot
+Gym/TokenGallery.swift: .padding(-3)  # (gallery)
+Gym/InsightDetails.swift: .padding(.top, -12)  # pulls the caption up under the chart's own inset
+Gym/StrategyView.swift: .padding(.horizontal, -16)  # scrolls to the card's edge instead of being cut at its padding
+Gym/FoodLogPhone.swift: .padding(.vertical, -2)  # the time column's backdrop overlaps the row edges
+Gym/SettingsView.swift: Divider().padding(.leading, 58)  # divider lines up with the row text after the icon
+Gym/WorkoutsView.swift: Divider().padding(.leading, 70)  # divider lines up with the row text after the icon
+Gym/AIPanel.swift: Divider().padding(.leading, 72)  # divider lines up with the row text after the emoji
+Gym/DashboardMF.swift: Divider().padding(.leading, 70)  # divider lines up with the row text after the icon
+Gym/InsightDetails.swift: Divider().padding(.leading, 58)  # divider lines up with the row text after the icon
+Gym/InsightDetails.swift: Divider().padding(.leading, 68)  # divider lines up with the row text after the icon
+Gym/StrategyView.swift: Divider().padding(.leading, 60)  # divider lines up with the row text after the icon

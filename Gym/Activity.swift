@@ -200,39 +200,39 @@ struct ActivityCard: View {
         let drunk = water.reduce(0) { $0 + $1.ml }, goal = ctx.waterGoalMl
         let waterColor = Color.waterTone
         Card(title: "Water & activity", systemImage: "drop.fill") {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(spacing: 10) {
+            HStack(alignment: .top, spacing: Space.l) {
+                VStack(spacing: Space.m) {
                     ZStack {
                         Ring(progress: goal > 0 ? drunk / goal : 0, color: waterColor, lineWidth: 9)
                         VStack(spacing: -1) {
-                            Text(litres(drunk)).font(.number(17)).monospacedDigit().minimumScaleFactor(0.7)
-                            Text("of \(litres(goal))").font(.caption2).foregroundStyle(.secondary)
+                            Text(litres(drunk)).font(.numberSmall).monospacedDigit().minimumScaleFactor(0.7)
+                            Text("of \(litres(goal))").font(.fine).foregroundStyle(.secondary)
                         }
-                        .padding(10)
+                        .padding(Space.m)
                     }
                     .frame(width: 92, height: 92)
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         waterButton(250, waterColor)
                         waterButton(500, waterColor)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                VStack(spacing: 10) {
+                VStack(spacing: Space.m) {
                     let a = activity.first
                     ZStack {
                         Ring(progress: Double(a?.steps ?? 0) / Double(stepGoal), color: palette.good, lineWidth: 9)
                         VStack(spacing: -1) {
-                            Text(a.map { number(Double($0.steps)) } ?? "–").font(.number(17)).monospacedDigit().minimumScaleFactor(0.7)
-                            Text("steps").font(.caption2).foregroundStyle(.secondary)
+                            Text(a.map { number(Double($0.steps)) } ?? "–").font(.numberSmall).monospacedDigit().minimumScaleFactor(0.7)
+                            Text("steps").font(.fine).foregroundStyle(.secondary)
                         }
-                        .padding(10)
+                        .padding(Space.m)
                     }
                     .frame(width: 92, height: 92)
                     if let a {
-                        Text("\(number(a.activeKcal)) active kcal").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("\(number(a.activeKcal)) active kcal").font(.label).foregroundStyle(.secondary)
                     } else {
                         Text(isPhone ? (stepsOn ? "No steps yet" : "Turn on in Settings") : "From your iPhone")
-                            .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            .font(.note).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -244,8 +244,8 @@ struct ActivityCard: View {
 
     private func waterButton(_ ml: Double, _ color: Color) -> some View {
         Button { animate { ctx.addWater(ml) } } label: {
-            Text("+\(number(ml))").font(.caption.weight(.bold)).monospacedDigit()
-                .padding(.horizontal, 9).padding(.vertical, 6)
+            Text("+\(number(ml))").font(.label).monospacedDigit()
+                .padding(.horizontal, Space.s).padding(.vertical, Space.s)
                 .background(color.opacity(0.16), in: Capsule()).foregroundStyle(color)
         }
         .buttonStyle(.plain)
@@ -266,7 +266,7 @@ struct WaterAmountSheet: View {
         NavigationStack {
             Form {
                 Stepper(value: $ml, in: 50...2000, step: 50) {
-                    Text("\(number(ml)) ml").font(.number(22)).monospacedDigit()
+                    Text("\(number(ml)) ml").font(.numberMedium).monospacedDigit()
                 }
                 HStack {
                     ForEach([150.0, 330, 750, 1000], id: \.self) { v in
@@ -320,7 +320,7 @@ struct ActivitySection: View {
                         }
                     }
                 }
-            if let message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if let message { Text(message).font(.secondaryText).foregroundStyle(.secondary) }
             #endif
         } header: {
             Text("Water & activity")

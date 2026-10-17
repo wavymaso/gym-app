@@ -16,14 +16,14 @@ struct SupplementsCard: View {
     var body: some View {
         let taken = Set(today.map(\.supplementKey))
         Card(title: "Supplements", systemImage: "pills.fill",
-             accessory: AnyView(Button(list.isEmpty ? "Add" : "Edit") { managing = true }.buttonStyle(.borderless).font(.caption.weight(.semibold)))) {
+             accessory: AnyView(Button(list.isEmpty ? "Add" : "Edit") { managing = true }.buttonStyle(.borderless).font(.label))) {
             if list.isEmpty {
-                Text("Creatine, vitamin D, omega-3… tick them off each day and keep the streak going.").font(.callout).foregroundStyle(.secondary)
+                Text("Creatine, vitamin D, omega-3… tick them off each day and keep the streak going.").font(.secondaryText).foregroundStyle(.secondary)
                 Button("Add supplements") { managing = true }.buttonStyle(.bordered)
             } else {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("\(list.filter { taken.contains($0.key) }.count)/\(list.count)").font(.number(26)).monospacedDigit()
-                    Text("taken today").font(.callout).foregroundStyle(.secondary)
+                    Text("\(list.filter { taken.contains($0.key) }.count)/\(list.count)").font(.numberLarge).monospacedDigit()
+                    Text("taken today").font(.secondaryText).foregroundStyle(.secondary)
                     Spacer()
                 }
                 FlowChips(items: list) { s in
@@ -34,14 +34,14 @@ struct SupplementsCard: View {
                         Haptics.tap()
                         #endif
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: Space.s) {
                             Text(s.emoji)
-                            Text(s.name).font(.subheadline.weight(.semibold))
-                            if on { Image(systemName: "checkmark").font(.caption.weight(.black)) }
+                            Text(s.name).font(.secondaryEmphasis)
+                            if on { Image(systemName: "checkmark").font(.label) }
                             let st = ctx.streak(s)
-                            if st > 1 { Text("🔥\(st)").font(.caption2.weight(.bold)).monospacedDigit() }
+                            if st > 1 { Text("🔥\(st)").font(.fineLabel).monospacedDigit() }
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .padding(.horizontal, Space.m).padding(.vertical, Space.s)
                         .background(on ? palette.good.opacity(0.85) : Color.raisedBackground, in: Capsule())
                         .foregroundStyle(on ? palette.onData : .primary)
                     }
@@ -58,7 +58,7 @@ struct FlowChips<Item: Identifiable, Content: View>: View {
     let items: [Item]
     @ViewBuilder let content: (Item) -> Content
     var body: some View {
-        FlowLayout(spacing: 8) { ForEach(items) { content($0) } }
+        FlowLayout(spacing: Space.s) { ForEach(items) { content($0) } }
     }
 }
 
@@ -108,26 +108,26 @@ struct SupplementsEditor: View {
                 if !list.isEmpty {
                     Section("Yours · last 14 days") {
                         ForEach(list) { s in
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: Space.s) {
                                 HStack {
                                     Text(s.emoji)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(s.name).font(.headline)
+                                    VStack(alignment: .leading, spacing: Space.hairline) {
+                                        Text(s.name).font(.cardTitle)
                                         Text([s.dose, SupplementTiming(rawValue: s.timing)?.label].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                                            .font(.caption).foregroundStyle(.secondary)
+                                            .font(.note).foregroundStyle(.secondary)
                                     }
                                     Spacer()
-                                    Text("🔥 \(ctx.streak(s))").font(.caption.weight(.bold)).monospacedDigit()
+                                    Text("🔥 \(ctx.streak(s))").font(.label).monospacedDigit()
                                 }
-                                HStack(spacing: 4) {
+                                HStack(spacing: Space.xs) {
                                     ForEach(days, id: \.self) { d in
                                         let on = recent.contains { $0.day == d && $0.supplementKey == s.key }
-                                        RoundedRectangle(cornerRadius: 3).fill(on ? palette.good : Color.raisedBackground).frame(height: 14)
+                                        RoundedRectangle(cornerRadius: Radius.xs).fill(on ? palette.good : Color.raisedBackground).frame(height: 14)
                                             .onTapGesture { ctx.toggleTake(s, on: d) }
                                     }
                                 }
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, Space.xs)
                         }
                         .onDelete { idx in for i in idx { list[i].active = false }; ctx.commit() }
                         .onMove { from, to in

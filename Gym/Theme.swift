@@ -174,7 +174,7 @@ let pagePadding: CGFloat = 24
 #endif
 
 /// Side by side on the Mac, stacked on the iPhone.
-var adaptiveStack: AnyLayout { isPhone ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 18)) }
+var adaptiveStack: AnyLayout { isPhone ? AnyLayout(VStackLayout(spacing: Space.m)) : AnyLayout(HStackLayout(spacing: Space.l)) }
 
 extension Color {
     static var cardBackground: Color { palette.surface }
@@ -190,7 +190,7 @@ struct Card<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.m) {
             if !title.isEmpty {
                 HStack {
                     Label {
@@ -198,7 +198,7 @@ struct Card<Content: View>: View {
                     } icon: {
                         if let systemImage { Image(systemName: systemImage) }
                     }
-                    .font(.caption.weight(.bold))
+                    .font(.label)
                     .textCase(.uppercase)
                     .tracking(0.6)
                     .foregroundStyle(.secondary)
@@ -208,7 +208,7 @@ struct Card<Content: View>: View {
             }
             content
         }
-        .padding(16)
+        .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(CardSurface())
     }
@@ -295,12 +295,12 @@ struct MacroChip: View {
     let macro: Macro
     let text: String
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             Circle().fill(macro.color).frame(width: 7, height: 7)
             Text(text).monospacedDigit()
         }
-        .font(.caption.weight(.semibold))
-        .padding(.horizontal, 8).padding(.vertical, 4)
+        .font(.label)
+        .padding(.horizontal, Space.s).padding(.vertical, Space.xs)
         .background(Color.raisedBackground, in: Capsule())
     }
 }
@@ -313,15 +313,15 @@ struct MacroBar: View {
     let energy: EnergyUnit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s) {
             HStack(alignment: .firstTextBaseline) {
-                Text(macro.label).font(.subheadline.weight(.medium))
+                Text(macro.label).font(.secondaryEmphasis)
                 Spacer()
                 HStack(spacing: 0) {
                     Text(amount(eaten)).fontWeight(.semibold)
                     Text(" / \(amount(target))").foregroundStyle(.secondary)
                 }
-                .font(.subheadline).monospacedDigit()
+                .font(.secondaryText).monospacedDigit()
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
@@ -370,11 +370,11 @@ struct MacroDonut: View {
         ZStack {
             Chart(parts, id: \.0) { m, kcal in
                 SectorMark(angle: .value("kcal", kcal), innerRadius: .ratio(0.68), angularInset: 2)
-                    .cornerRadius(4).foregroundStyle(m.color)
+                    .cornerRadius(Radius.xs).foregroundStyle(m.color)
             }
             VStack(spacing: 0) {
-                Text("\(Int((parts[0].1 / total * 100).rounded()))%").font(.number(18)).foregroundStyle(Macro.protein.color)
-                Text("protein").font(.caption2).foregroundStyle(.secondary)
+                Text("\(Int((parts[0].1 / total * 100).rounded()))%").font(.numberMedium).foregroundStyle(Macro.protein.color)
+                Text("protein").font(.fine).foregroundStyle(.secondary)
             }
         }
     }

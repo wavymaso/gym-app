@@ -33,10 +33,10 @@ struct EatingProfileView: View {
             if let p = profile {
                 Section {
                     if p.enoughData {
-                        Text("From \(p.daysUsed) days of logged foods, recent weeks counting most. Updated as you log.").font(.callout).foregroundStyle(.secondary)
+                        Text("From \(p.daysUsed) days of logged foods, recent weeks counting most. Updated as you log.").font(.secondaryText).foregroundStyle(.secondary)
                     } else {
                         Label("Only \(p.daysUsed) day\(p.daysUsed == 1 ? "" : "s") with individual foods so far (imported day totals don't count). After about two weeks of normal logging this fills in, and the meal planner can build plans from your own foods.",
-                              systemImage: "hourglass").font(.callout).foregroundStyle(.secondary)
+                              systemImage: "hourglass").font(.secondaryText).foregroundStyle(.secondary)
                     }
                 }
                 Section("Your day") {
@@ -46,7 +46,7 @@ struct EatingProfileView: View {
                 }
                 if !p.misses.isEmpty {
                     Section("Where days usually miss") {
-                        ForEach(p.misses, id: \.detail) { m in Label(m.detail, systemImage: "exclamationmark.circle").font(.callout) }
+                        ForEach(p.misses, id: \.detail) { m in Label(m.detail, systemImage: "exclamationmark.circle").font(.secondaryText) }
                     }
                 }
                 ForEach(p.slots, id: \.index) { s in
@@ -63,7 +63,7 @@ struct EatingProfileView: View {
                 }
                 if !p.together.isEmpty {
                     Section("Eaten together") {
-                        ForEach(p.together, id: \.a) { t in Text("\(t.a) + \(t.b) · \(t.times)×").font(.callout) }
+                        ForEach(p.together, id: \.a) { t in Text("\(t.a) + \(t.b) · \(t.times)×").font(.secondaryText) }
                     }
                 }
             } else {

@@ -9,7 +9,7 @@ private struct NumberRow: View {
     var unit: String = "g"
     var body: some View {
         LabeledContent(label) {
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 TextField("", text: $text, prompt: Text("0")).multilineTextAlignment(.trailing).frame(maxWidth: 90)
                     #if os(iOS)
                     .keyboardType(.decimalPad)
@@ -365,10 +365,10 @@ struct RecipeView: View {
                     if let c = parseNumber(cookedWeight), c > 0, let t = totals {
                         let raw = items.reduce(0) { $0 + $1.grams }
                         Text("Raw \(number(raw)) g → cooked \(number(c)) g (×\(number(c / raw, digits: 2))). Log it by cooked weight: \(t.serving.name) is \(number(c / max(parseNumber(servings) ?? 1, 1))) g cooked.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.note).foregroundStyle(.secondary)
                     }
                     if recipe == nil { Button { importing = true } label: { Label("Import from a link, post, text or photo…", systemImage: "link") } }
-                    if let aiNote { Label(aiNote, systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
+                    if let aiNote { Label(aiNote, systemImage: "sparkles").font(.note).foregroundStyle(.secondary) }
                 }
                 if !pending.isEmpty {
                     Section {
@@ -407,7 +407,7 @@ struct RecipeView: View {
                 if let t = totals {
                     Section("Per serving · \(number(t.serving.grams)) g") {
                         let n = t.per100.scaled(t.serving.grams / 100)
-                        Text(energy.format(n.kcal)).font(.title2.bold())
+                        Text(energy.format(n.kcal)).font(.sectionTitle)
                         MacroLine(n: n)
                     }
                 }

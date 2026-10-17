@@ -308,7 +308,7 @@ struct MainView: View {
     #endif
 
     private func row(_ s: Page) -> some View {
-        Label { Text(s.label).font(.body.weight(.medium)) } icon: { PageIcon(page: s, size: 24) }.tag(s)
+        Label { Text(s.label).font(.bodyEmphasis) } icon: { PageIcon(page: s, size: 24) }.tag(s)
     }
 
     #if os(iOS)

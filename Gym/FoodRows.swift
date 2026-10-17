@@ -11,27 +11,27 @@ struct FoodRowLabel: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text(name).font(.body.weight(.medium)).lineLimit(1)
-                    if favorite { Image(systemName: "star.fill").font(.caption).foregroundStyle(Macro.fat.color) }
+            VStack(alignment: .leading, spacing: Space.xs) {
+                HStack(spacing: Space.xs) {
+                    Text(name).font(.bodyEmphasis).lineLimit(1)
+                    if favorite { Image(systemName: "star.fill").font(.note).foregroundStyle(Macro.fat.color) }
                     if per100.looksWrong {
-                        Image(systemName: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(palette.warn)
+                        Image(systemName: "exclamationmark.triangle.fill").font(.note).foregroundStyle(palette.warn)
                             .help("Its calories don't match its protein, carbs and fat: the label may be wrong")
                     }
                 }
-                Text([brand, sourceLabel].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+                Text([brand, sourceLabel].compactMap { $0 }.joined(separator: " · ")).font(.note).foregroundStyle(.secondary)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(number(per100.kcal)) kcal").font(.callout.weight(.semibold)).monospacedDigit()
-                    Text("/100 \(unit)").font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .trailing, spacing: Space.xs) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                    Text("\(number(per100.kcal)) kcal").font(.secondaryEmphasis).monospacedDigit()
+                    Text("/100 \(unit)").font(.note).foregroundStyle(.secondary)
                 }
                 MacroLine(n: per100)
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, Space.xs)
         .contentShape(Rectangle())
     }
 
@@ -58,15 +58,15 @@ struct MFFoodRow: View {
     @State private var added = false
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Space.l) {
             Button(action: open) {
-                HStack(spacing: 14) {
-                    Text(foodEmoji(name: name, brand: brand)).font(.system(size: 30)).frame(width: 46)
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 5) {
-                            foodTitle(name, brand).font(.body).lineLimit(2).multilineTextAlignment(.leading)
-                            if favorite { Image(systemName: "star.fill").font(.caption2).foregroundStyle(palette.fat) }
-                            if n.looksWrong { Image(systemName: "exclamationmark.triangle.fill").font(.caption2).foregroundStyle(palette.warn) }
+                HStack(spacing: Space.l) {
+                    Text(foodEmoji(name: name, brand: brand)).font(.iconMedium).frame(width: 46)
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        HStack(spacing: Space.xs) {
+                            foodTitle(name, brand).font(.bodyText).lineLimit(2).multilineTextAlignment(.leading)
+                            if favorite { Image(systemName: "star.fill").font(.fine).foregroundStyle(palette.fat) }
+                            if n.looksWrong { Image(systemName: "exclamationmark.triangle.fill").font(.fine).foregroundStyle(palette.warn) }
                         }
                         FoodMacroLine(kcal: n.kcal, protein: n.protein, fat: n.fat, carbs: n.carbs, amount: amount)
                     }
@@ -77,7 +77,7 @@ struct MFFoodRow: View {
             .buttonStyle(.plain)
             if busy { ProgressView().controlSize(.small) }
             if let plus {
-                Image(systemName: added ? "checkmark" : "plus").font(.headline)
+                Image(systemName: added ? "checkmark" : "plus").font(.cardTitle)
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: 40, height: 40)
                     .background(added ? palette.good : Color.raisedBackground, in: Circle())
@@ -99,7 +99,7 @@ struct MFFoodRow: View {
                     .accessibilityAction(named: "Log now") { logNow?() }
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Space.s)
         .listRowBackground(Color.clear)
     }
 }
@@ -113,7 +113,7 @@ struct NoMatch: View {
 
     var body: some View {
         VStack(spacing: Space.m) {
-            Image(systemName: "magnifyingglass").font(.title).foregroundStyle(.secondary)
+            Image(systemName: "magnifyingglass").font(.sectionTitle).foregroundStyle(.secondary)
                 .frame(width: 56, height: 56).background(Color.raisedBackground, in: Circle())
             Text("No “\(query)” anywhere").font(.cardTitle)
             Text("Not in your foods, USDA or Open Food Facts. Log it another way:").font(.secondaryText).foregroundStyle(.secondary)

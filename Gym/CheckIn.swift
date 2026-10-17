@@ -19,13 +19,13 @@ struct CheckInView: View {
         NavigationStack {
             ScrollView {
                 if let s = ctx.checkInSummary() {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: Space.l) {
                         CheckInQuestionsView(answers: $answers).arrive(0)
                         CheckInProposalsView(answers: $answers, proposals: ctx.checkInProposals(answers)).arrive(0)
                         if ctx.phaseDone, let p = profiles.first { phaseCard(p) }
                         if !fast { WeeklyReview().arrive(0) }
-                        Text(fast ? "How your week went" : "The numbers").font(.title2.bold()).arrive(1)
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 12) {
+                        Text(fast ? "How your week went" : "The numbers").font(.sectionTitle).arrive(1)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Space.m, alignment: .top)], spacing: Space.m) {
                             tile("Trend weight", unit.format(s.trendKg), s.weekChangeKg.map { "\(signed(unit, $0)) this week" } ?? "")
                             tile("Average intake", s.avgIntake.map { energy.format($0) } ?? "–", "\(s.trackedDays) of 7 days logged")
                             tile("Expenditure", energy.format(s.expenditure), "Was \(energy.format(ctx.targets()?.expenditure ?? s.expenditure))")
@@ -34,26 +34,26 @@ struct CheckInView: View {
                         if !fast { partialModule(energy) }
                         if s.trackedDays < 4 {
                             Label("Only \(s.trackedDays) days logged this week, so the estimate barely moved. Logging most days makes check-ins accurate.",
-                                  systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
+                                  systemImage: "exclamationmark.triangle").font(.secondaryText).foregroundStyle(.secondary)
                         }
                         let adh = ctx.weekAdherence()
                         if adh.total > 0 { AdherenceCard(summary: adh).arrive(2) }
                         else if let a = ctx.planAdherence() {
                             Label("Meal plan: \(a.followed) of \(a.planned) planned days eaten as planned (context only: it never changes targets by itself).",
-                                  systemImage: "calendar.badge.checkmark").font(.callout).foregroundStyle(.secondary).arrive(2)
+                                  systemImage: "calendar.badge.checkmark").font(.secondaryText).foregroundStyle(.secondary).arrive(2)
                         }
                         ShadowEngineCard(liveKcal: s.proposed?.kcal ?? s.current.kcal).arrive(3)
                         if let p = s.proposed {
-                            Text("Targets for the week ahead").font(.title2.bold()).padding(.top, 8).arrive(3)
+                            Text("Targets for the week ahead").font(.sectionTitle).padding(.top, Space.s).arrive(3)
                             Card(title: "Now → suggested", systemImage: "target") {
                                 compare(.calories, s.current, p, energy)
                                 compare(.protein, s.current, p, energy)
                                 compare(.fat, s.current, p, energy)
                                 compare(.carbs, s.current, p, energy)
-                                Label(s.why(unit, energy), systemImage: "info.circle").font(.caption).foregroundStyle(.secondary)
+                                Label(s.why(unit, energy), systemImage: "info.circle").font(.note).foregroundStyle(.secondary)
                                 if ctx.activeProgram?.mode == "collaborative" {
                                     Text("Collaborative: calories follow your expenditure; protein and your carb/fat split stay yours.")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.note).foregroundStyle(.secondary)
                                 }
                             }
                             HStack {
@@ -110,13 +110,13 @@ struct CheckInView: View {
         let next = p.phases.first ?? PhaseStep(goal: GoalType.maintain.rawValue, ratePercent: 0, weeks: 4)
         return Card(title: "Phase complete", systemImage: "flag.checkered") {
             Text("\(ctx.activeProgram?.goalValue.label ?? "This phase") is done (\(p.phaseEndText(p.weight) ?? "")). Next: \(next.describe(p.weight)).")
-                .font(.callout)
+                .font(.secondaryText)
             HStack {
                 Button("Start it") { ctx.startNextPhase(); refresh += 1 }.buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
                 Button("Keep going") { p.phaseEnd = ""; ctx.commit(); refresh += 1 }.buttonStyle(.bordered)
             }
             Text("Going from a cut straight into a surplus mostly adds fat back; a few weeks at your new maintenance first settles water, hunger and expenditure.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.note).foregroundStyle(.secondary)
         }
     }
 
@@ -138,12 +138,12 @@ struct CheckInView: View {
         if !suspect.isEmpty {
             Card(title: "Coach: any days half-logged?", systemImage: "questionmark.bubble") {
                 Text("These look light next to your usual day. If you ate more than you logged, guess the whole day: a rough number beats a low one, which would pull your expenditure and targets down.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.secondaryText).foregroundStyle(.secondary)
                 ForEach(suspect, id: \.self) { d in
                     HStack {
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: Space.hairline) {
                             Text(date(fromKey: d).formatted(.dateTime.weekday(.wide).day().locale(appLocale)))
-                            Text("\(energy.format(byDay[d] ?? 0)) logged\(partial.contains(d) ? " · marked partial" : "")").font(.caption).foregroundStyle(.secondary)
+                            Text("\(energy.format(byDay[d] ?? 0)) logged\(partial.contains(d) ? " · marked partial" : "")").font(.note).foregroundStyle(.secondary)
                         }
                         Spacer()
                         TextField("Whole day", text: Binding(get: { estimates[d] ?? "" }, set: { estimates[d] = $0 }))
@@ -157,15 +157,15 @@ struct CheckInView: View {
                         .buttonStyle(.bordered).disabled((parseNumber(estimates[d] ?? "") ?? 0) <= (byDay[d] ?? 0))
                     }
                 }
-                Text("They were fine? Ignore this, or turn on Fast check-in (⋯) to skip coaching.").font(.caption).foregroundStyle(.secondary)
+                Text("They were fine? Ignore this, or turn on Fast check-in (⋯) to skip coaching.").font(.note).foregroundStyle(.secondary)
             }
         }
     }
 
     private func tile(_ title: String, _ value: String, _ note: String) -> some View {
         Card(title: title) {
-            Text(value).font(.title3.bold()).monospacedDigit()
-            Text(note).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.subsectionTitle).monospacedDigit()
+            Text(note).font(.note).foregroundStyle(.secondary)
         }
     }
 
@@ -176,10 +176,10 @@ struct CheckInView: View {
             Label(m.label, systemImage: "circle.fill").labelStyle(DotLabel(color: m.color))
             Spacer()
             Text(fmt(m.value(a))).foregroundStyle(.secondary).monospacedDigit()
-            Image(systemName: "arrow.right").font(.caption).foregroundStyle(.secondary)
+            Image(systemName: "arrow.right").font(.note).foregroundStyle(.secondary)
             Text(fmt(m.value(b))).fontWeight(.semibold).monospacedDigit()
             Text(abs(diff) < 1 ? "" : (diff > 0 ? "+" : "−") + number(abs(m == .calories ? energy.fromKcal(diff) : diff)))
-                .font(.caption).foregroundStyle(.secondary).frame(width: 44, alignment: .trailing)
+                .font(.note).foregroundStyle(.secondary).frame(width: 44, alignment: .trailing)
         }
     }
 }

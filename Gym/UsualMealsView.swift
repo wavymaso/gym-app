@@ -44,7 +44,7 @@ struct UsualMealsView: View {
         List {
             Section {
                 Text("Learned from \(days) day\(days == 1 ? "" : "s") of food-by-food logging. Until there's more history, your templates and staples carry the plan; confirmed combinations are reproduced first.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.note).foregroundStyle(.secondary)
             }
             ForEach(MealBand.allCases, id: \.self) { band in
                 let list = meals.filter { $0.band == band }
@@ -52,10 +52,10 @@ struct UsualMealsView: View {
                     Section(band.label) {
                         ForEach(list) { m in
                             HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: Space.xxs) {
                                     Text(m.foods.map { Taxonomy.byID[$0]?.name ?? $0 }.joined(separator: " + "))
                                     Text(m.confirmed ? "yours" : "seen \(m.seen)× · last \(m.lastDay.isEmpty ? "—" : date(fromKey: m.lastDay).formatted(.dateTime.day().month(.abbreviated).locale(appLocale)))")
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.note).foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 if !m.confirmed {

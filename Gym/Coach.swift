@@ -158,7 +158,7 @@ struct CoachCard: View {
                 Text(coach.working ? "Reading today…" : "Nothing to flag right now.").font(.secondaryText).foregroundStyle(.secondary)
             }
             ForEach(coach.today.reversed()) { e in
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text(e.message.headline).font(.secondaryText.weight(.semibold))
                     Text(e.message.body).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     if let a = e.message.action, a.kind == .openCheckIn || a.kind == .openProposal {

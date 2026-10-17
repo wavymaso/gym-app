@@ -144,7 +144,7 @@ struct BackupSection: View {
             Button(folder.map { "Also saving to “\($0)” · Change…" } ?? "Also save to a folder… (iCloud Drive, say)") { picking = true }
             if folder != nil { Button("Stop saving to that folder", role: .destructive) { Backup.forgetFolder(); folder = nil } }
             Button("Restore from a backup…") { restoring = true }
-            if let message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if let message { Text(message).font(.secondaryText).foregroundStyle(.secondary) }
         } header: {
             Text("Backups")
         } footer: {

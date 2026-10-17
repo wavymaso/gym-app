@@ -144,32 +144,32 @@ struct FoodLogger: View {
     private var topBar: some View {
         let target = ctx.dayTargets(on: day)?.kcal ?? 0
         let total = eatenToday.kcal + cartTotal.kcal
-        return HStack(spacing: 8) {
+        return HStack(spacing: Space.s) {
             circleButton("xmark") { if cart.isEmpty { dismiss() } else { confirmClose = true } }
             Button { pickingTime = true } label: {
-                Text(when.formatted(.dateTime.hour().minute().locale(appLocale))).font(.callout.weight(.semibold)).monospacedDigit()
-                    .padding(.horizontal, 14).frame(height: 44)
+                Text(when.formatted(.dateTime.hour().minute().locale(appLocale))).font(.secondaryEmphasis).monospacedDigit()
+                    .padding(.horizontal, Space.l).frame(height: 44)
                     .background(Color.raisedBackground, in: Capsule())
             }
             .buttonStyle(.plain)
             caloriesPill(total, target)
             Button { if !cart.isEmpty { reviewing = true } } label: { cartPill }.buttonStyle(.plain)
         }
-        .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 6)
+        .padding(.horizontal, Space.m).padding(.top, Space.m).padding(.bottom, Space.s)
     }
 
     private func circleButton(_ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.headline).frame(width: 44, height: 44).background(Color.raisedBackground, in: Circle())
+            Image(systemName: icon).font(.cardTitle).frame(width: 44, height: 44).background(Color.raisedBackground, in: Circle())
         }
         .buttonStyle(.plain)
     }
 
     private func caloriesPill(_ total: Double, _ target: Double) -> some View {
         let p = target > 0 ? total / target : 0
-        return Text("\(number(total)) / \(number(target))").font(.callout.weight(.semibold)).monospacedDigit()
+        return Text("\(number(total)) / \(number(target))").font(.secondaryEmphasis).monospacedDigit()
             .contentTransition(.numericText()).animation(Motion.snappy, value: total)
-            .padding(.horizontal, 14).frame(height: 44)
+            .padding(.horizontal, Space.l).frame(height: 44)
             .overlay(Capsule().stroke(Color.raisedBackground, lineWidth: 3))
             .overlay(Capsule().trim(from: 0, to: min(p, 1)).stroke(p > 1.05 ? palette.warn : palette.calories,
                                                                     style: StrokeStyle(lineWidth: 3, lineCap: .round))
@@ -178,9 +178,9 @@ struct FoodLogger: View {
     }
 
     private var cartPill: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             if cart.isEmpty {
-                Image(systemName: "fork.knife").foregroundStyle(.secondary).padding(.leading, 14)
+                Image(systemName: "fork.knife").foregroundStyle(.secondary).padding(.leading, Space.l)
                 Spacer(minLength: 0)
             } else {
                 HStack(spacing: -8) {
@@ -192,12 +192,12 @@ struct FoodLogger: View {
                                                     removal: .opacity))
                     }
                 }
-                .padding(.leading, 12)
-                Text("\(cart.count)").font(.callout.weight(.bold)).liveNumber(Double(cart.count))
+                .padding(.leading, Space.m)
+                Text("\(cart.count)").font(.secondaryEmphasis).liveNumber(Double(cart.count))
                 Spacer(minLength: 0)
             }
             Button(action: { cart.isEmpty ? dismiss() : logAll() }) {
-                Image(systemName: cart.isEmpty ? "chevron.down" : "checkmark").font(.headline)
+                Image(systemName: cart.isEmpty ? "chevron.down" : "checkmark").font(.cardTitle)
                     .frame(width: 44, height: 44)
                     .background(cart.isEmpty ? Color.primary.opacity(0.1) : palette.accent, in: Circle())
                     .foregroundStyle(cart.isEmpty ? Color.primary : palette.onAccent)
@@ -227,13 +227,13 @@ struct FoodLogger: View {
 
     private var tabStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 ForEach(LoggerTab.available) { t in
                     Button { animate(Motion.snappy) { tab = t } } label: {
-                        VStack(spacing: 8) {
-                            Label(t.label, systemImage: t.icon).font(.subheadline.weight(.semibold))
+                        VStack(spacing: Space.s) {
+                            Label(t.label, systemImage: t.icon).font(.secondaryEmphasis)
                                 .foregroundStyle(tab == t ? .primary : .secondary)
-                                .padding(.horizontal, 10)
+                                .padding(.horizontal, Space.m)
                             ZStack {
                                 Rectangle().fill(.clear).frame(height: 3)
                                 if tab == t { Capsule().fill(Color.primary).frame(height: 3).matchedGeometryEffect(id: "u", in: underline) }
@@ -244,7 +244,7 @@ struct FoodLogger: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Space.s)
         }
         .overlay(alignment: .bottom) { Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 1) }
     }
@@ -302,9 +302,9 @@ struct FoodLogger: View {
                     Button { if c.food != nil { reviewing = false; editing = c } } label: {
                         HStack {
                             Circle().fill(dominant(c.nutrients)).frame(width: 10, height: 10)
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: Space.xxs) {
                                 Text(c.name).lineLimit(1)
-                                Text(c.amountText).font(.caption).foregroundStyle(.secondary)
+                                Text(c.amountText).font(.note).foregroundStyle(.secondary)
                             }
                             Spacer()
                             Text("\(number(c.nutrients.kcal)) kcal").monospacedDigit()
@@ -333,14 +333,14 @@ struct FoodLogger: View {
 
     private var timeSheet: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                HStack(spacing: 8) {
+            VStack(spacing: Space.l) {
+                HStack(spacing: Space.s) {
                     ForEach(Meal.allCases) { m in
                         Button {
                             when = Calendar.current.date(bySettingHour: m.usual.0, minute: m.usual.1, second: 0, of: date(fromKey: day)) ?? when
                         } label: {
-                            VStack(spacing: 4) { Image(systemName: m.icon).foregroundStyle(m.color); Text(m.label).font(.caption2) }
-                                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                            VStack(spacing: Space.xs) { Image(systemName: m.icon).foregroundStyle(m.color); Text(m.label).font(.fine) }
+                                .frame(maxWidth: .infinity).padding(.vertical, Space.m)
                                 .background(Meal(time: when) == m ? m.color.opacity(0.2) : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
                         }
                         .buttonStyle(.plain)
@@ -401,45 +401,45 @@ struct QuickAddPanel: View {
         let fromMacros = p * 4 + f * 9 + c * 4
         let k = parseNumber(kcal) ?? fromMacros
         ScrollView {
-            VStack(spacing: 14) {
+            VStack(spacing: Space.l) {
                 field("Calories", $kcal, unit: "kcal", tag: 0, prompt: fromMacros > 0 ? number(fromMacros) : "0", big: true)
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     field("Protein", $protein, unit: "g", tag: 1, color: palette.protein)
                     field("Fat", $fat, unit: "g", tag: 2, color: palette.fat)
                     field("Carbs", $carbs, unit: "g", tag: 3, color: palette.carbs)
                 }
                 TextField("Name (optional)", text: $name)
-                    .padding(14).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14))
+                    .padding(Space.l).background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
                 if fromMacros > 0, let typed = parseNumber(kcal), abs(typed - fromMacros) > max(30, typed * 0.15) {
-                    Label("The macros add up to \(number(fromMacros)) kcal.", systemImage: "info.circle").font(.caption).foregroundStyle(.secondary)
+                    Label("The macros add up to \(number(fromMacros)) kcal.", systemImage: "info.circle").font(.note).foregroundStyle(.secondary)
                 }
                 Button {
                     add(name.isEmpty ? "Quick add" : name, Nutrients(kcal: k, protein: p, fat: f, carbs: c))
                     name = ""; kcal = ""; protein = ""; fat = ""; carbs = ""; focus = nil
                 } label: {
-                    Text("Add to cart").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
+                    Text("Add to cart").font(.cardTitle).frame(maxWidth: .infinity).padding(.vertical, Space.s)
                 }
                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent).controlSize(.large).disabled(k <= 0)
             }
-            .padding(16)
+            .padding(Space.l)
         }
         .onAppear { focus = 0 }
     }
 
     private func field(_ label: String, _ text: Binding<String>, unit: String, tag: Int, prompt: String = "0", color: Color = palette.calories,
                        big: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.caption.weight(.semibold)).foregroundStyle(color)
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text(label).font(.label).foregroundStyle(color)
             HStack(alignment: .firstTextBaseline) {
-                TextField(prompt, text: text).font(big ? .number(34) : .number(22)).focused($focus, equals: tag)
+                TextField(prompt, text: text).font(big ? .numberHero : .numberMedium).focused($focus, equals: tag)
                     #if os(iOS)
                     .keyboardType(.decimalPad)
                     #endif
                 Text(unit).foregroundStyle(.secondary)
             }
         }
-        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14))
+        .padding(Space.l).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
     }
 }
 
@@ -471,7 +471,7 @@ struct ScanPanel: View {
                                        description: Text("Allow camera access for Gym in Settings → Privacy & Security → Camera."))
             }
             if mode == 0 {
-                RoundedRectangle(cornerRadius: 14).stroke(Tokens.onScrim.opacity(0.8), lineWidth: 3)
+                RoundedRectangle(cornerRadius: Radius.m).stroke(Tokens.onScrim.opacity(0.8), lineWidth: 3)
                     .frame(width: 300, height: 170).padding(.top, 200).allowsHitTesting(false)
             }
             HStack {
@@ -481,20 +481,20 @@ struct ScanPanel: View {
                 if mode == 0 { round("keyboard") { typing = true } }
                 round(torch ? "flashlight.on.fill" : "flashlight.off.fill") { torch.toggle(); setTorch(torch) }
             }
-            .padding(12)
+            .padding(Space.m)
             VStack {
                 Spacer()
                 if looking { ProgressView().padding().background(.ultraThinMaterial, in: Circle()) }
-                if let status { Text(status).font(.callout).multilineTextAlignment(.center).padding(12)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding(.horizontal) }
+                if let status { Text(status).font(.secondaryText).multilineTextAlignment(.center).padding(Space.m)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Radius.m)).padding(.horizontal) }
                 if mode == 1 {
                     Button { Task { await captureLabel() } } label: {
                         Circle().fill(Tokens.onScrim).frame(width: 70, height: 70).overlay(Circle().stroke(Tokens.onScrim.opacity(0.5), lineWidth: 4).padding(-6))
                     }
-                    .buttonStyle(.plain).padding(.bottom, 30)
+                    .buttonStyle(.plain).padding(.bottom, Space.xxl)
                 } else {
-                    Text("Point at a barcode").font(.callout.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule()).padding(.bottom, 30)
+                    Text("Point at a barcode").font(.secondaryEmphasis).padding(.horizontal, Space.l).padding(.vertical, Space.s)
+                        .background(.ultraThinMaterial, in: Capsule()).padding(.bottom, Space.xxl)
                 }
             }
         }
@@ -511,7 +511,7 @@ struct ScanPanel: View {
 
     private func round(_ icon: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.headline).frame(width: 46, height: 46).background(Tokens.scrim, in: Circle()).foregroundStyle(Tokens.onScrim)
+            Image(systemName: icon).font(.cardTitle).frame(width: 46, height: 46).background(Tokens.scrim, in: Circle()).foregroundStyle(Tokens.onScrim)
         }
         .buttonStyle(.plain)
     }

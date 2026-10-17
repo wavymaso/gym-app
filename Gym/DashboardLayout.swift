@@ -80,20 +80,20 @@ enum DashItem {
     @ViewBuilder static func glyph(_ id: String) -> some View {
         let c = color(id)
         ZStack {
-            RoundedRectangle(cornerRadius: 6).fill(Color.raisedBackground)
+            RoundedRectangle(cornerRadius: Radius.s).fill(Color.raisedBackground)
             switch id {
             case "macros":
-                HStack(alignment: .bottom, spacing: 2) {
+                HStack(alignment: .bottom, spacing: Space.xxs) {
                     ForEach([(Macro.protein.color, 9.0), (Macro.fat.color, 14.0), (Macro.carbs.color, 11.0)], id: \.1) { Capsule().fill($0.0).frame(width: 4, height: $0.1) }
                 }
             case "expenditure", "weight":
-                Image(systemName: "chart.line.uptrend.xyaxis").font(.caption.weight(.bold)).foregroundStyle(c)
+                Image(systemName: "chart.line.uptrend.xyaxis").font(.label).foregroundStyle(c)
             case "energyBalance", "week", "training":
-                Image(systemName: "chart.bar.fill").font(.caption).foregroundStyle(c)
+                Image(systemName: "chart.bar.fill").font(.note).foregroundStyle(c)
             case "goal":
-                HStack(spacing: 2) { Capsule().fill(c).frame(width: 14, height: 4); Capsule().fill(Color.extraTone).frame(width: 5, height: 4) }
+                HStack(spacing: Space.xxs) { Capsule().fill(c).frame(width: 14, height: 4); Capsule().fill(Color.extraTone).frame(width: 5, height: 4) }
             case "weighIn", "foodLogging", "score":
-                HStack(spacing: 2) { ForEach(0..<3, id: \.self) { _ in Circle().fill(c).frame(width: 5, height: 5) } }
+                HStack(spacing: Space.xxs) { ForEach(0..<3, id: \.self) { _ in Circle().fill(c).frame(width: 5, height: 5) } }
             default:
                 Capsule().fill(c).frame(width: 22, height: 5)
             }
@@ -118,18 +118,18 @@ struct CustomizeDashboardView: View {
                             .onMove { layout.sections[i].items.move(fromOffsets: $0, toOffset: $1) }
                             .onDelete { layout.sections[i].items.remove(atOffsets: $0) }
                         Button { adding = section.kind } label: {
-                            Text(section.kind.addLabel).font(.body.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 8)
+                            Text(section.kind.addLabel).font(.bodyEmphasis).frame(maxWidth: .infinity).padding(.vertical, Space.s)
                                 .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m))
                         }
                         .buttonStyle(.plain)
                     } header: {
                         HStack {
-                            Text(section.kind.label).font(.title3.bold()).foregroundStyle(.primary).textCase(nil)
+                            Text(section.kind.label).font(.subsectionTitle).foregroundStyle(.primary).textCase(nil)
                             Spacer()
                             Button { move(i, -1) } label: { Image(systemName: "arrow.up") }.disabled(i == 0)
                             Button { move(i, 1) } label: { Image(systemName: "arrow.down") }.disabled(i == layout.sections.count - 1)
                         }
-                        .buttonStyle(.borderless).font(.body.weight(.semibold))
+                        .buttonStyle(.borderless).font(.bodyEmphasis)
                     }
                 }
                 Section {
@@ -159,7 +159,7 @@ struct CustomizeDashboardView: View {
     }
 
     private func row(_ i: Int, _ id: String) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             DashItem.glyph(id)
             Text(DashItem.label(id))
             Spacer()
@@ -169,7 +169,7 @@ struct CustomizeDashboardView: View {
                     Button("Consumed") { layout.sections[i].remaining.removeAll { $0 == id } }
                     Button("Remaining") { if !rem { layout.sections[i].remaining.append(id) } }
                 } label: {
-                    HStack(spacing: 4) { Text(rem ? "Remaining" : "Consumed"); Image(systemName: "chevron.down").font(.caption) }
+                    HStack(spacing: Space.xs) { Text(rem ? "Remaining" : "Consumed"); Image(systemName: "chevron.down").font(.note) }
                         .foregroundStyle(.secondary)
                 }
                 .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
@@ -200,7 +200,7 @@ struct AddRemoveItemsView: View {
                     Toggle(isOn: Binding(get: { selected.contains(id) }, set: { on in
                         if on { if !selected.contains(id) { selected.append(id) } } else { selected.removeAll { $0 == id } }
                     })) {
-                        HStack(spacing: 12) { DashItem.glyph(id); Text(DashItem.label(id)) }
+                        HStack(spacing: Space.m) { DashItem.glyph(id); Text(DashItem.label(id)) }
                     }
                 }
             }
@@ -231,7 +231,7 @@ struct NutritionSection: View {
 
     var body: some View {
         Card(title: "Nutrition", systemImage: "leaf") {
-            VStack(spacing: 12) {
+            VStack(spacing: Space.m) {
                 ForEach(items, id: \.self) { id in
                     if id == "macros" { macros } else if let (v, t, unit, limit) = values(id) { bar(id, v, t, unit, limit) }
                 }
@@ -240,12 +240,12 @@ struct NutritionSection: View {
     }
 
     private var macros: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             ForEach([Macro.protein, .fat, .carbs], id: \.self) { m in
                 let v = m.value(eaten.targets), t = m.value(target)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(m.label).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Text("\(number(v))/\(number(t)) g").font(.number(15, weight: .semibold)).monospacedDigit()
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text(m.label).font(.label).foregroundStyle(.secondary)
+                    Text("\(number(v))/\(number(t)) g").font(.numberSmall).monospacedDigit()
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
                             Capsule().fill(m.color.opacity(0.16))
@@ -288,11 +288,11 @@ struct NutritionSection: View {
             return "\(number(a, digits: targ < 10 ? 1 : 0)) / \(limit ? "max " : "")\(number(targ, digits: targ < 10 ? 1 : 0)) \(unit)"
         }()
         let p = (v ?? 0) / max(t, 0.0001)
-        return VStack(alignment: .leading, spacing: 5) {
+        return VStack(alignment: .leading, spacing: Space.xs) {
             HStack {
-                Text(DashItem.label(id)).font(.subheadline.weight(.medium))
+                Text(DashItem.label(id)).font(.secondaryEmphasis)
                 Spacer()
-                Text(text).font(.subheadline).monospacedDigit().foregroundStyle(limit && p > 1 ? palette.warn : .secondary)
+                Text(text).font(.secondaryText).monospacedDigit().foregroundStyle(limit && p > 1 ? palette.warn : .secondary)
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
@@ -320,12 +320,12 @@ struct HabitDotsCard: View {
         for d in range.reversed() { if done.contains(d) { streak += 1 } else if d != dayKey() { break } }
         return Card(title: title, systemImage: "checkmark.circle") {
             HStack(alignment: .firstTextBaseline) {
-                Text("\(count)/\(days)").font(.number(24)).monospacedDigit()
+                Text("\(count)/\(days)").font(.numberLarge).monospacedDigit()
                 Text("days").foregroundStyle(.secondary)
                 Spacer()
-                if streak > 1 { Label("\(streak) in a row", systemImage: "flame.fill").font(.caption.weight(.bold)).foregroundStyle(palette.warn) }
+                if streak > 1 { Label("\(streak) in a row", systemImage: "flame.fill").font(.label).foregroundStyle(palette.warn) }
             }
-            HStack(spacing: 5) {
+            HStack(spacing: Space.xs) {
                 ForEach(range, id: \.self) { d in
                     Circle().fill(done.contains(d) ? color : Color.raisedBackground)
                         .overlay { if d == dayKey() { Circle().stroke(color, lineWidth: 1.5) } }
@@ -350,20 +350,20 @@ struct EnergyBalanceWidget: View {
         let avgIn = logged.isEmpty ? 0 : logged.reduce(0) { $0 + intake[$1]! } / Double(logged.count)
         let refDays = logged.compactMap { vsExpenditure ? expenditure[$0] : target($0) }
         let avgRef = refDays.isEmpty ? 0 : refDays.reduce(0, +) / Double(refDays.count)
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
             HStack {
-                Text("Last 30 days").font(.headline)
+                Text("Last 30 days").font(.cardTitle)
                 Spacer()
                 Picker("", selection: $vsExpenditure) { Text("Targets").tag(false); Text("Expenditure").tag(true) }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
             }
-            HStack(alignment: .bottom, spacing: 2) {
+            HStack(alignment: .bottom, spacing: Space.xxs) {
                 ForEach(days, id: \.self) { d in
                     let k = intake[d] ?? 0, ref = (vsExpenditure ? expenditure[d] : target(d)) ?? 0
                     GeometryReader { g in
                         let top = max(avgRef * 1.5, 1)
                         ZStack(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 2).fill(Macro.calories.color.opacity(k > 0 ? 0.85 : 0)).frame(height: g.size.height * min(1, k / top))
+                            RoundedRectangle(cornerRadius: Radius.xs).fill(Macro.calories.color.opacity(k > 0 ? 0.85 : 0)).frame(height: g.size.height * min(1, k / top))
                             Rectangle().fill(vsExpenditure ? Macro.fat.color : Color.primary.opacity(0.6)).frame(height: 2)
                                 .offset(y: -g.size.height * min(1, ref / top) + 1).opacity(ref > 0 ? 1 : 0)
                         }
@@ -372,15 +372,15 @@ struct EnergyBalanceWidget: View {
                 }
             }
             .frame(height: 90)
-            HStack(spacing: 6) {
-                Text(energy.format(avgIn)).font(.number(15, weight: .semibold))
+            HStack(spacing: Space.s) {
+                Text(energy.format(avgIn)).font(.numberSmall)
                 Text("−").foregroundStyle(.secondary)
-                Text(energy.format(avgRef)).font(.number(15, weight: .semibold))
+                Text(energy.format(avgRef)).font(.numberSmall)
                 Text("=").foregroundStyle(.secondary)
-                Text(signedKcal(avgIn - avgRef, energy)).font(.number(15, weight: .bold))
+                Text(signedKcal(avgIn - avgRef, energy)).font(.numberSmall)
                     .foregroundStyle(vsExpenditure ? (avgIn < avgRef ? palette.good : palette.warn) : .primary)
                 Spacer()
-                Text(vsExpenditure ? (avgIn < avgRef ? "deficit" : "surplus") : "vs targets").font(.caption).foregroundStyle(.secondary)
+                Text(vsExpenditure ? (avgIn < avgRef ? "deficit" : "surplus") : "vs targets").font(.note).foregroundStyle(.secondary)
             }
             .monospacedDigit()
         }

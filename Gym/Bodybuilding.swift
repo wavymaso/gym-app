@@ -115,26 +115,26 @@ struct ProteinMealsCard: View {
         let byMeal = Dictionary(grouping: entries) { Meal(time: $0.time) }.mapValues { $0.reduce(0) { $0 + $1.nutrients.protein } / Double(logged) }
         let hits = Meal.allCases.filter { (byMeal[$0] ?? 0) >= per * 0.85 }.count
         Card(title: days.count > 1 ? "Protein per meal · 7-day average" : "Protein per meal", systemImage: "fork.knife") {
-            HStack(alignment: .bottom, spacing: 14) {
+            HStack(alignment: .bottom, spacing: Space.l) {
                 ForEach(Meal.allCases) { m in
                     let g = byMeal[m] ?? 0
-                    VStack(spacing: 6) {
-                        Text("\(number(g)) g").font(.caption.weight(.semibold)).monospacedDigit()
+                    VStack(spacing: Space.s) {
+                        Text("\(number(g)) g").font(.label).monospacedDigit()
                         ZStack(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 6).fill(Color.raisedBackground).frame(height: 90)
-                            RoundedRectangle(cornerRadius: 6).fill(g >= per * 0.85 ? palette.protein : palette.protein.opacity(0.45))
+                            RoundedRectangle(cornerRadius: Radius.s).fill(Color.raisedBackground).frame(height: 90)
+                            RoundedRectangle(cornerRadius: Radius.s).fill(g >= per * 0.85 ? palette.protein : palette.protein.opacity(0.45))
                                 .frame(height: min(90, 90 * g / max(per * 1.6, 1)))
                             Rectangle().fill(Color.primary.opacity(0.7)).frame(height: 2).offset(y: -90 * (per / (per * 1.6)))
                         }
                         .frame(maxWidth: 46)
-                        Image(systemName: m.icon).font(.caption).foregroundStyle(m.color)
-                        Text(m.label).font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
+                        Image(systemName: m.icon).font(.note).foregroundStyle(m.color)
+                        Text(m.label).font(.fine).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
             Text("\(hits) of 4 meals reach about \(number(per)) g (0,4 g per kg). Spreading protein over 3–5 meals builds more muscle than the same total in one or two.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.note).foregroundStyle(.secondary)
         }
     }
 }
@@ -183,15 +183,15 @@ struct StrengthRetentionCard: View {
                 if let now = bwNow, let then = bwThen {
                     let held = lifts.compactMap(\.change).filter { $0 > -0.02 }.count
                     Text("Body weight \(signed(unit, now - then)) in 6 weeks · \(held) of \(lifts.count) main lifts holding or up")
-                        .font(.callout.weight(.semibold))
+                        .font(.secondaryEmphasis)
                 }
                 ForEach(lifts) { l in
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(l.name).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    HStack(spacing: Space.m) {
+                        VStack(alignment: .leading, spacing: Space.xxs) {
+                            Text(l.name).font(.secondaryEmphasis).lineLimit(1)
                             if let e = l.weekly.last?.e1rm {
                                 Text("e1RM \(unit.format(e, digits: 0))\(bwNow.map { " · \(number(e / $0, digits: 2))× body weight" } ?? "")")
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.note).foregroundStyle(.secondary)
                             }
                         }
                         Spacer()
@@ -203,18 +203,18 @@ struct StrengthRetentionCard: View {
                     }
                 }
                 if falling.count >= 2 {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "arrow.down.heart.fill").foregroundStyle(palette.warn).font(.title3)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Time for a deload").font(.subheadline.weight(.bold))
+                    HStack(alignment: .top, spacing: Space.m) {
+                        Image(systemName: "arrow.down.heart.fill").foregroundStyle(palette.warn).font(.subsectionTitle)
+                        VStack(alignment: .leading, spacing: Space.xs) {
+                            Text("Time for a deload").font(.secondaryEmphasis)
                             Text("\(falling.map(\.name).joined(separator: " and ")) dropped over 3% for two weeks. Take an easy week: same exercises, about half the sets, 3–4 reps in reserve. Strength usually comes back above where it was.")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.note).foregroundStyle(.secondary)
                         }
                     }
-                    .padding(12).background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.m))
+                    .padding(Space.m).background(palette.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.m))
                 } else {
                     Text("Estimated 1RM from your best working set each week (Epley). Holding strength while the scale drops means you're keeping muscle.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.note).foregroundStyle(.secondary)
                 }
             }
         }

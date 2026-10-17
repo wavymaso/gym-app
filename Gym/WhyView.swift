@@ -9,7 +9,7 @@ struct WhyView: View {
     var body: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Space.s) {
                     Text(headline).font(.cardTitle)
                     if let live = liveKcal, live != record.output.kcal {
                         Text("Shadow mode: the current coaching set \(number(live)) kcal; this is what the new engine would do.")
@@ -34,7 +34,7 @@ struct WhyView: View {
             }
             Section("Why") {
                 ForEach(Array(record.reasons.enumerated()), id: \.offset) { _, r in
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: Space.xxs) {
                         Text(r.rule.capitalized).font(.secondaryText.weight(.semibold))
                         Text(r.detail).font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
@@ -71,11 +71,11 @@ struct WhyView: View {
 struct EvidenceRow: View {
     let entry: EvidenceEntry
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Space.xs) {
             HStack {
                 Text(entry.description).font(.secondaryText).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
-                Text(entry.grade.rawValue).font(.label).padding(.horizontal, 7).padding(.vertical, 2)
+                Text(entry.grade.rawValue).font(.label).padding(.horizontal, Space.s).padding(.vertical, Space.xxs)
                     .background(Color.raisedBackground, in: Capsule())
                     .accessibilityLabel("Evidence grade \(entry.grade.rawValue)")
             }
@@ -85,7 +85,7 @@ struct EvidenceRow: View {
             }
             if !entry.population.isEmpty, entry.population != "—" { Text("Studied in: \(entry.population)").font(.fine).foregroundStyle(.tertiary) }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xxs)
     }
 }
 
@@ -100,10 +100,10 @@ struct DecisionHistoryView: View {
             ForEach(records) { r in
                 if let rec = r.record {
                     NavigationLink { WhyView(record: rec) } label: {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: Space.xxs) {
                             Text(date(fromKey: r.day).formatted(.dateTime.weekday(.wide).day().month(.wide).year().locale(appLocale)))
                             Text("\(rec.action.capitalized) · \(number(rec.input.currentTargets.kcal)) → \(number(rec.output.kcal)) kcal\(r.live ? "" : " · shadow")")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.note).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -125,7 +125,7 @@ struct ShadowEngineCard: View {
             if let r = record {
                 NavigationLink { WhyView(record: r, liveKcal: liveKcal) } label: {
                     HStack(spacing: Space.m) {
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: Space.xs) {
                             Text("New coaching engine (preview)").font(.label).foregroundStyle(.secondary).textCase(.uppercase)
                             Text(r.action == "no change" ? "Would keep \(number(r.output.kcal)) kcal" : "Would set \(number(r.output.kcal)) kcal")
                                 .font(.cardTitle)
@@ -149,7 +149,7 @@ struct ShadowEngineCard: View {
 struct EvidenceListView: View {
     var body: some View {
         List {
-            Section { Text("A: meta-analysis or several trials · B: a single trial or strong study · C: expert consensus or review · D: convention, a fit to your data, or your choice.").font(.caption).foregroundStyle(.secondary) }
+            Section { Text("A: meta-analysis or several trials · B: a single trial or strong study · C: expert consensus or review · D: convention, a fit to your data, or your choice.").font(.note).foregroundStyle(.secondary) }
             ForEach(["A", "B", "C", "D"], id: \.self) { g in
                 Section("Grade \(g)") {
                     ForEach(Evidence.all.filter { $0.grade.rawValue == g }) { EvidenceRow(entry: $0) }

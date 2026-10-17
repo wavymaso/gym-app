@@ -21,16 +21,16 @@ struct BodySection: View {
 
     var body: some View {
         let unit = profiles.first?.weight ?? .kg
-        VStack(spacing: 16) {
+        VStack(spacing: Space.l) {
             Card(title: "Measurements", systemImage: "ruler",
                  accessory: AnyView(Button { adding = true } label: { Label("Add", systemImage: "plus") }.buttonStyle(.borderless))) {
                 let latest = latestBySite
                 if latest.isEmpty {
                     Text("Weight doesn't show everything: a smaller waist at the same weight is fat lost and muscle gained. Measure every 2–4 weeks, same time of day.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.secondaryText).foregroundStyle(.secondary)
                     Button("Add measurements") { adding = true }.buttonStyle(.bordered)
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 10)], spacing: 10) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Space.m)], spacing: Space.m) {
                         ForEach(BodySite.allCases.filter { latest[$0] != nil }) { s in
                             Button { detail = s } label: { tile(s, latest[s]!, unit) }.buttonStyle(.plain)
                         }
@@ -38,17 +38,17 @@ struct BodySection: View {
                     if let p = profiles.first, let bf = navyBodyFat(sex: p.sexValue, heightCm: p.heightCm, waist: latest[.waist]?.cm,
                                                                    neck: latest[.neck]?.cm, hips: latest[.hips]?.cm) {
                         HStack {
-                            Label("Body fat, tape estimate", systemImage: "percent").font(.callout)
+                            Label("Body fat, tape estimate", systemImage: "percent").font(.secondaryText)
                             Spacer()
-                            Text("\(number(bf, digits: 1)) %").font(.headline).monospacedDigit()
+                            Text("\(number(bf, digits: 1)) %").font(.cardTitle).monospacedDigit()
                         }
                         Text("US Navy method from your waist, neck\(p.sexValue == .female ? ", hips" : "") and height: usually within 3–4 % of a DEXA scan.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.note).foregroundStyle(.secondary)
                     }
                 }
             }
             Card(title: "Progress photos", systemImage: "person.crop.rectangle",
-                 accessory: AnyView(HStack(spacing: 12) {
+                 accessory: AnyView(HStack(spacing: Space.m) {
                      if Set(photos.map(\.day)).count >= 2 { Button("Compare") { comparing = true }.buttonStyle(.borderless) }
                      Button { addingPhoto = true } label: { Label("Add", systemImage: "plus") }.buttonStyle(.borderless)
                  })) {
@@ -58,13 +58,13 @@ struct BodySection: View {
                                action: ("Take your first", { addingPhoto = true }))
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: Space.m) {
                             ForEach(photos) { p in
                                 Button { viewing = p } label: {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: Space.xs) {
                                         PhotoThumb(data: p.jpeg).frame(width: 96, height: 128)
                                             .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-                                        Text(short(p.day)).font(.caption2).foregroundStyle(.secondary)
+                                        Text(short(p.day)).font(.fine).foregroundStyle(.secondary)
                                     }
                                 }
                                 .buttonStyle(.plain)
@@ -94,18 +94,18 @@ struct BodySection: View {
     }
 
     private func tile(_ s: BodySite, _ v: (cm: Double, day: String, change: Double?), _ unit: WeightUnit) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(s.label).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-            Text(unit.formatLength(v.cm)).font(.number(20)).monospacedDigit()
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text(s.label).font(.label).foregroundStyle(.secondary)
+            Text(unit.formatLength(v.cm)).font(.numberMedium).monospacedDigit()
             if let c = v.change, abs(c) >= 0.05 {
                 Delta(text: (c > 0 ? "+" : "−") + unit.formatLength(abs(c)), good: s.smallerIsBetter.map { $0 == (c < 0) })
             } else {
-                Text(short(v.day)).font(.caption2).foregroundStyle(.secondary)
+                Text(short(v.day)).font(.fine).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(Space.m)
+        .background(Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
     }
 }
 
@@ -131,9 +131,9 @@ struct MeasurementsSheet: View {
                 Section {
                     ForEach(BodySite.allCases) { s in
                         HStack {
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: Space.hairline) {
                                 Text(s.label)
-                                Text(s.hint).font(.caption2).foregroundStyle(.secondary)
+                                Text(s.hint).font(.fine).foregroundStyle(.secondary)
                             }
                             Spacer()
                             TextField(last(s).map { number(unit.fromCm($0), digits: 1) } ?? "–", text: binding(s))
@@ -264,7 +264,7 @@ struct AddProgressPhoto: View {
                 DatePicker("Date", selection: $day, in: ...Date(), displayedComponents: .date)
                 Section {
                     if let jpeg {
-                        PhotoThumb(data: jpeg, maxPixels: 800).frame(height: 320).clipShape(RoundedRectangle(cornerRadius: 14))
+                        PhotoThumb(data: jpeg, maxPixels: 800).frame(height: 320).clipShape(RoundedRectangle(cornerRadius: Radius.m))
                             .listRowInsets(EdgeInsets())
                     }
                     #if os(iOS)
@@ -324,7 +324,7 @@ struct PhotoViewer: View {
     var body: some View {
         NavigationStack {
             PhotoThumb(data: photo.jpeg, maxPixels: 1600).aspectRatio(3 / 4, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 16)).padding()
+                .clipShape(RoundedRectangle(cornerRadius: Radius.l)).padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .pageBackground()
                 .navigationTitle("\(Pose(rawValue: photo.pose)?.label ?? "") · \(short(photo.day))")
@@ -361,7 +361,7 @@ struct CompareView: View {
         let unit = profiles.first?.weight ?? .kg
         let days = Array(Set(photos.filter { $0.pose == pose.rawValue }.map(\.day))).sorted()
         NavigationStack {
-            VStack(spacing: 14) {
+            VStack(spacing: Space.l) {
                 Picker("Pose", selection: $pose) { ForEach(Pose.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
                 if days.count < 2 {
                     Spacer()
@@ -370,7 +370,7 @@ struct CompareView: View {
                 } else {
                     let a = before.flatMap { days.contains($0) ? $0 : nil } ?? days.first!
                     let b = after.flatMap { days.contains($0) ? $0 : nil } ?? days.last!
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(alignment: .top, spacing: Space.m) {
                         side(a, days: days, pick: { before = $0 }, unit)
                         side(b, days: days, pick: { after = $0 }, unit)
                     }
@@ -378,7 +378,7 @@ struct CompareView: View {
                     Spacer(minLength: 0)
                 }
             }
-            .padding(16)
+            .padding(Space.l)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pageBackground()
             .navigationTitle("Compare")
@@ -394,18 +394,18 @@ struct CompareView: View {
     }
 
     private func side(_ day: String, days: [String], pick: @escaping (String) -> Void, _ unit: WeightUnit) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Space.s) {
             Menu {
                 ForEach(days.reversed(), id: \.self) { d in Button(short(d)) { pick(d) } }
             } label: {
-                HStack(spacing: 4) { Text(short(day)).font(.headline); Image(systemName: "chevron.down").font(.caption) }
+                HStack(spacing: Space.xs) { Text(short(day)).font(.cardTitle); Image(systemName: "chevron.down").font(.note) }
             }
             .menuStyle(.borderlessButton).fixedSize()
             if let p = photos.last(where: { $0.day == day && $0.pose == pose.rawValue }) {
                 PhotoThumb(data: p.jpeg, maxPixels: 1000).aspectRatio(3 / 4, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
             }
-            if let w = weight(near: day) { Text(unit.format(w)).font(.callout.monospacedDigit()).foregroundStyle(.secondary) }
+            if let w = weight(near: day) { Text(unit.format(w)).font(.secondaryText.monospacedDigit()).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity)
     }
@@ -424,7 +424,7 @@ struct CompareView: View {
             }
             return out
         }()
-        Text(lines.joined(separator: " · ")).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        Text(lines.joined(separator: " · ")).font(.secondaryText).foregroundStyle(.secondary).multilineTextAlignment(.center)
     }
 
     /// The weigh-in closest to a day (within a week).
