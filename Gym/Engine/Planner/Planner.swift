@@ -19,6 +19,12 @@ struct PlanFood: Equatable {
     var bands: Set<MealBand> = []         // meals it belongs in (empty: any)
     var role: FoodRole = .proteinMain
     var maxPerDay = 2                     // meals a day it can appear in
+    var nova = 0                          // NOVA group (0: unknown)
+    var basic = false                     // from the basic foods library (not one of yours)
+    var basicAllowed = true               // allowed in Basic style (NOVA 1–2, or chosen as a basic)
+    var shownRatio = 1.0                  // the plan shows grams × this (you weigh it cooked, values are raw: the cooked ratio)
+    var shownUnit = "g"                   // "g", "g cooked", "g raw"
+    func shown(_ g: Double) -> String { "\(Int((g * shownRatio).rounded())) \(shownUnit)" }
 
     static func == (a: PlanFood, b: PlanFood) -> Bool { a.key == b.key }
     func macros(_ g: Double) -> Macros {
@@ -261,10 +267,14 @@ enum Planner {
         }
         func candidates(_ s: PlanSlot) -> [PlanFood] {
             let foods = foods.filter { fits($0, s) }
-            let usual = foods.filter { affinity($0, s) > 0 }.sorted { (affinity($0, s), $1.key) > (affinity($1, s), $0.key) }
-            let staples = foods.filter { $0.per100.protein >= 15 || $0.per100.carbs >= 50 }
+            // Your usual foods for this meal first; then your other foods, most eaten first; then the
+            // basic foods library, at least a couple per role so any role can be filled.
+            let usual = foods.filter { affinity($0, s) > 0 && !$0.basic }.sorted { (affinity($0, s), $1.key) > (affinity($1, s), $0.key) }
             var list = Array(usual.prefix(8))
-            for f in (w.anySlot ? foods : staples) where !list.contains(f) && list.count < 14 { list.append(f) }
+            for f in foods where !f.basic && !list.contains(f) && list.count < 16 { list.append(f) }
+            var perRole: [FoodRole: Int] = [:]
+            for f in list { perRole[f.role, default: 0] += 1 }
+            for f in foods where f.basic && !list.contains(f) && (perRole[f.role] ?? 0) < 3 { list.append(f); perRole[f.role, default: 0] += 1 }
             return list
         }
         // Start from your usual meals.
@@ -342,6 +352,7 @@ enum Planner {
                         let usual = affinity(f, sl)
                         x -= w.slotPreference * 6 * min(usual, 3)
                         x += w.slotPreference * (usual == 0 ? 8 : 0)
+                        if f.basic { x += 6 }               // the library fills gaps; your own foods come first
                         x += pow((it.grams - f.usualGrams) / max(f.usualGrams, 30), 2) * 4
                         x += w.variety * Double(f.uses7) * 1.5
                     }

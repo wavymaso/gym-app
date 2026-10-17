@@ -11,6 +11,7 @@ struct PlannerSettings: Codable, Equatable {
     var healthSessions: [String: TrainingSlot] = [:] // workouts from Apple Health (day → first session), last 6 weeks
     var staples: [Staple] = []                       // cold start: foods you eat regularly
     var roles: [String: FoodRole] = [:]              // your corrections to a food's role (main, side, condiment, treat)
+    var weighAs: [String: WeightState] = [:]         // per food: you weigh it raw or cooked (default raw; sold-cooked foods cooked)
     var fibreFloorGrams: Double = 19                 // fixed fibre floor (g/day); 0: scale with calories (registry, 14 g per 1,000 kcal)
     var highDaysFollowTraining = true                // calorie distribution: training days = your training week
     var inferredWeek: [Int: TrainingSlot] = [:]      // last inferred from workouts (kept so targets can use it without a fetch)

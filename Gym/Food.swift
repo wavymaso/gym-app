@@ -48,11 +48,12 @@ import SwiftData
     var state: WeightState? {
         if let s = WeightState(rawValue: weightState) { return s }
         if source == "recipe" { return .raw }                 // a recipe's values are per gram of its raw ingredients
+        if source == "basic" { return BasicFoods.byKey[key]?.state }
         return isLiquid ? nil : Cooking.guessState(name)
     }
     /// Cooked ÷ raw: your batch, else the typical value for this kind of food.
     var ratio: (value: Double, measured: Bool, what: String)? {
-        if cookedRatio > 0 { return (cookedRatio, true, "your batch") }
+        if cookedRatio > 0 { return source == "basic" ? (cookedRatio, false, "USDA raw vs cooked") : (cookedRatio, true, "your batch") }
         if source == "recipe" { return nil }                  // only a weighed batch tells
         // Sold cooked (roast chicken, tinned, ready meals): you weigh it as it comes, so the typical
         // raw→cooked ratio is never applied; only a batch you weighed yourself can convert.

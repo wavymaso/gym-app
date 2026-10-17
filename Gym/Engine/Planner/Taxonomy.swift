@@ -175,6 +175,7 @@ enum Taxonomy {
 
     /// What we know about a food before classifying it.
     struct Input {
+        var key: String? = nil          // basic:<id> foods are known exactly
         var name: String
         var brand: String?
         var source: String              // off | usda | custom | recipe
@@ -242,6 +243,10 @@ enum Taxonomy {
     }
 
     static func classify(_ x: Input, override: Override? = nil, suggestion: Suggestion? = nil) -> Result {
+        if override == nil, let k = x.key, let b = BasicFoods.byKey[k] {
+            return Result(canonical: b.canonical, role: b.role, nova: b.nova, novaSource: "basic foods library (\(b.source))", novaEstimated: false,
+                          state: b.state, confidence: 1, roleSource: .rule, why: ["basic foods library"])
+        }
         var why: [String] = []
         let canon = override?.canonical.flatMap { byID[$0] } ?? match(x.name, brand: x.brand) ?? suggestion?.canonical.flatMap { byID[$0] }
         if let c = canon, override?.canonical == nil { why.append("name → \(c.name)") }

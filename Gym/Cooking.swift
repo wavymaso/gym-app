@@ -13,7 +13,6 @@ enum Cooking {
         (["lentej", "lentil"], 3.0, "lentils, boiled"),
         (["garbanzo", "chickpea", "judías", "alubias", "beans"], 2.3, "pulses, boiled"),
         (["quinoa", "cuscús", "couscous", "bulgur"], 3.0, "grains, boiled"),
-        (["avena", "oats", "porridge"], 5.0, "porridge"),
         (["patata", "potato"], 0.83, "potatoes, baked"),
         (["pollo", "chicken", "pavo", "turkey"], 0.73, "poultry, roasted"),
         (["ternera", "beef", "mince", "carne picada", "cerdo", "pork", "cordero", "lamb", "burger", "hamburguesa"], 0.75, "meat, cooked"),

@@ -21,7 +21,7 @@ extension Food {
 
 extension ModelContext {
     func taxonomyInput(_ f: Food) -> Taxonomy.Input {
-        var x = Taxonomy.Input(name: f.name, brand: f.brand, source: f.source, kcal: f.per100.kcal, protein: f.per100.protein, fat: f.per100.fat,
+        var x = Taxonomy.Input(key: f.key, name: f.name, brand: f.brand, source: f.source, kcal: f.per100.kcal, protein: f.per100.protein, fat: f.per100.fat,
                                carbs: f.per100.carbs, sugar: f.per100.sugar, isLiquid: f.isLiquid, state: f.state)
         if f.nova > 0 { x.offNova = f.nova }
         if !f.foodGroup.isEmpty && f.foodGroup != "-" {

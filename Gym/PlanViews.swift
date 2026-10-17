@@ -57,10 +57,12 @@ struct PlanDayView: View {
         }
         .sheet(item: Binding(get: { amount.map { SwapKey(slot: $0.slot.index, item: $0.item) } }, set: { _ in amount = nil })) { k in
             if let r = result, let s = r.plan.slots.first(where: { $0.index == k.slot }) {
-                AmountSheet(item: k.item, food: r.foods[k.item.key]) { grams in
-                    if let f = ctx.food(key: k.item.key) {
+                AmountSheet(item: k.item, food: r.foods[k.item.key]) { amount in
+                    // The amount is in the way you weigh it (g, g cooked or g raw).
+                    if let f = ctx.food(key: k.item.key) ?? ctx.materializeBasic(k.item.key) {
                         let t = Calendar.current.date(byAdding: .minute, value: s.minute, to: date(fromKey: day)) ?? Date()
-                        _ = ctx.log(f, amount: grams, unit: f.baseUnit, day: day, time: t); ctx.commit(); Haptics.tap()
+                        let unit = r.foods[k.item.key].map(\.shownUnit).flatMap { f.units.contains($0) ? $0 : nil } ?? f.baseUnit
+                        _ = ctx.log(f, amount: amount, unit: unit, day: day, time: t); ctx.commit(); Haptics.tap()
                     }
                 }
                 .presentationDetents([.height(260)])
@@ -151,7 +153,7 @@ struct PlanDayView: View {
                 HStack {
                     Text(r.foods[it.key]?.name ?? it.key).lineLimit(1)
                     Spacer()
-                    Text(it.grams > 1 ? "\(Int(it.grams)) g" : "\(Int(r.foods[it.key]?.macros(it.grams).kcal ?? 0)) kcal").monospacedDigit().foregroundStyle(.secondary)
+                    Text(it.grams > 1 ? (r.foods[it.key]?.shown(it.grams) ?? "\(Int(it.grams)) g") : "\(Int(r.foods[it.key]?.macros(it.grams).kcal ?? 0)) kcal").monospacedDigit().foregroundStyle(.secondary)
                     if !s.eaten {
                         Button { swapping = (s.index, it) } label: { Image(systemName: "arrow.triangle.2.circlepath") }.buttonStyle(.borderless)
                             .accessibilityLabel("Swap \(r.foods[it.key]?.name ?? "")")
@@ -264,14 +266,14 @@ struct AmountSheet: View {
         VStack(spacing: Space.l) {
             Text(food?.name ?? "").font(.cardTitle)
             HStack(alignment: .firstTextBaseline) {
-                TextField("\(Int(item.grams))", text: $text).font(.numberLarge).multilineTextAlignment(.center).frame(maxWidth: 160)
+                TextField("\(Int((item.grams * (food?.shownRatio ?? 1)).rounded()))", text: $text).font(.numberLarge).multilineTextAlignment(.center).frame(maxWidth: 160)
                     #if os(iOS)
                     .keyboardType(.decimalPad)
                     #endif
-                Text("g").unitStyle()
+                Text(food?.shownUnit ?? "g").unitStyle()
             }
             Button {
-                log(parseNumber(text) ?? item.grams); dismiss()
+                log(parseNumber(text) ?? (item.grams * (food?.shownRatio ?? 1)).rounded()); dismiss()
             } label: { Text("Log what I ate").font(.headline).frame(maxWidth: .infinity, minHeight: 48) }
                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
         }

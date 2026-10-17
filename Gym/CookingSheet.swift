@@ -8,6 +8,7 @@ struct CookingSheet: View {
     @Environment(\.dismiss) private var dismiss
     let food: Food
     @State private var state: WeightState = .raw
+    @State private var weighAs: WeightState = .raw
     @State private var raw = ""
     @State private var cooked = ""
     @State private var loaded = false
@@ -22,6 +23,12 @@ struct CookingSheet: View {
             } header: { Text("The nutrition values are per 100 g of…") } footer: {
                 Text(food.source == "recipe" ? "A recipe's values are per gram of its raw ingredients." :
                      "Packets of pasta, rice and pulses give dry values. Supermarket roast chicken gives cooked values.")
+            }
+            Section {
+                Picker("I weigh it", selection: $weighAs) { ForEach(WeightState.allCases, id: \.self) { Text($0 == .raw ? "Raw / dry" : "Cooked").tag($0) } }
+                    .pickerStyle(.segmented)
+            } header: { Text("When you weigh it") } footer: {
+                Text("Meal plans show this food's portions this way, converted with the ratio below (e.g. 75 g dry rice → 210 g cooked).")
             }
             Section {
                 HStack { Text("Raw weight"); Spacer(); TextField("g", text: $raw).multilineTextAlignment(.trailing).frame(width: 90); Text("g").foregroundStyle(.secondary) }
@@ -54,6 +61,11 @@ struct CookingSheet: View {
                 Button("Save") {
                     food.weightState = state.rawValue
                     if let b = batch { food.cookedRatio = (b * 1000).rounded() / 1000 }
+                    if let p = ctx.profile {
+                        var s = p.planner
+                        s.weighAs[food.key] = weighAs == ModelContext.defaultWeighing(state) ? nil : weighAs
+                        p.planner = s
+                    }
                     ctx.commit(); Haptics.success(); dismiss()
                 }
             }
@@ -62,6 +74,7 @@ struct CookingSheet: View {
             guard !loaded else { return }
             loaded = true
             state = food.state ?? .raw
+            weighAs = ctx.profile?.planner.weighAs[food.key] ?? ModelContext.defaultWeighing(state)
         }
     }
 }

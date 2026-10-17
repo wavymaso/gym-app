@@ -17,14 +17,42 @@ extension ModelContext {
     /// Roles from the taxonomy (your corrections included), with the meals a canonical food belongs
     /// in (oats and protein bars: breakfast and merienda). Drinks aren't planned.
     func planFoods() -> [PlanFood] {
-        planFoodsGuessed().compactMap { f in
+        let own = planFoodsGuessed().compactMap { f -> PlanFood? in
             guard let food = food(key: f.key) else { return f }
             let t = taxonomy(of: food)
             guard t.role != .drink else { return nil }
             var g = t.role == f.role ? f : f.with(role: t.role)
             g.bands.formUnion(Taxonomy.bands(t.canonical))
+            g.nova = t.nova
             return g
         }
+        // The basic foods library, always there to fill a role (those you've logged are your own foods now).
+        let basics = BasicFoods.planFoods(excluding: Set(own.map(\.key)))
+        let weigh = profile?.planner.weighAs ?? [:]
+        return (own + basics).map { f in
+            var f = f
+            let food = food(key: f.key)
+            let b = BasicFoods.byKey[f.key]
+            guard let data = food?.state ?? b?.state, let ratio = food?.ratio?.value ?? b?.ratio, abs(ratio - 1) > 0.01 else { return f }
+            let mine = weigh[f.key] ?? Self.defaultWeighing(data)
+            if mine != data { f.shownRatio = mine == .cooked ? ratio : 1 / ratio; f.shownUnit = mine == .cooked ? Cooking.cookedUnit : Cooking.rawUnit }
+            return f
+        }
+    }
+
+    /// You weigh food raw, unless it's sold cooked (its values are per cooked weight).
+    static func defaultWeighing(_ data: WeightState) -> WeightState { data == .cooked ? .cooked : .raw }
+
+    /// A basic library food as one of your foods (made the first time you log it).
+    func materializeBasic(_ key: String) -> Food? {
+        if let f = food(key: key) { return f }
+        guard let b = BasicFoods.byKey[key] else { return nil }
+        let v = b.values
+        let f = Food(key: key, name: b.name, source: "basic", per100: Nutrients(kcal: v.kcal, protein: v.protein, fat: v.fat, carbs: v.carbs, fiber: v.fibre),
+                     servings: b.unit.map { [Serving(name: $0.name, grams: $0.grams)] } ?? [], isLiquid: b.liquid)
+        f.weightState = b.state.rawValue; f.cookedRatio = b.ratio ?? 0; f.nova = b.nova; f.foodGroup = "-"
+        insert(f)
+        return f
     }
 
     /// Before the taxonomy (name and macro rules only).
@@ -145,8 +173,15 @@ extension ModelContext {
     func eat(_ slot: PlanSlot, foods: [String: PlanFood], day: String) {
         let base = date(fromKey: day)
         let time = Calendar.current.date(byAdding: .minute, value: slot.minute, to: base) ?? Date()
+        let shown = Dictionary(planFoods().map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
         for it in slot.items where !it.key.hasPrefix("entry:") {
-            if let f = food(key: it.key) { _ = log(f, amount: it.grams.rounded(), unit: f.baseUnit, day: day, time: time) }
+            guard let f = food(key: it.key) ?? materializeBasic(it.key) else { continue }
+            // Logged as you weigh it (e.g. 210 g cooked), so the entry reads the way you measured.
+            if let p = shown[it.key], p.shownUnit != "g", f.units.contains(p.shownUnit) {
+                _ = log(f, amount: (it.grams * p.shownRatio).rounded(), unit: p.shownUnit, day: day, time: time)
+            } else {
+                _ = log(f, amount: it.grams.rounded(), unit: f.baseUnit, day: day, time: time)
+            }
         }
         commit()
     }
