@@ -77,6 +77,12 @@ enum Evidence {
                                                    link: "https://doi.org/10.1186/1550-2783-10-5")
     private static let escobar = EvidenceSource(citation: "Escobar KA, VanDusseldorp TA, Kerksick CM. 2016. Carbohydrate intake and resistance-based exercise: are current recommendations reflective of actual need? Br J Nutr 116(12):2053–2065",
                                                 link: "https://pubmed.ncbi.nlm.nih.gov/27993175/")
+    private static let henselmans = EvidenceSource(citation: "Henselmans M, Bjørnsen T, Hedderman R, Vårvik FT. 2022. The effect of carbohydrate intake on strength and resistance training performance: a systematic review. Nutrients 14(4):856 (first author as recalled; title, journal and findings checked on PubMed 17 Oct 2026)",
+                                                   link: "https://pubmed.ncbi.nlm.nih.gov/35215506/")
+    private static let slater = EvidenceSource(citation: "Slater G, Phillips SM. 2011. Nutrition guidelines for strength sports: sprinting, weightlifting, throwing events, and bodybuilding. J Sports Sci 29(S1):S67–S77 (citation checked; the carbohydrate figures in the full text were not available to check)",
+                                               link: "https://doi.org/10.1080/02640414.2011.574722")
+    private static let roberts = EvidenceSource(citation: "Roberts BM, Helms ER, Trexler ET, Fitschen PJ. 2020. Nutritional recommendations for physique athletes. J Hum Kinet 71:79–108",
+                                                link: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7052702/")
     private static let aird = EvidenceSource(citation: "Aird TP, Davies RW, Carson BP. 2018. Effects of fasted vs fed-state exercise on performance and post-exercise metabolism: a systematic review and meta-analysis. Scand J Med Sci Sports 28(5):1476–1493",
                                              link: "https://doi.org/10.1111/sms.13054")
     private static let dga = EvidenceSource(citation: "Dietary Guidelines for Americans (14 g fibre per 1 000 kcal), as reported by secondary sources; the primary document was not checked", link: "https://www.dietaryguidelines.gov")
@@ -240,6 +246,34 @@ enum Evidence {
               value: 3, range: 3...7, unit: "g/kg/day", grade: .C, sources: [escobar],
               population: "Review; the recommendation is largely borrowed from endurance research.",
               note: "Context, not a target: on a cut the engine's calorie target decides; the planner only puts more of the day's carbs around training."),
+        .init(id: "carbs.physique.gPerKg", description: "Bodybuilders have been advised about 4–7 g of carbohydrate per kg a day. Slater & Phillips say strength-sport advice should be individual; the range is a reference, not a target on a cut.",
+              value: 4, range: 4...7, unit: "g/kg/day", grade: .C, sources: [roberts, slater, escobar],
+              population: "Narrative reviews of physique and strength athletes; Roberts et al. cite 4–7 g/kg from earlier publications.",
+              note: "Shown beside your daily carbs. A target only on a bulk or at maintenance; on a cut the engine's calories decide and carbs are what's left."),
+        .init(id: "carbs.cut.gPerKg", description: "During contest dieting a realistic carbohydrate range is 2–5 g per kg a day; very lean phases often need under 4 g/kg.",
+              value: 3, range: 2...5, unit: "g/kg/day", grade: .C, sources: [roberts],
+              population: "Narrative review of physique athletes in contest preparation.",
+              note: "So a cut that lands under the 4–7 range is normal, not a mistake."),
+        .init(id: "carbs.performance.nuance", description: "Carbohydrate improves lifting performance mainly in longer, higher-volume sessions (over about 10 sets per muscle group) and when the comparison is fasted; in typical sessions with matched calories it rarely changes performance, and there was no dose-response.",
+              value: 10, range: 6...12, unit: "sets per muscle group", grade: .B, sources: [henselmans],
+              population: "Systematic review of 49 studies: acute intake 19, glycogen depletion 6, short-term 7, long-term 17. Carbohydrate helped in 6 of 19 acute studies (mostly vs fasted controls and over 10 sets per muscle group), 3 after depletion (mostly twice-a-day sessions, not with matched calories), none of 7 short-term; 15 of 17 long-term studies found no effect.",
+              note: "Why the planner treats carb timing as a mild preference: it sizes carbs around a session by its volume, never at the cost of protein or the calorie target."),
+        .init(id: "carbs.preWorkout.gPerKg", description: "Eat an easily digestible carbohydrate meal about 2 hours before training; the amount isn't specified in the research. We plan about 0.5–1 g/kg, lower in fat and fibre.",
+              value: 0.75, range: 0.5...1.0, unit: "g/kg", grade: .D, sources: [roberts, mine],
+              population: "—", note: "The timing is from a narrative review; the 0.5–1 g/kg amount is your choice (practitioner convention).", verified: false),
+        .init(id: "timing.glycogen.hours", description: "Muscle glycogen is restored within 24 hours when the diet has at least 8 g of carbohydrate per kg; with under 4 hours between sessions, 1.2 g/kg/h of carbohydrate is advised.",
+              value: 24, range: 4...24, unit: "hours", grade: .C, sources: [kerksick],
+              population: "Position stand, mostly endurance research.",
+              note: "On a cut 8 g/kg is out of reach, so the planner only leans the day's carbs toward the recovery window, and says so."),
+        .init(id: "timing.recovery.within24h", description: "When the next session is less than about 24 hours away, put more of the day's carbs into the post-workout meal and the meals before the next session.",
+              value: 24, range: 12...24, unit: "hours", grade: .D, sources: [kerksick, mine],
+              population: "—", note: "Our rule, built on glycogen restoration; the share shifted is a setting. A preference within the calories, never above them.", verified: false),
+        .init(id: "carbs.dayShift.share", description: "On training days, carbs go up and fat toward its floor; on rest days fat goes up and carbs down; the week's calories stay the same.",
+              value: 0.5, range: 0.25...1.0, unit: "share of the shift", grade: .D, sources: [mine],
+              population: "—", note: "Practitioner convention. The size of the shift is a setting (default: 30% of rest-day carbs).", verified: false),
+        .init(id: "carbs.intra.minMinutes", description: "Carbohydrate during a session (dates, banana, a sports drink) only for sessions longer than about 90 minutes, and only if you turn it on.",
+              value: 90, range: 60...120, unit: "minutes", grade: .D, sources: [mine],
+              population: "—", note: "Convention; the lifting research found no benefit in typical sessions.", verified: false),
         .init(id: "timing.fastedTraining", description: "Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions.",
               value: 0, range: 0...0, unit: "—", grade: .C, sources: [aird],
               population: "Meta-analysis of 46 studies, mostly aerobic exercise.",

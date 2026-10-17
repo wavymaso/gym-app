@@ -50,6 +50,14 @@ Where the evidence is weak or mixed (diet breaks, refeeds, bulking rates, sleep)
 | `timing.preWorkout.lowFatFibre` | Keep the last meal before training lower in fat and fibre for comfort. | — | — | D |
 | `timing.postWorkout.protein` | Protein from right after training up to about 2 hours later strongly stimulates muscle growth; the 'anabolic window' is wider than once thought, especially if you ate before training. | 2 hours after | 0–4 | C |
 | `carbs.training.gPerKg` | For resistance training, 3–7 g of carbohydrate per kg a day is the usual recommendation; a review argues lower intakes may not hurt lifting performance. | 3 g/kg/day | 3–7 | C |
+| `carbs.physique.gPerKg` | Bodybuilders have been advised about 4–7 g of carbohydrate per kg a day. Slater & Phillips say strength-sport advice should be individual; the range is a reference, not a target on a cut. | 4 g/kg/day | 4–7 | C |
+| `carbs.cut.gPerKg` | During contest dieting a realistic carbohydrate range is 2–5 g per kg a day; very lean phases often need under 4 g/kg. | 3 g/kg/day | 2–5 | C |
+| `carbs.performance.nuance` | Carbohydrate improves lifting performance mainly in longer, higher-volume sessions (over about 10 sets per muscle group) and when the comparison is fasted; in typical sessions with matched calories it rarely changes performance, and there was no dose-response. | 10 sets per muscle group | 6–12 | B |
+| `carbs.preWorkout.gPerKg` | Eat an easily digestible carbohydrate meal about 2 hours before training; the amount isn't specified in the research. We plan about 0.5–1 g/kg, lower in fat and fibre. | 0.75 g/kg | 0.5–1 | D |
+| `timing.glycogen.hours` | Muscle glycogen is restored within 24 hours when the diet has at least 8 g of carbohydrate per kg; with under 4 hours between sessions, 1.2 g/kg/h of carbohydrate is advised. | 24 hours | 4–24 | C |
+| `timing.recovery.within24h` | When the next session is less than about 24 hours away, put more of the day's carbs into the post-workout meal and the meals before the next session. | 24 hours | 12–24 | D |
+| `carbs.dayShift.share` | On training days, carbs go up and fat toward its floor; on rest days fat goes up and carbs down; the week's calories stay the same. | 0.5 share of the shift | 0.25–1 | D |
+| `carbs.intra.minMinutes` | Carbohydrate during a session (dates, banana, a sports drink) only for sessions longer than about 90 minutes, and only if you turn it on. | 90 minutes | 60–120 | D |
 | `timing.fastedTraining` | Training fasted is fine if you prefer it: eating beforehand improved longer aerobic exercise but not shorter sessions. | — | — | C |
 | `fibre.per1000kcal` | About 14 g of fibre per 1 000 kcal eaten. | 14 g/1000 kcal | 10–16 | D |
 | `partialDay.rule` | A day with fewer than half your usual number of entries and under 60% of its target looks half-logged and waits for your confirmation. | 0.5 share of usual entries | 0.3–0.7 | D |
@@ -394,6 +402,74 @@ For resistance training, 3–7 g of carbohydrate per kg a day is the usual recom
 - **Studied in:** Review; the recommendation is largely borrowed from endurance research.
 - **Note:** Context, not a target: on a cut the engine's calorie target decides; the planner only puts more of the day's carbs around training.
 - Escobar KA, VanDusseldorp TA, Kerksick CM. 2016. Carbohydrate intake and resistance-based exercise: are current recommendations reflective of actual need? Br J Nutr 116(12):2053–2065. <https://pubmed.ncbi.nlm.nih.gov/27993175/>
+
+### `carbs.physique.gPerKg` (grade C)
+
+Bodybuilders have been advised about 4–7 g of carbohydrate per kg a day. Slater & Phillips say strength-sport advice should be individual; the range is a reference, not a target on a cut.
+
+- **Studied in:** Narrative reviews of physique and strength athletes; Roberts et al. cite 4–7 g/kg from earlier publications.
+- **Note:** Shown beside your daily carbs. A target only on a bulk or at maintenance; on a cut the engine's calories decide and carbs are what's left.
+- Roberts BM, Helms ER, Trexler ET, Fitschen PJ. 2020. Nutritional recommendations for physique athletes. J Hum Kinet 71:79–108. <https://pmc.ncbi.nlm.nih.gov/articles/PMC7052702/>
+- Slater G, Phillips SM. 2011. Nutrition guidelines for strength sports: sprinting, weightlifting, throwing events, and bodybuilding. J Sports Sci 29(S1):S67–S77 (citation checked; the carbohydrate figures in the full text were not available to check). <https://doi.org/10.1080/02640414.2011.574722>
+- Escobar KA, VanDusseldorp TA, Kerksick CM. 2016. Carbohydrate intake and resistance-based exercise: are current recommendations reflective of actual need? Br J Nutr 116(12):2053–2065. <https://pubmed.ncbi.nlm.nih.gov/27993175/>
+
+### `carbs.cut.gPerKg` (grade C)
+
+During contest dieting a realistic carbohydrate range is 2–5 g per kg a day; very lean phases often need under 4 g/kg.
+
+- **Studied in:** Narrative review of physique athletes in contest preparation.
+- **Note:** So a cut that lands under the 4–7 range is normal, not a mistake.
+- Roberts BM, Helms ER, Trexler ET, Fitschen PJ. 2020. Nutritional recommendations for physique athletes. J Hum Kinet 71:79–108. <https://pmc.ncbi.nlm.nih.gov/articles/PMC7052702/>
+
+### `carbs.performance.nuance` (grade B)
+
+Carbohydrate improves lifting performance mainly in longer, higher-volume sessions (over about 10 sets per muscle group) and when the comparison is fasted; in typical sessions with matched calories it rarely changes performance, and there was no dose-response.
+
+- **Studied in:** Systematic review of 49 studies: acute intake 19, glycogen depletion 6, short-term 7, long-term 17. Carbohydrate helped in 6 of 19 acute studies (mostly vs fasted controls and over 10 sets per muscle group), 3 after depletion (mostly twice-a-day sessions, not with matched calories), none of 7 short-term; 15 of 17 long-term studies found no effect.
+- **Note:** Why the planner treats carb timing as a mild preference: it sizes carbs around a session by its volume, never at the cost of protein or the calorie target.
+- Henselmans M, Bjørnsen T, Hedderman R, Vårvik FT. 2022. The effect of carbohydrate intake on strength and resistance training performance: a systematic review. Nutrients 14(4):856 (first author as recalled; title, journal and findings checked on PubMed 17 Oct 2026). <https://pubmed.ncbi.nlm.nih.gov/35215506/>
+
+### `carbs.preWorkout.gPerKg` (grade D, unverified)
+
+Eat an easily digestible carbohydrate meal about 2 hours before training; the amount isn't specified in the research. We plan about 0.5–1 g/kg, lower in fat and fibre.
+
+- **Studied in:** —
+- **Note:** The timing is from a narrative review; the 0.5–1 g/kg amount is your choice (practitioner convention).
+- Roberts BM, Helms ER, Trexler ET, Fitschen PJ. 2020. Nutritional recommendations for physique athletes. J Hum Kinet 71:79–108. <https://pmc.ncbi.nlm.nih.gov/articles/PMC7052702/>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `timing.glycogen.hours` (grade C)
+
+Muscle glycogen is restored within 24 hours when the diet has at least 8 g of carbohydrate per kg; with under 4 hours between sessions, 1.2 g/kg/h of carbohydrate is advised.
+
+- **Studied in:** Position stand, mostly endurance research.
+- **Note:** On a cut 8 g/kg is out of reach, so the planner only leans the day's carbs toward the recovery window, and says so.
+- Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+
+### `timing.recovery.within24h` (grade D, unverified)
+
+When the next session is less than about 24 hours away, put more of the day's carbs into the post-workout meal and the meals before the next session.
+
+- **Studied in:** —
+- **Note:** Our rule, built on glycogen restoration; the share shifted is a setting. A preference within the calories, never above them.
+- Kerksick CM et al. 2017. International society of sports nutrition position stand: nutrient timing. J Int Soc Sports Nutr 14:33. <https://doi.org/10.1186/s12970-017-0189-4>
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `carbs.dayShift.share` (grade D, unverified)
+
+On training days, carbs go up and fat toward its floor; on rest days fat goes up and carbs down; the week's calories stay the same.
+
+- **Studied in:** —
+- **Note:** Practitioner convention. The size of the shift is a setting (default: 30% of rest-day carbs).
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
+
+### `carbs.intra.minMinutes` (grade D, unverified)
+
+Carbohydrate during a session (dates, banana, a sports drink) only for sessions longer than about 90 minutes, and only if you turn it on.
+
+- **Studied in:** —
+- **Note:** Convention; the lifting research found no benefit in typical sessions.
+- The user's own choice (15 Oct 2026). `COACHING_AUDIT.md`
 
 ### `timing.fastedTraining` (grade C)
 
