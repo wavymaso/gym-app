@@ -1,6 +1,6 @@
 import Foundation
 
-// Which foods you eat together: your log grouped into meals (entries within 45 minutes), each food
+// Which foods you eat together: your log grouped into meals (entries within 60 minutes), each food
 // mapped to its canonical food, then counted per meal type. Pair scores ("with rice cakes at
 // breakfast you have peanut butter 2 times out of 2") steer slot filling so plans reproduce what you
 // actually eat; whole combinations show in "Your usual meals" to confirm, edit or delete.
@@ -25,7 +25,7 @@ struct MealPatterns: Equatable {
     var pairs: [MealBand: [String: Double]] = [:]
     var combos: [UsualMeal] = []
 
-    static let gapMinutes = 45
+    static let gapMinutes = 60          // a breakfast logged over an hour is still one meal
     static let halfLifeDays = 30.0
 
     /// `canonical`: food key → canonical id (foods without one are left out).
