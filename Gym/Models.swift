@@ -211,6 +211,28 @@ func distribute(_ t: Targets, weekday: Int, high: Set<Int>, extra: Double, fast:
     return out
 }
 
+/// The calorie floor holds on every day, not just on the daily target: a day the distribution or the
+/// refeed would put under it is raised to it, and the difference comes off the days above it (carbs
+/// first, then fat), so the week's total stays the same whenever the week can afford it. Fasting days
+/// (`exempt`) are low on purpose and left alone.
+func floorWeek(_ week: [Targets], floor: Double, exempt: Set<Int> = []) -> [Targets] {
+    var out = week
+    let low = out.indices.filter { !exempt.contains($0) && out[$0].kcal < floor }
+    guard !low.isEmpty else { return out }
+    var need = 0.0
+    for i in low { let d = floor - out[i].kcal; need += d; out[i].kcal = floor; out[i].carbs += d / 4 }
+    let room = out.indices.filter { !exempt.contains($0) && !low.contains($0) && out[$0].kcal > floor }
+    let headroom = room.reduce(0.0) { $0 + out[$1].kcal - floor }
+    guard headroom > 0 else { return out }
+    let take = min(need, headroom)
+    for i in room {
+        let d = take * (out[i].kcal - floor) / headroom
+        out[i].kcal -= d; out[i].carbs -= d / 4
+        if out[i].carbs < 0 { out[i].fat = max(0, out[i].fat + out[i].carbs * 4 / 9); out[i].carbs = 0 }
+    }
+    return out
+}
+
 // MARK: - Your own nutrient targets (Settings → Nutrient targets)
 
 extension Profile {

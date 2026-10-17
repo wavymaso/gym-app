@@ -385,6 +385,16 @@ extension ModelContext {
             if activeProgram?.mode != "coached",
                let own = p.weekPlan[Calendar(identifier: .gregorian).component(.weekday, from: date(fromKey: day))] { return own }
             t = p.refeed(t, on: day)
+            // Coached: the calorie floor holds on every day of the distributed week (bug, 17 Oct: it held only
+            // on the daily target, so the refeed and training-day extras pushed the other days under it).
+            if activeProgram?.mode == "coached", let floor = bodyInfo(guardrails: true)?.floorKcal {
+                let n = dayNumber(day), monday = dayKey(number: n - ((n + 3) % 7 + 7) % 7)
+                let week = (0..<7).map { addDays(monday, $0) }
+                let cal = Calendar(identifier: .gregorian)
+                let fast = Set(week.indices.filter { p.fastDaySet.contains(cal.component(.weekday, from: date(fromKey: week[$0]))) })
+                let floored = floorWeek(week.map { p.refeed(p.adjust(set.targets, on: $0), on: $0) }, floor: floor, exempt: fast)
+                if let i = week.firstIndex(of: day) { t = floored[i] }
+            }
         }
         guard p?.weeklyBudget == true else { return t }
         let n = dayNumber(day), monday = dayKey(number: n - ((n + 3) % 7 + 7) % 7)
@@ -402,9 +412,12 @@ extension ModelContext {
         // Opt-in and small: at most 10% a day, and never more than 150 kcal a day taken away after a big day.
         let left = Double(daysBetween(day, sunday) + 1)
         let shift = max(-min(0.1 * t.kcal, 150), min(0.1 * t.kcal, carry / left))
-        t.kcal += shift
-        t.carbs = max(0, t.carbs + shift * 0.6 / 4)
-        t.fat = max(0, t.fat + shift * 0.4 / 9)
+        // Never under the floor because of the weekly budget either.
+        let floor = activeProgram?.mode == "coached" ? (p.flatMap { _ in bodyInfo(guardrails: true)?.floorKcal } ?? 0) : 0
+        let shiftFloored = max(shift, min(0, floor - t.kcal))
+        t.kcal += shiftFloored
+        t.carbs = max(0, t.carbs + shiftFloored * 0.6 / 4)
+        t.fat = max(0, t.fat + shiftFloored * 0.4 / 9)
         return t
     }
 }
