@@ -166,7 +166,7 @@ struct DayLog: View {
     let open: (FoodLogView.LogSheet) -> Void
 
     @State private var savingMeal: (Meal, [FoodEntry])?
-    @AppStorage("showEmptyHours") private var showEmptyHours = false
+    @AppStorage("showEmptyHours") private var showEmptyHours = true
     @State private var mealName = ""
 
     init(day: String, energy: EnergyUnit, target: Targets?, style: Binding<FoodLogView.LogStyle>, open: @escaping (FoodLogView.LogSheet) -> Void) {

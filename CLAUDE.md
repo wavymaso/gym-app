@@ -141,6 +141,9 @@ PART-B-PLAN.md and is not built before 7 Nov.
 - **One title system:** every tab and page uses `.largeTitle("Sentence case")`, the system large
   title that collapses on scroll. Header buttons go in the toolbar. Uppercase tracked labels only
   via `.sectionLabelStyle()`.
+- **Food log timeline:** the full hourly view (every hour with its +, like MacroFactor's) is the
+  default, as you asked on 18 Oct after trying the compact one. Compact (logged hours, the next
+  planned meal, thin + Add gaps) stays behind ⋯ → Show empty hours off.
 - **Phone bottom:** no floating search pill. Every scroll view ends with `Space.tabBarClearance`.
 - **Numbers never wrap:** use `.numberFit()`. At accessibility text sizes, layouts switch (2×2 stats,
   macros on their own line).

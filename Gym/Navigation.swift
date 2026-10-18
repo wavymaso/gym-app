@@ -160,7 +160,7 @@ struct WhatsNewSheet: View {
     private let items: [(String, String, String)] = [
         ("chart.line.uptrend.xyaxis", "One trend everywhere", "The trend you see is the one behind your targets: the coaching engine's trend and its expenditure, on every device."),
         ("textformat.size", "Calmer pages", "Plain large titles that tuck away as you scroll, one type scale and spacing everywhere, and nothing hidden under the tab bar. Search lives in ＋ and the Food log."),
-        ("clock", "A tidier food log", "Only the hours you logged and your next planned meal; gaps are one thin ＋ Add row (⋯ → Show empty hours for the full day)."),
+        ("clock", "A compact food log, if you want it", "⋯ → turn off Show empty hours: only the hours you logged and your next planned meal, gaps as one thin ＋ Add row."),
         ("calendar.badge.clock", "Plan your meals", "Food log → ⋯ → Plan: swap a food, keep one at a portion, servings in units (2 eggs, 1 bar), and how many meals you ate as planned."),
         ("questionmark.bubble", "Six questions at the check-in", "Hunger, energy, sleep, training, stress and how hard the plan was: suggestions you accept or decline, never automatic."),
         ("accessibility", "VoiceOver", "Charts, rings, the day strip, sets and plan meals read out properly."),

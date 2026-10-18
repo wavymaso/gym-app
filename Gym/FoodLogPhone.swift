@@ -12,7 +12,7 @@ struct PhoneFoodLog: View {
     @Query private var profiles: [Profile]
     @State private var day = dayKey()
     @AppStorage("phoneLogStyle") private var style: FoodLogView.LogStyle = .timeline
-    @AppStorage("showEmptyHours") private var showEmptyHours = false
+    @AppStorage("showEmptyHours") private var showEmptyHours = true
     @State private var sheet: FoodLogView.LogSheet?
     @State private var details = false
     @State private var picking = false
@@ -294,8 +294,8 @@ struct DayEntries: View {
         let byHour = Dictionary(grouping: entries) { cal.component(.hour, from: $0.time) }
         let lo = min(6, byHour.keys.min() ?? 6), hi = 23                // the whole evening, up to midnight
         let full = showEmptyHours || sel.mode != nil
-        // Compact (the default): the hours you logged and the next planned meal; the gaps between
-        // them are thin "+ add" rows. The full hourly view is in ⋯ → Show empty hours.
+        // The full hourly view (the default, like MacroFactor's), or compact (⋯ → Show empty hours
+        // off): the hours you logged and the next planned meal, the gaps as thin "+ add" rows.
         let planHour = nextPlanned.map { $0.minute / 60 }
         let hours = full ? Array(sel.mode != nil ? min(lo, 5)...max(hi, 23) : lo...hi) : Array(Set(byHour.keys).union(planHour.map { [$0] } ?? [])).sorted()
         return VStack(alignment: .leading, spacing: Space.l) {
