@@ -31,7 +31,7 @@ current: add each decision when it's made.
 
 A1–A9 were done in small commits. A10's proof is PROOF-dark-titanium.png, PROOF-light-titanium.png and
 PROOF-black-gold.png. Part B is planned in PART-B-PLAN.md: an engine switch decision on 9 Nov, then the
-information architecture.
+information architecture. It was approved as a draft on 18 Oct; the user will revise it with notes after 7 Nov.
 
 ## Feature freeze: 17 Oct to 7 Nov 2026
 
