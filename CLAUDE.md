@@ -70,9 +70,10 @@ PART-B-PLAN.md and is not built before 7 Nov.
 - **The ~1 kg gap to MacroFactor's/classic trend is the EMA lag**, not a bias. The classic trend (α 0.1)
   trails a moving weight by about 9 days; after removing that lag the residual is about 0 every month
   from Jul 2025 to Oct 2026 (`GAP=1` in `tools/backtest.sh cohere`).
-- **Known engine-trend issue (not fixed, needs approval):** in long gaps without weigh-ins the rate
-  carries on unchecked. Feb–Jun 2025 had no weigh-ins, and the trend there drifts up to 24 kg below the
-  real weight. Today's values aren't affected.
+- **Long gaps (fixed 18 Oct, approved):** after 14 days without a weigh-in the rate fades (7-day
+  half-life) and true mass may move (0.15 kg/day sd); the first weigh-in after the gap isn't treated as
+  an outlier; an ended gap is drawn as a straight line. Feb–Jun 2025 now sits within 1 kg of
+  MacroFactor's trend (was up to 24 kg off). Today's values and the recent-third forecasts are unchanged.
 - **The engine preview** at check-in sits next to the current rules and never changes targets. When
   to switch is a Part B decision.
 

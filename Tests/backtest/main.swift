@@ -92,6 +92,14 @@ if ProcessInfo.processInfo.environment["COHERE"] != nil {
         for (lo, hi, label) in ranges() { line += String(format: " \(label) %.2f kg", avg(mfT.keys.filter { $0 >= lo && $0 < hi }.compactMap { d in m[d].map { abs($0 - mfT[d]!) } })) }
         print(line)
     }
+    if let span = ProcessInfo.processInfo.environment["DAYS"] {
+        // DAYS=2025-01-01:2025-07-15 → each weighed day, and the 1st/15th of each month, side by side.
+        let p = span.split(separator: ":").map(String.init)
+        for d in all where d >= p[0] && d <= p[1] && (wmap[d] != nil || d.hasSuffix("-01") || d.hasSuffix("-15")) {
+            print(d, wmap[d].map { String(format: "w %6.2f", $0.reduce(0, +) / Double($0.count)) } ?? "        ", String(format: "eng %6.2f rate %+5.2f  ema %6.2f  mf %@", eng[d] ?? 0, (engRate[d] ?? 0), ema[d] ?? 0, mfT[d].map { String(format: "%6.2f", $0) } ?? "  –"))
+        }
+        exit(0)
+    }
     if ProcessInfo.processInfo.environment["GAP"] != nil {
         // The engine − classic gap by month: signed, against the rate (an EMA lags a moving weight by about
         // (1 − α)/α days, so it sits above the true weight on a cut), and water-event days.

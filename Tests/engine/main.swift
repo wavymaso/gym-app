@@ -175,4 +175,21 @@ do {
 check("recomp advice: experienced lifter at an assumed body fat → not recommended", EngineTargets.recompAdvice(me, body: BodyComposition()).detail.hasPrefix("A recomp works best"))
 check("recomp advice: newer lifter → reasonable", EngineTargets.recompAdvice(Person(male: true, heightCm: 180, age: 25, trainingYears: 0.5), body: BodyComposition()).detail.hasPrefix("A recomp is reasonable"))
 check("after a cut comes maintenance", EngineTargets.nextPhase(after: .cut).0 == .maintain)
+// A long gap without weigh-ins (18 Oct 2026): losing 0.1 kg a day for 30 days, then nothing for 120
+// days, then 8 kg heavier. The rate must not carry on through the gap, the first weigh-in after it is
+// believed (not an outlier), and the gap is drawn as a straight line between the two sides.
+do {
+    var gd: [EngineDay] = []
+    for i in 0..<30 { gd.append(EngineDay(key: String(format: "d%04d", i), weighIns: [100 - 0.1 * Double(i)])) }
+    for i in 30..<150 { gd.append(EngineDay(key: String(format: "d%04d", i), weighIns: [])) }
+    for i in 150..<160 { gd.append(EngineDay(key: String(format: "d%04d", i), weighIns: [105])) }
+    let t = EngineTrend.run(gd)
+    let before = t[29].trend, after = t[150].trend, mid = t[90].trend
+    check("gap: the first weigh-in after it is believed", abs(after - 105) < 1, after)
+    check("gap: no runaway rate (trend stays between the two sides)", t[30..<150].allSatisfy { $0.trend >= min(before, after) - 0.01 && $0.trend <= max(before, after) + 0.01 }, t[30..<150].map(\.trend).min() ?? 0)
+    check("gap: a straight line between the two sides", abs(mid - (before + (after - before) * 61 / 121)) < 0.01, mid)
+    // Still waiting for the next weigh-in: the rate fades instead of extrapolating for months.
+    let open = EngineTrend.run(Array(gd[0..<150]))
+    check("open gap: the trend drifts at most a few kg", abs(open.last!.trend - before) < 3, open.last!.trend)
+}
 print(fails == 0 ? "ALL PASSED" : "\(fails) FAILED")

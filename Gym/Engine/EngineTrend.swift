@@ -1,7 +1,10 @@
 import Foundation
 
 // Trend weight as a state-space model (Kalman filter): true mass, its rate of change, and water.
-// - Missing days: the model just predicts forward (uncertainty grows).
+// - Missing days: the model just predicts forward (uncertainty grows). In a long gap (over two
+//   weeks without a weigh-in) the rate fades towards zero instead of carrying on for months, and
+//   once the next weigh-in arrives, the days in between are drawn as a straight line from the
+//   trend before the gap to the trend after it.
 // - Several weigh-ins in a day: their mean, trusted more (noise / n).
 // - Outliers: a surprise beyond a few sd counts less (robust update).
 // - Water events (refeed, travel, creatine…): the water term is allowed to jump, so the scale jump
@@ -18,6 +21,9 @@ struct TrendSettings: Equatable {
     var outlierZ = 3.0
     var maxTissuePerDay = 0.25    // kg: true tissue can't change faster (≈ a 2 000 kcal imbalance); more is water
     var maxWater = 2.0            // kg: the most water the scale can plausibly carry above or below the trend
+    var gapGraceDays = 14         // days without a weigh-in before the rate starts to fade
+    var gapRateHalfLife = 7.0     // days: after that, the rate halves this often (no evidence it carries on)
+    var gapMassNoise = 0.15       // kg/day sd of true mass in a long gap: the weight can really have moved
 }
 
 struct TrendPoint: Equatable {
@@ -41,12 +47,14 @@ enum EngineTrend {
         for i in firstIdx..<days.count {
             let d = days[i]
             if i > firstIdx {
-                // Predict
-                x = [x[0] + x[1], x[1], phi * x[2]]
-                let F = [[1.0, 1, 0], [0, 1, 0], [0, 0, phi]]
+                // Predict. Long without a weigh-in, the rate fades: nothing says it carries on.
+                let decay = i - lastWeighed > s.gapGraceDays ? pow(0.5, 1 / s.gapRateHalfLife) : 1
+                x = [x[0] + x[1], decay * x[1], phi * x[2]]
+                let F = [[1.0, 1, 0], [0, decay, 0], [0, 0, phi]]
                 var wq = s.waterSD * s.waterSD * (1 - phi * phi)
                 for e in d.events { wq += e.size * e.size }
-                P = add(mul(mul(F, P), transpose(F)), [[s.massNoise * s.massNoise, 0, 0], [0, s.rateNoise * s.rateNoise, 0], [0, 0, wq]])
+                let mq = decay < 1 ? s.gapMassNoise * s.gapMassNoise : s.massNoise * s.massNoise
+                P = add(mul(mul(F, P), transpose(F)), [[mq, 0, 0], [0, s.rateNoise * s.rateNoise, 0], [0, 0, wq]])
             }
             if !d.weighIns.isEmpty {
                 let y = d.weighIns.reduce(0, +) / Double(d.weighIns.count)
@@ -54,7 +62,8 @@ enum EngineTrend {
                 let innov = y - (x[0] + x[2])
                 let S0 = P[0][0] + 2 * P[0][2] + P[2][2] + R
                 let z = abs(innov) / S0.squareRoot()
-                if z > s.outlierZ { R *= pow(z / s.outlierZ, 2) }
+                // After a long gap a big change is real, not an outlier.
+                if z > s.outlierZ && i - lastWeighed <= s.gapGraceDays { R *= pow(z / s.outlierZ, 2) }
                 let S = P[0][0] + 2 * P[0][2] + P[2][2] + R
                 let K = (0..<3).map { (P[$0][0] + P[$0][2]) / S }
                 for k in 0..<3 { x[k] += K[k] * innov }
@@ -74,6 +83,17 @@ enum EngineTrend {
             }
             out.append(TrendPoint(day: d.key, trend: x[0], ratePerWeek: x[1] * 7, sd: max(P[0][0], 0).squareRoot(),
                                   water: x[2], weighed: !d.weighIns.isEmpty))
+        }
+        // Long gaps that have ended: a straight line between the trend either side (history only:
+        // the weighed days, and every day after the last weigh-in, keep the filter's values).
+        let weighed = out.indices.filter { out[$0].weighed }
+        for (a, b) in zip(weighed, weighed.dropFirst()) where b - a > s.gapGraceDays {
+            let slope = (out[b].trend - out[a].trend) / Double(b - a)
+            for j in (a + 1)..<b {
+                out[j].trend = out[a].trend + slope * Double(j - a)
+                out[j].ratePerWeek = slope * 7
+                out[j].water = 0
+            }
         }
         return out
     }
