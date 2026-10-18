@@ -74,3 +74,4 @@ Tick these on the iPhone after installing. Note anything that feels off and tell
 - [ ] **Largest text (Accessibility XL):** Today, Food log, Plan, Workout and Weight readable with nothing cut off; the tab bar stays its size and long-pressing a tab shows its name big
 - [ ] **Profile:** with no name set, More shows a person symbol and "Add your name"; adding one shows your initials
 - [ ] What's new appears once (this update, then "Earlier")
+- [ ] **Entries to check:** the Dashboard shows one line ("1 entry to check" today: the 1662 kcal potatoes meal); it opens a list with Confirm and Fix per entry; Fix opens the entry; tapping a food in the list opens it too; after Confirm the line disappears

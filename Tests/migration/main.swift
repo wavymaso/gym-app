@@ -22,6 +22,9 @@ MainActor.assumeIsolated {
         check("profile has the new settings", p != nil && (p!.fastKcal > 0) && BMREquation(rawValue: p!.bmrEquation) != nil, (p?.fastKcal ?? -1, p?.bmrEquation ?? "?"))
         // Plan adherence log (17 Oct 2026): existing profiles open with an empty log; a day saves and reads back.
         check("profile opens with an empty plan log", p?.planLog.isEmpty ?? false || p?.planLogJSON.isEmpty == false, p?.planLogJSON ?? "")
+        // Imported day totals (one entry at 13:00) are never "too big to be right", so they never leave expenditure.
+        let imported = Set(entries.filter { $0.foodKey == "import" }.map(\.day))
+        check("imported day totals are never flagged as large", ctx.unconfirmedLargeDays.isDisjoint(with: imported) && imported.allSatisfy { ctx.largeFlags(on: $0).isEmpty })
         // A1 (18 Oct 2026): the default expenditure is the engine's, built on the trend the screens show.
         let keepExp = p?.expAlgorithm ?? ""
         p?.expAlgorithm = ""; dataVersion += 1

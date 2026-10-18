@@ -402,7 +402,7 @@ func addDemoProfile(_ ctx: ModelContext) {
         let ate = 2450 + noise() * 700
         mass += (ate - 2950) / kcalPerKg
         if i % 9 != 4 {
-            ctx.insert(FoodEntry(day: day, time: date(fromKey: day).addingTimeInterval(13 * 3600), name: "Day's food", brand: nil, foodKey: nil,
+            ctx.insert(FoodEntry(day: day, time: date(fromKey: day).addingTimeInterval(13 * 3600), name: "Day's food", brand: nil, foodKey: i == 30 ? nil : "import",   // day totals, like an import (one left as typed, so the "to check" line shows)
                                  amount: 1, unit: "", grams: 0, nutrients: Nutrients(kcal: ate, protein: 170, fat: 75, carbs: ate / 4 - 170 - 170)))
         }
         if i % 6 != 2 { ctx.logWeight(mass + noise() * 1.4, on: day) }

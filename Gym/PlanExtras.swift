@@ -3,65 +3,113 @@ import SwiftUI
 
 /// "Is this right?" for an entry or meal big enough to be a typo (1 500 kcal, or 60% of the day's
 /// target). Until you confirm it, its day is left out of expenditure and the plan doesn't count it.
-/// `day` nil: every such day in the last 4 weeks (the dashboard).
+/// One line ("2 entries to check") that opens the list; `day` nil: every such day in the last 4 weeks.
 struct LargeEntriesCard: View {
     @Environment(\.modelContext) private var ctx
     var day: String? = nil
     var energy: EnergyUnit = .kcal
-    @State private var flags: [(day: String, flag: LargeEntryRule.Flag)] = []
-    @State private var later: Set<String> = []
+    @State private var count = 0
+    @State private var open = false
 
     var body: some View {
         Group {
-            let shown = flags.filter { !later.contains($0.flag.ids.joined()) }
-            if !shown.isEmpty {
-                VStack(alignment: .leading, spacing: Space.m) {
-                    Label(shown.count == 1 ? "Is this right?" : "Are these right?", systemImage: "exclamationmark.magnifyingglass").font(.cardTitle)
-                    Text("Big enough to be a typo (a serving count, or raw vs cooked weight). Until you confirm, this day stays out of your expenditure estimate and the plan doesn't count it.")
-                        .font(.secondaryText).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    ForEach(shown.prefix(3), id: \.flag.ids) { item in row(item.day, item.flag) }
+            if count > 0 {
+                Button { open = true } label: {
+                    HStack(spacing: Space.m) {
+                        Image(systemName: "exclamationmark.magnifyingglass").font(.cardTitle).foregroundStyle(palette.warn)
+                        VStack(alignment: .leading, spacing: Space.xxs) {
+                            Text(count == 1 ? "1 entry to check" : "\(count) entries to check").font(.cardTitle)
+                            Text("Big enough to be a typo; left out of your expenditure until you answer").font(.note).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right").font(.label).foregroundStyle(.tertiary)
+                    }
+                    .padding(Space.l).frame(maxWidth: .infinity, alignment: .leading)
+                    .modifier(CardSurface())
+                    .contentShape(Rectangle())
                 }
-                .padding(Space.l)
-                .modifier(CardSurface())
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint("Opens the list to confirm or fix each one")
                 .transition(.opacity.combined(with: .move(edge: .top)))
             } else {
                 Color.clear.frame(height: 0)        // an empty Group never runs .task
             }
         }
-        .task(id: "\(day ?? "all")|\(dataVersion)") { load() }
+        .task(id: "\(day ?? "all")|\(dataVersion)") { count = ctx.largeEntryFlags(day: day).count }
+        .sheet(isPresented: $open, onDismiss: { count = ctx.largeEntryFlags(day: day).count }) {
+            NavigationStack { LargeEntriesList(day: day, energy: energy) }.appStyle()
+        }
+    }
+}
+
+extension ModelContext {
+    /// The large entries still to answer: on one day, or every day of the last 4 weeks.
+    func largeEntryFlags(day: String?) -> [(day: String, flag: LargeEntryRule.Flag)] {
+        if let day { return largeFlags(on: day).map { (day, $0) } }
+        return unconfirmedLargeDays.sorted().flatMap { d in largeFlags(on: d).map { (d, $0) } }
+    }
+}
+
+/// The list behind "N entries to check": each entry or meal with Confirm (it's right, count it) or
+/// Fix (open the entry and change the amount).
+struct LargeEntriesList: View {
+    @Environment(\.modelContext) private var ctx
+    @Environment(\.dismiss) private var dismiss
+    let day: String?
+    let energy: EnergyUnit
+    @State private var flags: [(day: String, flag: LargeEntryRule.Flag)] = []
+    @State private var editing: FoodEntry?
+
+    var body: some View {
+        List {
+            ForEach(flags, id: \.flag.ids) { item in section(item.day, item.flag) }
+            if flags.isEmpty { Text("All checked.").foregroundStyle(.secondary) }
+        }
+        .themedForm()
+        .navigationTitle("Entries to check")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        .task(id: dataVersion) { load() }
+        .sheet(item: $editing, onDismiss: load) { EntryEditor(entry: $0).appStyle() }
     }
 
-    private func load() {
-        if let day { flags = ctx.largeFlags(on: day).map { (day, $0) }; return }
-        flags = ctx.unconfirmedLargeDays.sorted().flatMap { d in ctx.largeFlags(on: d).map { (d, $0) } }
-    }
+    private func load() { flags = ctx.largeEntryFlags(day: day) }
 
-    private func row(_ d: String, _ f: LargeEntryRule.Flag) -> some View {
+    private func section(_ d: String, _ f: LargeEntryRule.Flag) -> some View {
         let es = ctx.entries(on: d).filter { f.ids.contains($0.syncID) }.sorted { $0.nutrients.kcal > $1.nutrients.kcal }
         let when = String(format: "%02d:%02d", f.minute / 60, f.minute % 60)
-        return VStack(alignment: .leading, spacing: Space.s) {
-            Text("\(day == nil ? date(fromKey: d).formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale)) + ", " : "")\(f.single ? "an entry" : "a meal") at \(when): \(number(energy.fromKcal(f.kcal))) \(energy.rawValue)")
-                .font(.secondaryEmphasis).monospacedDigit()
-            ForEach(es.prefix(4), id: \.syncID) { e in
-                HStack {
-                    Text(e.name).lineLimit(1)
-                    Spacer()
-                    Text("\(e.amountText) · \(number(energy.fromKcal(e.nutrients.kcal)))").foregroundStyle(.secondary).monospacedDigit()
+        let dayText = date(fromKey: d).formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).locale(appLocale))
+        return Section {
+            ForEach(es, id: \.syncID) { e in
+                Button { editing = e } label: {
+                    HStack {
+                        Text(e.name).lineLimit(2)
+                        Spacer()
+                        Text("\(e.amountText) · \(number(energy.fromKcal(e.nutrients.kcal)))").foregroundStyle(.secondary).monospacedDigit()
+                    }
+                    .font(.secondaryText).contentShape(Rectangle())
                 }
-                .font(.fine)
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the entry to change the amount")
             }
-            if es.count > 4 { Text("and \(es.count - 4) more").font(.fine).foregroundStyle(.secondary) }
-            HStack {
-                Button("Yes, that's right") {
+            HStack(spacing: Space.m) {
+                Button("Confirm") {
                     ctx.confirmLarge(f.ids, on: d); Haptics.success()
                     animate(Motion.smooth) { flags.removeAll { $0.flag == f } }
                 }
                 .buttonStyle(.borderedProminent).foregroundStyle(palette.onAccent)
-                Button("I'll fix it") { Haptics.tick(); animate(Motion.smooth) { _ = later.insert(f.ids.joined()) } }
+                .accessibilityHint("It's right: count this day in your expenditure")
+                Button("Fix") { editing = es.first }
                     .buttonStyle(.bordered)
+                    .accessibilityHint("Opens the biggest entry to change the amount")
             }
-            .font(.secondaryEmphasis).controlSize(.small)
-            Text("To fix it, tap the entry in the food log and change the amount.").font(.fine).foregroundStyle(.secondary)
+            .font(.secondaryEmphasis)
+        } header: {
+            Text("\(dayText), \(f.single ? "an entry" : "a meal") at \(when): \(number(energy.fromKcal(f.kcal))) \(energy.rawValue)").monospacedDigit()
         }
     }
 }
