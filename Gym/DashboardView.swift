@@ -104,6 +104,17 @@ struct DashboardView: View {
         }
     }
 
+    /// Today's Train light: a finished workout today, a rest day (nothing on the training plan),
+    /// or still to do.
+    private func trainLight(_ p: Profile) -> JudgeLights.Train {
+        let start = Calendar.current.startOfDay(for: Date())
+        let done = ((try? ctx.fetch(FetchDescriptor<Workout>(predicate: #Predicate { $0.start >= start && $0.end != nil }))) ?? []).isEmpty == false
+        if done { return .done }
+        let week = p.planner.week(ctx.inferredSchedule())
+        if week.isEmpty { return .notPlanned }
+        return p.planner.training(on: dayKey(), inferred: ctx.inferredSchedule()) == nil ? .rest : .toDo
+    }
+
     private var greeting: String {
         switch Calendar.current.component(.hour, from: Date()) {
         case 5..<12: return "Good morning"
@@ -165,7 +176,7 @@ struct DashboardView: View {
     }
 
     @ViewBuilder private func heroWidgets(_ eaten: Nutrients, _ t: Targets, _ p: Profile) -> some View {
-        let rings = TodayRings(eaten: eaten.targets, target: t, energy: p.energy)
+        let rings = TodayRings(eaten: eaten.targets, target: t, energy: p.energy, train: trainLight(p))
         let week = Card(title: "Weekly nutrition", systemImage: "calendar") {
             WeekGrid(entries: loggedDays, target: { d in d == dayKey() ? t : (ctx.dayTargets(on: d) ?? target(on: d).map { p.adjust($0.targets, on: d) }) },
                      energy: p.energy)

@@ -21,8 +21,8 @@ struct GymApp: App {
 
 /// Applies the chosen theme; changing it redraws everything in the new colours.
 struct ThemedRoot: View {
-    @AppStorage("appearance") private var appearance: Appearance = ThemeChoice.appearance
-    @AppStorage("finish") private var finish: Finish = .titanium
+    @AppStorage("appearance") private var appearance: Appearance = { ThemeChoice.moveToJueces(); return ThemeChoice.appearance }()
+    @AppStorage("finish") private var finish: Finish = .platinum
     @AppStorage("reduceDepth") private var reduceDepth = false
     @Environment(\.colorScheme) private var systemScheme
 

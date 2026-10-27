@@ -5,7 +5,7 @@ import ImageIO
 // Lays the theme screenshots out: one row per Finish, one column per screen; one image per
 // Appearance (THEME-SNAPSHOTS-light/dark/black.png) plus all three stacked (THEME-SNAPSHOTS.png).
 let dir = CommandLine.arguments[1], out = CommandLine.arguments[2]
-let appearances = ["light", "dark", "black"], finishes = ["titanium", "silver", "graphite", "gold", "roseGold"]
+let appearances = ["light", "dark", "black"], finishes = ["platinum", "titanium", "silver", "graphite", "gold", "roseGold"]
 let screens = ["today", "food", "plan", "swap", "workout", "weight", "settings"]
 let cw = 300, ch = 652, label = 150, gap = 12, head = 44
 

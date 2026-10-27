@@ -3,6 +3,28 @@
 Everything lives in `Gym/Design.swift` (motion, haptics, spacing, corners, type, undo) and
 `Gym/Theme.swift` (colours: each theme's `Palette`). Screens use these, never raw values.
 
+## The world: Jueces, in platinum (27 Oct 2026)
+
+A dark competition platform. Matte black anodised surfaces, machined platinum, and the three
+referee lights, where white is a good lift.
+
+- **Default: Black × Platinum.** Platinum is a white metal with a breath of warmth
+  (`Finish.platinum`): bright in the dark, pewter in the light. Each device moves to it once
+  (`ThemeChoice.moveToJueces`), and every other appearance and finish stays available.
+- **Cards** get a machined edge in the dark: a 0.75 pt rim, brightest at the top left (light
+  catching it), a fainter reflection at the bottom right. No glows, no shadows on cards.
+- **Numbers** are instrument figures: SF, not rounded, tabular, heavy for the hero.
+- **The referee's lamp** (`JudgeLamp`) is drawn as an object: a brushed bezel in the finish's metal,
+  a black groove, and a dark glass lens with a glint. It lights warm white from the bottom as
+  progress fills it, glowing softly only when full. The red no-lift light means over.
+  - **Today's three lights** (`JudgeLights`, top of the Today card):
+    - **Eat:** lit from 90% of the calorie target; red above 110%.
+    - **Protein:** lit from 95% of the target.
+    - **Train:** lit when today's workout is done, or on a rest day by the training plan.
+  - **Logged sets:** each set's done button is a lamp, lit white.
+- **Colour:** macro and meaning colours stay as before (they carry data), but chrome stays
+  platinum. In the workout header only PRs take a colour (champagne).
+
 ## Motion: three springs
 | Token | Use | Spring |
 |---|---|---|

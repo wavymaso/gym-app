@@ -69,7 +69,7 @@ struct NutrientPanel: View {
         return HStack(spacing: Space.s) {
             ZStack {
                 Ring(progress: p, color: color, lineWidth: 4)
-                Text(v == nil ? "–" : "\(Int((p * 100).rounded()))").font(.system(size: 10, weight: .bold, design: .rounded)).monospacedDigit()
+                Text(v == nil ? "–" : "\(Int((p * 100).rounded()))").font(.system(size: 10, weight: .bold, design: .default)).monospacedDigit()
             }
             .frame(width: 34, height: 34)
             VStack(alignment: .leading, spacing: 0) {

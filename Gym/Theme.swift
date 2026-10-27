@@ -44,13 +44,21 @@ struct Palette: Equatable {
     static func make(_ a: Appearance, _ f: Finish, systemDark: Bool = true, reduceDepth: Bool = false) -> Palette {
         Palette(tokens: Tokens.make(a.resolved(systemDark: systemDark), f), reduceDepth: reduceDepth)
     }
-    static let standard = Palette.make(.dark, .titanium)
+    static let standard = Palette.make(.black, .platinum)
 }
 
 /// Settings: the two choices, plus "Reduce depth".
 enum ThemeChoice {
     static var appearance: Appearance { Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "") ?? .automatic }
-    static var finish: Finish { Finish(rawValue: UserDefaults.standard.string(forKey: "finish") ?? "") ?? .titanium }
+    static var finish: Finish { Finish(rawValue: UserDefaults.standard.string(forKey: "finish") ?? "") ?? .platinum }
+    /// Jueces (Oct 2026): once per device, the new look (Black × Platinum). You can switch back in More → Theme.
+    static func moveToJueces() {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: "jueces1") else { return }
+        d.set(Appearance.black.rawValue, forKey: "appearance")
+        d.set(Finish.platinum.rawValue, forKey: "finish")
+        d.set(true, forKey: "jueces1")
+    }
 }
 
 /// The palette in use (set by ThemedRoot before anything is drawn).
@@ -105,14 +113,14 @@ enum Macro: CaseIterable {
 }
 
 extension Font {
-    /// Big rounded numbers (calories left, weights, totals).
+    /// Big numbers (calories left, weights, totals).
     /// (Scales with the Dynamic Type setting, from the size it's designed at.)
     static func number(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
         #if os(iOS)
         let scaled = min(UIFontMetrics(forTextStyle: .body).scaledValue(for: size), size * 1.6)    // big numbers grow, but stay on screen
-        return .system(size: scaled, weight: weight, design: .rounded)
+        return .system(size: scaled, weight: weight, design: .default)
         #else
-        return .system(size: size, weight: weight, design: .rounded)
+        return .system(size: size, weight: weight, design: .default)
         #endif
     }
 }
@@ -204,8 +212,17 @@ struct CardSurface: ViewModifier {
             .background(Color.cardBackground, in: shape)
             .overlay {
                 if !palette.reduceDepth {
-                    shape.strokeBorder(palette.hairline, lineWidth: 0.5)
-                        .mask(LinearGradient(colors: [Tokens.maskSolid, Tokens.maskSolid.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom))
+                    if palette.tokens.isDark {
+                        // A machined edge: light catches the top-left rim, a fainter reflection the bottom-right.
+                        shape.strokeBorder(LinearGradient(stops: [
+                            .init(color: palette.tokens.accentHigh.color.opacity(0.22), location: 0),
+                            .init(color: palette.tokens.accentHigh.color.opacity(0.05), location: 0.45),
+                            .init(color: palette.tokens.accentHigh.color.opacity(0.10), location: 1),
+                        ], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.75)
+                    } else {
+                        shape.strokeBorder(palette.hairline, lineWidth: 0.5)
+                            .mask(LinearGradient(colors: [Tokens.maskSolid, Tokens.maskSolid.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom))
+                    }
                 }
             }
     }

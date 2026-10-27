@@ -155,7 +155,10 @@ new Today home):
    day goes. The most minimal.
 4. **Dark Titanium, refined:** today's look, cleaned up.
 
-**Decision:** pick one before 7 Nov, or with your notes. The pick becomes Gym's DESIGN.md world:
+**Decided 27 Oct:** Jueces, redone in platinum, and built now as a visual-only change (features
+unchanged; see DESIGN.md). Part B screens inherit it.
+
+**Original note:** pick one before 7 Nov, or with your notes. The pick becomes Gym's DESIGN.md world:
 tokens in Design.swift and Tokens.swift, the existing lint keeps them honest, and the theme grid
 changes to match.
 

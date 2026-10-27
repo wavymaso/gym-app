@@ -1,7 +1,9 @@
 import SwiftUI
 
-// The theme system: Appearance (Automatic, Light, Dark, Black) × Finish (Titanium, Silver,
-// Graphite, Gold, Rose Gold). Every colour in the app comes from here.
+// The theme system: Appearance (Automatic, Light, Dark, Black) × Finish (Platinum, Titanium,
+// Silver, Graphite, Gold, Rose Gold). Every colour in the app comes from here. The default is
+// Black × Platinum (Jueces, Oct 2026): a dark competition platform, machined platinum, and the
+// three referee lights.
 //
 // Rules: neutrals are a tonal ramp with the faintest tint of the finish; the accent is the finish
 // (a desaturated metal), used sparingly; macro and semantic colours are muted so they sit inside the
@@ -17,13 +19,14 @@ enum Appearance: String, CaseIterable, Identifiable {
 }
 
 enum Finish: String, CaseIterable, Identifiable {
-    case titanium, silver, graphite, gold, roseGold
+    case platinum, titanium, silver, graphite, gold, roseGold
     var id: String { rawValue }
     var label: String { self == .roseGold ? "Rose Gold" : rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
 
     /// The neutrals' tint: hue, and how much (barely: you shouldn't be able to name the colour).
     fileprivate var tint: (hue: Double, amount: Double) {
         switch self {
+        case .platinum: return (48, 0.35)     // the faintest warmth of the metal
         case .titanium: return (212, 1.0)     // cool
         case .silver: return (220, 0.6)       // cool, lighter touch
         case .graphite: return (0, 0)         // true neutral
@@ -126,6 +129,7 @@ struct Tokens: Equatable {
 
         // The finish's metal: hue, saturation, and brightness in the dark and in the light.
         let accent: (h: Double, s: Double, dark: Double, light: Double) = switch f {
+            case .platinum: (45, 0.035, 0.90, 0.40)     // white metal, a breath of warmth: bright in the dark, pewter in the light
             case .titanium: (210, 0.14, 0.72, 0.42)     // warm grey with a hint of blue
             case .silver: (220, 0.03, 0.88, 0.45)       // bright, nearly neutral
             case .graphite: (30, 0.03, 0.58, 0.26)      // dark gunmetal

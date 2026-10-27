@@ -5,7 +5,7 @@ Gym/Theme.swift: .system(size:  # Font.number's definition (Dynamic Type scaled,
 Gym/SettingsView.swift: .font(.system(size: 26, weight: .black).width(.expanded))  # initials inside the fixed 70 pt avatar circle
 Gym/Navigation.swift: .font(.system(size: size * 0.52  # an icon sized to its tile (size is the tile's)
 Gym/WorkoutParts.swift: .font(.system(size: 8, weight: .bold))  # plate weight drawn inside a plate of fixed height
-Gym/MicrosView.swift: .font(.system(size: 10, weight: .bold, design: .rounded))  # percentage inside a fixed 30 pt ring
+Gym/MicrosView.swift: .font(.system(size: 10, weight: .bold, design: .default))  # percentage inside a fixed 30 pt ring
 Gym/FoodSelection.swift: .font(.system(size: 10, weight: .bold))  # icon inside a fixed 18 pt badge
 Gym/FoodSelection.swift: .font(.system(size: 11, weight: .heavy))  # letter inside a fixed 18 pt badge
 Gym/WorkoutsView.swift: .font(.system(size: 90, weight: .bold))  # watermark art behind the hero card

@@ -144,11 +144,12 @@ extension Font {
     static let iconMedium = Font.title                         // a food's emoji at the start of a row
     static let iconHero = Font.system(size: 48, weight: .regular)  // an empty state's or sheet's big symbol (fixed: art)   // UPPERCASE TRACKED section labels: use .sectionLabelStyle()
 
-    // Number roles: rounded, tabular, and they scale with Dynamic Type too.
-    static let numberHero = Font.system(.largeTitle, design: .rounded).weight(.bold)      // calories left, the weigh-in
-    static let numberLarge = Font.system(.title, design: .rounded).weight(.bold)          // card values
-    static let numberMedium = Font.system(.title3, design: .rounded).weight(.semibold)    // tiles, set fields
-    static let numberSmall = Font.system(.subheadline, design: .rounded).weight(.semibold)
+    // Number roles: tabular, and they scale with Dynamic Type too.
+    // Jueces: an instrument's figures, not rounded ones: SF at a heavy weight, tabular (liveNumber).
+    static let numberHero = Font.system(.largeTitle, design: .default).weight(.heavy)     // calories left, the weigh-in
+    static let numberLarge = Font.system(.title, design: .default).weight(.bold)          // card values
+    static let numberMedium = Font.system(.title3, design: .default).weight(.semibold)    // tiles, set fields
+    static let numberSmall = Font.system(.subheadline, design: .default).weight(.semibold)
 }
 
 extension View {
@@ -506,5 +507,48 @@ extension View {
     func floatShadow() -> some View {
         let s = palette.tokens.floatShadow
         return shadow(color: palette.reduceDepth ? .clear : s.color, radius: s.radius, y: s.y)
+    }
+}
+
+
+// MARK: - Jueces: the referee's lamp
+
+/// A referee's lamp at a lifting meet, as a real object: a machined bezel in the finish's metal
+/// around a recessed lens of dark glass. The lens lights from the bottom as `fill` goes from 0 to 1;
+/// lit, it's warm white (a good lift). `red`: the no-lift light (over target).
+struct JudgeLamp: View {
+    var fill: Double
+    var red = false
+    var size: CGFloat = 72
+
+    var body: some View {
+        let f = max(0, min(1, fill))
+        let t = palette.tokens
+        let lens = size * 0.80
+        let lit: [Color] = red ? [Color(.sRGB, red: 1, green: 0.62, blue: 0.55), Color(.sRGB, red: 0.82, green: 0.20, blue: 0.17)]
+                               : [Color(.sRGB, red: 1, green: 1, blue: 0.99), Color(.sRGB, red: 0.90, green: 0.885, blue: 0.85)]
+        return ZStack {
+            // The bezel: brushed metal, light from the top left.
+            Circle().fill(palette.reduceDepth ? AnyShapeStyle(t.accent.color)
+                                               : AnyShapeStyle(LinearGradient(colors: [t.accentHigh.color, t.accent.color, t.accentLow.color, t.accent.color],
+                                                                              startPoint: .topLeading, endPoint: .bottomTrailing)))
+            // The groove where the lens sits.
+            Circle().fill(Tokens.maskSolid).frame(width: size * 0.86, height: size * 0.86)
+            // The lens, off: dark glass.
+            Circle().fill(RadialGradient(colors: [Color(white: 0.16), Color(white: 0.035)], center: UnitPoint(x: 0.4, y: 0.32),
+                                         startRadius: 0, endRadius: lens * 0.62))
+                .frame(width: lens, height: lens)
+            // The lens, lit, rising from the bottom.
+            Circle().fill(RadialGradient(colors: lit, center: UnitPoint(x: 0.42, y: 0.38), startRadius: 0, endRadius: lens * 0.6))
+                .frame(width: lens, height: lens)
+                .mask(alignment: .bottom) { Rectangle().frame(height: lens * f) }
+            // A glint on the glass.
+            Ellipse().fill(Color.white.opacity(f > 0.6 ? 0.7 : 0.16)).frame(width: lens * 0.26, height: lens * 0.13)
+                .rotationEffect(.degrees(-28)).offset(x: -lens * 0.18, y: -lens * 0.24).blur(radius: 0.6)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: (red ? lit[1] : lit[0]).opacity(palette.reduceDepth ? 0 : f >= 1 ? 0.32 : 0), radius: size * 0.16)
+        .animation(Motion.pick(Motion.smooth), value: f)
+        .accessibilityHidden(true)
     }
 }

@@ -4,7 +4,12 @@ import Foundation
 import ImageIO
 // Before | after, per screen: one image per theme (PROOF-dark-titanium.png …), rows = screens.
 let dir = CommandLine.arguments[1]
-let themes = [("dark", "titanium"), ("light", "titanium"), ("black", "gold")]
+// <dir> [beforeName] [afterName] [appearance-finish …]
+let beforeName = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "before"
+let afterName = CommandLine.arguments.count > 3 ? CommandLine.arguments[3] : "after"
+let themes: [(String, String)] = CommandLine.arguments.count > 4
+    ? CommandLine.arguments.dropFirst(4).map { let p = $0.split(separator: "-"); return (String(p[0]), String(p[1])) }
+    : [("dark", "titanium"), ("light", "titanium"), ("black", "gold")]
 let screens = ["today", "food", "plan", "swap", "workout", "weight", "settings"]
 let cw = 300, ch = 652, gap = 12, head = 44, pair = 40
 func load(_ p: String) -> CGImage? {
@@ -26,7 +31,7 @@ for (a, f) in themes {
     for (c, s) in screens.enumerated() {
         let x0 = gap + c * (2 * cw + gap + pair)
         text(ctx, s.capitalized, x0, H - head - 30)
-        for (k, side) in ["before", "after"].enumerated() {
+        for (k, side) in [beforeName, afterName].enumerated() {
             if let im = load("\(dir)/\(side)/\(a)-\(f)-\(s).png") { ctx.draw(im, in: CGRect(x: x0 + k * (cw + gap), y: gap, width: cw, height: ch)) }
         }
     }

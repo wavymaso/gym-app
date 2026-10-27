@@ -16,7 +16,7 @@ shot() {   # appearance finish name args…
   xcrun simctl io $S screenshot "$OUT/$a-$f-$n.png" >/dev/null 2>&1
 }
 for a in light dark black; do
-  for f in titanium silver graphite gold roseGold; do
+  for f in platinum titanium silver graphite gold roseGold; do
     shot $a $f today -page dashboard
     shot $a $f food -page food -phoneLogStyle timeline
     shot $a $f plan -page food -phoneLogStyle plan

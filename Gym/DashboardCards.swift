@@ -2,11 +2,12 @@ import Charts
 import SwiftData
 import SwiftUI
 
-/// The hero: a big calorie ring with what's left, and a ring per macro.
+/// The hero: the three referee lights (Jueces), a big calorie ring with what's left, and a ring per macro.
 struct TodayRings: View {
     let eaten: Targets
     let target: Targets
     let energy: EnergyUnit
+    var train: JudgeLights.Train = .notPlanned
 
     var body: some View {
         rings.capType()
@@ -14,6 +15,9 @@ struct TodayRings: View {
 
     private var rings: some View {
         Card(title: "") {
+            JudgeLights(eaten: eaten, target: target, energy: energy, train: train)
+                .padding(.bottom, Space.l)
+            Rectangle().fill(palette.stroke.opacity(0.6)).frame(height: 0.5).padding(.bottom, Space.l)
             let layout = isPhone ? AnyLayout(VStackLayout(spacing: Space.l)) : AnyLayout(HStackLayout(spacing: Space.xxl))
             layout {
                 calorieRing
@@ -73,6 +77,51 @@ struct TodayRings: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(m.label)
         .accessibilityValue("\(number(e)) of \(number(t)) grams, \(e <= t ? "\(number(t - e)) left" : "\(number(e - t)) over")")
+    }
+}
+
+/// Jueces: today's three referee lights. White is a good lift: calories in your band, protein hit,
+/// today's training done (or a rest day). They light from the bottom as the day goes; the Eat
+/// light turns red, the no-lift light, when you're well over.
+struct JudgeLights: View {
+    enum Train { case done, rest, toDo, notPlanned }
+    let eaten: Targets
+    let target: Targets
+    let energy: EnergyUnit
+    let train: Train
+
+    var body: some View {
+        let kcal = target.kcal > 0 ? eaten.kcal / target.kcal : 0
+        let eatOver = kcal > 1.1
+        let eatFill = kcal >= 0.9 ? 1 : kcal
+        let protein = target.protein > 0 ? eaten.protein / target.protein : 0
+        let proteinFill = protein >= 0.95 ? 1 : protein
+        let (trainFill, trainLabel, trainDetail): (Double, String, String) = switch train {
+            case .done: (1, "Train", "done")
+            case .rest: (1, "Rest day", "nothing to do")
+            case .toDo: (0, "Train", "still to do")
+            case .notPlanned: (0, "Train", "nothing planned")
+        }
+        return HStack(alignment: .top, spacing: 0) {
+            lamp(eatFill, red: eatOver, "Eat", eatOver ? "\(number(energy.fromKcal(eaten.kcal - target.kcal))) over" : "\(number(energy.fromKcal(eaten.kcal))) of \(number(energy.fromKcal(target.kcal)))",
+                 spoken: eatOver ? "Eat: red, over by \(energy.format(eaten.kcal - target.kcal))" : "Eat: \(eatFill >= 1 ? "lit" : "\(Int(eatFill * 100)) percent"), \(energy.format(eaten.kcal)) of \(energy.format(target.kcal))")
+            lamp(proteinFill, "Protein", "\(number(eaten.protein)) of \(number(target.protein)) g",
+                 spoken: "Protein: \(proteinFill >= 1 ? "lit" : "\(Int(proteinFill * 100)) percent"), \(number(eaten.protein)) of \(number(target.protein)) grams")
+            lamp(trainFill, trainLabel, trainDetail, spoken: "\(trainLabel): \(trainFill >= 1 ? "lit" : "off"), \(trainDetail)")
+        }
+    }
+
+    private func lamp(_ fill: Double, red: Bool = false, _ title: String, _ detail: String, spoken: String) -> some View {
+        VStack(spacing: Space.s) {
+            JudgeLamp(fill: fill, red: red, size: isPhone ? 64 : 76)
+            VStack(spacing: Space.xxs) {
+                Text(title).font(.label).textCase(.uppercase).tracking(0.8).foregroundStyle(palette.text1)
+                Text(detail).font(.note).monospacedDigit().foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
     }
 }
 

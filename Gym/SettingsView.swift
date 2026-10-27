@@ -269,8 +269,8 @@ struct AppearanceSection: View {
         var body: some View { AppearanceSection().content }
     }
 
-    @AppStorage("appearance") private var appearance: Appearance = .automatic
-    @AppStorage("finish") private var finish: Finish = .titanium
+    @AppStorage("appearance") private var appearance: Appearance = .black
+    @AppStorage("finish") private var finish: Finish = .platinum
     @AppStorage("reduceDepth") private var reduceDepth = false
     @Environment(\.colorScheme) private var scheme
 
@@ -330,7 +330,7 @@ struct ThemePreview: View {
                             style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 0) {
-                    Text("1 557").font(.system(.title3, design: .rounded).weight(.semibold)).monospacedDigit().foregroundStyle(t.text1.color)
+                    Text("1 557").font(.system(.title3, design: .default).weight(.semibold)).monospacedDigit().foregroundStyle(t.text1.color)
                     Text("kcal left").font(.fineLabel).foregroundStyle(t.text2.color)
                 }
             }

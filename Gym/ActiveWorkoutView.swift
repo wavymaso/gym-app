@@ -109,9 +109,9 @@ struct ActiveWorkoutView: View {
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
                     stat(clock(workout.duration), "Time", color: palette.accent)
                 }
-                stat("\(done.count)/\(sets.count)", "Sets", color: palette.good)
-                stat("\(number(unit.fromKg(volume(done.map(\.lift)))))", "Volume \(unit.rawValue)", color: Macro.fat.color)
-                stat("\(records.values.filter { !$0.isEmpty }.count)", "PRs", color: Macro.protein.color)
+                stat("\(done.count)/\(sets.count)", "Sets", color: palette.text1)
+                stat("\(number(unit.fromKg(volume(done.map(\.lift)))))", "Volume \(unit.rawValue)", color: palette.text1)
+                stat("\(records.values.filter { !$0.isEmpty }.count)", "PRs", color: records.values.contains { !$0.isEmpty } ? palette.record : palette.text1)
             }
         }
         .padding(Space.l)
@@ -313,10 +313,9 @@ private struct ExerciseBlock: View {
                         }
                         HStack(spacing: Space.s) {
                             Button { animate(Motion.snappy) { onDone(row) } } label: {
-                                Image(systemName: "checkmark").font(.secondaryEmphasis)
-                                    .foregroundStyle(row.done ? palette.onData : .secondary)
-                                    .frame(width: 32, height: 28)
-                                    .background(row.done ? palette.good : Color.raisedBackground, in: RoundedRectangle(cornerRadius: Radius.s))
+                                // Jueces: a logged set is a good lift, its lamp lit white.
+                                JudgeLamp(fill: row.done ? 1 : 0, size: 30)
+                                    .frame(width: 34, height: 34)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(row.done ? "\(setName) done" : "Mark \(setName.lowercased()) done")
@@ -328,7 +327,7 @@ private struct ExerciseBlock: View {
                             }
                         }
                     }
-                    .foregroundStyle(row.done ? palette.good : .primary)
+                    .foregroundStyle(row.done ? palette.text1 : .primary)
                 }
             }
             Button(action: addSet) {

@@ -22,7 +22,7 @@ shot() {   # appearance finish name args…
   sleep ${WAIT:-8}
   xcrun simctl io $S screenshot "$OUT/$a-$f-$n.png" >/dev/null 2>&1
 }
-for t in dark:titanium light:titanium black:gold; do
+for t in ${THEMES:-dark:titanium light:titanium black:gold}; do
   a=${t%%:*}; f=${t##*:}
   shot $a $f today -page dashboard
   shot $a $f food -page food -phoneLogStyle timeline

@@ -33,6 +33,16 @@ A1–A9 were done in small commits. A10's proof is PROOF-dark-titanium.png, PROO
 PROOF-black-gold.png. Part B is planned in PART-B-PLAN.md: an engine switch decision on 9 Nov, then the
 information architecture. It was approved as a draft on 18 Oct; the user will revise it with notes after 7 Nov.
 
+## Jueces in platinum (27 Oct 2026)
+
+- **What:** a visual-only redesign the user asked for during the freeze ("keep gym functioning
+  the same").
+- **The look:** Black × Platinum by default, machined card edges, instrument numbers, and the
+  referee lamps (Today's three lights, logged sets). Described in DESIGN.md.
+- **Proof:** PROOF-black-platinum.png, PROOF-dark-platinum.png and PROOF-light-platinum.png,
+  against the old Dark Titanium default.
+- **Rule:** any further Gym UI work stays in this world. Features and flows are unchanged.
+
 ## Feature freeze: 17 Oct to 7 Nov 2026
 
 Bug fixes and polish only. New features go in BACKLOG.md with a spec. Part B
