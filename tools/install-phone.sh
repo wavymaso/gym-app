@@ -8,8 +8,13 @@ UDID=${GYM_PHONE:-$(xcrun devicectl list devices 2>/dev/null | awk '/physical/ &
 [ -n "$UDID" ] || { echo "No iPhone found. Plug it in, unlock it, trust this Mac, and turn on Developer Mode (Settings → Privacy & Security)."; exit 1; }
 [ -f Gym/foods.sqlite ] || echo "warning: Gym/foods.sqlite missing (offline food database); run tools/update-food-db.sh"
 echo "Building…"
-xcodebuild -project Gym.xcodeproj -scheme Gym -configuration Release -destination 'generic/platform=iOS' \
-  -derivedDataPath build -allowProvisioningUpdates build 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)" | sort -u
+OUT=$(xcodebuild -project Gym.xcodeproj -scheme Gym -configuration Release -destination 'generic/platform=iOS' \
+  -derivedDataPath build -allowProvisioningUpdates build 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)" | sort -u)
+echo "$OUT"
+if ! grep -q "BUILD SUCCEEDED" <<< "$OUT"; then
+  if grep -q "No Accounts" <<< "$OUT"; then echo "Xcode isn't signed in to your Apple ID: Xcode → Settings → Accounts → + → Apple ID, then run this again."; fi
+  echo "The build failed, so nothing was installed (an older build would have expired signing)."; exit 1
+fi
 APP=build/Build/Products/Release-iphoneos/Gym.app
 BUNDLE=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")
 for i in 1 2 3; do
