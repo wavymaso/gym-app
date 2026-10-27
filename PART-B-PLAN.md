@@ -139,6 +139,29 @@ canvases for analysis and the week plan.
 
 **Effort:** week-plan grid (1.5), analysis dashboard (1), data tables (0.5).
 
+## 7. Visual renewal (dark), with the new Today (2–3 sessions on top of item 1)
+
+**Asked on 27 Oct:** renew Gym's look with the new design skills, keeping a **dark aesthetic**. It's
+built with Part B, so screens are only rebuilt once.
+
+**Directions to choose from:** `.impeccable/mocks/decision/index.html` (all dark, each showing the
+new Today home):
+1. **Discos (my recommendation):** competition plates on a rubber floor. The plate colours carry
+   the data (protein red, carbs blue, fat yellow, training green), and today's macros are three
+   plates filling as you eat.
+2. **Cronos:** a Formula 1 timing tower. Purple means a personal best, green better than last time,
+   yellow a warning, on lifts, trend and streaks.
+3. **Jueces:** the three referee lights at a meet (Eat, Protein, Train/rest), lighting up as the
+   day goes. The most minimal.
+4. **Dark Titanium, refined:** today's look, cleaned up.
+
+**Decision:** pick one before 7 Nov, or with your notes. The pick becomes Gym's DESIGN.md world:
+tokens in Design.swift and Tokens.swift, the existing lint keeps them honest, and the theme grid
+changes to match.
+
+**Effort:** tokens and themes (0.5), Today and the four tabs in the new world (1.5), snapshots,
+accessibility and the checklist (0.5).
+
 ## Suggested order
 
 1. Engine decision (item 5) on 9 Nov, since it affects what Today shows.
@@ -148,4 +171,6 @@ canvases for analysis and the week plan.
 5. Settings (item 4).
 6. Mac (item 6).
 
-That's 13–14 sessions in all.
+The visual renewal (item 7) goes with item 1.
+
+That's 15–17 sessions in all.

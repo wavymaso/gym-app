@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gym: pick a direction</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font:15px/1.45 -apple-system, "SF Pro Text", system-ui, sans-serif; color:#e9e9ec; background:#1b1c1f; padding:40px 32px 64px; }
+  h1 { font:800 30px/1.1 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.02em; color:#fff; }
+  .lede { color:#a3a6ad; max-width:820px; margin:10px 0 30px; }
+  .row { display:grid; grid-template-columns: 340px 1fr; gap:28px; background:#24262a; border-radius:20px; padding:28px; margin-bottom:22px; }
+  .row h2 { font:800 26px/1.1 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.02em; color:#fff; margin:6px 0 10px; }
+  .tag { font:700 12px/1 -apple-system, system-ui; color:#a3a6ad; }
+  .row p { color:#c9cbd0; font-size:14px; margin-bottom:10px; }
+  dl { display:grid; grid-template-columns: 92px 1fr; gap:6px 12px; font-size:13.5px; margin-top:10px; }
+  dt { color:#8a8d95; } dd { color:#d6d8dc; }
+  .chips { display:flex; gap:6px; margin-top:14px; } .chip { width:22px; height:22px; border-radius:6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .phones { display:flex; gap:22px; align-items:flex-start; }
+  .cap { font-size:12px; color:#8a8d95; text-align:center; margin-top:8px; }
+  .ph { width:250px; height:541px; border-radius:38px; overflow:hidden; position:relative; box-shadow:0 0 0 7px #000, 0 18px 36px rgba(0,0,0,.45); }
+  .ph > .s { width:390px; height:844px; transform:scale(.641); transform-origin:0 0; position:absolute; inset:0 auto auto 0; overflow:hidden; }
+  .sb { height:54px; display:flex; justify-content:space-between; align-items:flex-end; padding:0 34px 8px 40px; font:600 16px/1 -apple-system, system-ui; }
+  .num { font-variant-numeric: tabular-nums lining-nums; }
+  .cond { font-stretch: condensed; font-family: "SF Pro Display", -apple-system, system-ui; }
+  .tabs { position:absolute; left:0; right:0; bottom:0; height:84px; display:flex; justify-content:space-around; padding-top:10px; font:600 11px/1 -apple-system, system-ui; }
+  .tabs span { display:flex; flex-direction:column; align-items:center; gap:5px; } .tabs i { width:26px; height:26px; border-radius:7px; display:block; }
+
+  /* ===== A: Discos (competition plates on rubber floor) ===== */
+  .A { background:#0e0e0f; color:#f4f4f2; }
+  .A .tabs { background:#151516; border-top:1px solid #222; color:#6f7177; } .A .tabs i { background:#2a2a2c; } .A .tabs .on { color:#fff; } .A .tabs .on i { background:#d7261e; }
+  .A .w { padding:4px 20px; }
+  .A .t { font:800 34px/1 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.02em; }
+  .A .d { font:600 14px/1 -apple-system, system-ui; color:#8b8d93; margin-top:6px; }
+  .A .kc { display:flex; align-items:flex-end; gap:16px; margin-top:20px; }
+  .A .big { font:900 84px/0.9 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.04em; font-stretch:condensed; }
+  .A .big small { font-size:22px; font-weight:800; letter-spacing:0; color:#8b8d93; margin-left:6px; }
+  .A .plates { display:flex; gap:10px; margin-top:22px; align-items:flex-end; height:150px; }
+  .A .pl { flex:1; height:100%; border-radius:12px; background:#1c1c1e; position:relative; overflow:hidden; }
+  .A .pl b { position:absolute; left:0; right:0; bottom:0; border-radius:12px 12px 0 0; }
+  .A .pl span { position:absolute; left:12px; top:10px; font:800 13px/1.2 -apple-system, system-ui; color:#fff; mix-blend-mode:normal; }
+  .A .pl em { position:absolute; left:12px; bottom:10px; font:900 26px/1 -apple-system, system-ui; font-stretch:condensed; font-style:normal; }
+  .A .bar { height:8px; border-radius:4px; background:#2c2c2e; margin:-79px -6px 0; position:relative; z-index:0; }
+  .A .card { background:#17171a; border-radius:18px; padding:14px 16px; margin-top:14px; }
+  .A .card h4 { font:700 13px/1 -apple-system, system-ui; color:#8b8d93; margin-bottom:8px; }
+  .A .meal { display:flex; justify-content:space-between; align-items:center; }
+  .A .meal b { font:700 17px/1.3 -apple-system, system-ui; } .A .meal small { display:block; color:#8b8d93; font-size:13px; }
+  .A .eat { background:#f4f4f2; color:#0e0e0f; font:800 15px/1 -apple-system, system-ui; padding:11px 16px; border-radius:12px; }
+  .A .wo { display:flex; gap:12px; align-items:center; }
+  .A .wo i { width:44px; height:44px; border-radius:50%; border:8px solid #1f5fbf; display:block; }
+  .A .go { margin-left:auto; background:#d7261e; color:#fff; font:800 15px/1 -apple-system, system-ui; padding:11px 16px; border-radius:12px; }
+
+  /* ===== B: Cronos (timing tower) ===== */
+  .B { background:#050506; color:#f2f2f2; }
+  .B .tabs { background:#0b0b0c; border-top:1px solid #1d1d20; color:#6c6e74; } .B .tabs i { background:#222327; } .B .tabs .on { color:#fff; } .B .tabs .on i { background:#a93bd8; }
+  .B .w { padding:4px 18px; }
+  .B .hd { display:flex; justify-content:space-between; align-items:baseline; }
+  .B .t { font:800 32px/1 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.02em; font-stretch:condensed; }
+  .B .d { font:600 13px/1 -apple-system, system-ui; color:#7d8087; }
+  .B .tower { margin-top:16px; border-radius:14px; overflow:hidden; background:#0f0f11; }
+  .B .tr { display:grid; grid-template-columns: 34px 1fr 86px 70px; align-items:center; padding:12px 12px; border-bottom:1px solid #1b1b1e; font:600 16px/1 -apple-system, system-ui; }
+  .B .tr .p { font:800 13px/1 -apple-system, system-ui; color:#7d8087; }
+  .B .tr .v { text-align:right; font:800 20px/1 -apple-system, system-ui; font-stretch:condensed; }
+  .B .tr .dl { text-align:right; font:800 13px/1 -apple-system, system-ui; }
+  .B .pu { color:#c26cf0; } .B .gr { color:#3ad27a; } .B .ye { color:#f2c230; }
+  .B .lead { padding:18px 14px; display:flex; align-items:flex-end; justify-content:space-between; background:#121214; }
+  .B .lead .n { font:900 76px/0.9 -apple-system, "SF Pro Display", system-ui; font-stretch:condensed; letter-spacing:-0.03em; }
+  .B .lead .n small { font-size:20px; color:#7d8087; margin-left:4px; }
+  .B .sec { display:flex; gap:4px; margin-top:10px; } .B .sec i { height:6px; flex:1; border-radius:2px; display:block; }
+  .B .card { background:#0f0f11; border-radius:14px; padding:13px 14px; margin-top:12px; display:flex; justify-content:space-between; align-items:center; }
+  .B .card b { font:700 16px/1.3 -apple-system, system-ui; } .B .card small { display:block; color:#7d8087; font-size:12.5px; }
+  .B .btn { background:#f2f2f2; color:#050506; font:800 14px/1 -apple-system, system-ui; padding:10px 14px; border-radius:10px; }
+
+  /* ===== C: Jueces (meet lights) ===== */
+  .C { background:#000; color:#f5f5f5; }
+  .C .tabs { background:#070708; border-top:1px solid #18181a; color:#68696e; } .C .tabs i { background:#1e1e21; } .C .tabs .on { color:#fff; } .C .tabs .on i { background:#fff; }
+  .C .w { padding:4px 22px; }
+  .C .t { font:800 34px/1 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.02em; }
+  .C .lights { display:flex; justify-content:space-between; margin-top:28px; }
+  .C .lt { text-align:center; width:30%; }
+  .C .lt i { display:block; width:86px; height:86px; margin:0 auto; border-radius:50%; background:#1a1a1c; box-shadow: inset 0 0 0 2px #2a2a2d; }
+  .C .lt i.on { background:#f8f8f6; box-shadow: 0 0 0 6px rgba(255,255,255,.08), 0 0 40px rgba(255,255,255,.35); }
+  .C .lt i.half { background: conic-gradient(#f8f8f6 0 38%, #1a1a1c 38% 100%); }
+  .C .lt b { display:block; font:800 15px/1.2 -apple-system, system-ui; margin-top:12px; }
+  .C .lt small { display:block; font:600 12.5px/1.3 -apple-system, system-ui; color:#8a8b90; margin-top:3px; }
+  .C .kc { margin-top:34px; }
+  .C .kc .n { font:900 72px/0.95 -apple-system, "SF Pro Display", system-ui; letter-spacing:-0.04em; }
+  .C .kc .n small { font-size:20px; color:#8a8b90; margin-left:4px; font-weight:700; letter-spacing:0; }
+  .C .mac { display:flex; gap:18px; margin-top:12px; font:700 14px/1 -apple-system, system-ui; color:#c7c8cc; }
+  .C .mac i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+  .C .card { border-top:1px solid #1c1c1f; padding:16px 0; margin-top:18px; display:flex; justify-content:space-between; align-items:center; }
+  .C .card b { font:700 17px/1.3 -apple-system, system-ui; } .C .card small { display:block; color:#8a8b90; font-size:13px; }
+  .C .btn { border:2px solid #f5f5f5; color:#f5f5f5; font:800 14px/1 -apple-system, system-ui; padding:9px 14px; border-radius:22px; }
+
+  /* ===== Canon: Dark Titanium, refined ===== */
+  .K { background:#101113; color:#f2f2f4; }
+  .K .tabs { background:rgba(22,23,26,.96); border-top:1px solid #25272b; color:#7a7d84; } .K .tabs i { background:#2a2c31; } .K .tabs .on { color:#c9d4e6; } .K .tabs .on i { background:#9fb1cc; }
+  .K .lt { font:700 34px/1 -apple-system, "SF Pro Display", system-ui; padding:4px 20px 12px; }
+  .K .card { margin:0 16px 12px; background:#1a1b1f; border-radius:18px; padding:16px; }
+  .K .rings { display:flex; justify-content:space-between; align-items:center; }
+  .K .r1 { width:130px; height:130px; border-radius:50%; background: conic-gradient(#c9d4e6 0 32%, #2a2c31 32% 100%); display:grid; place-items:center; }
+  .K .r1 div { width:104px; height:104px; border-radius:50%; background:#1a1b1f; display:grid; place-items:center; text-align:center; font:800 26px/1 -apple-system, system-ui; }
+  .K .r1 small { display:block; font-size:12px; color:#8a8d95; font-weight:600; margin-top:4px; }
+  .K .ms { display:flex; flex-direction:column; gap:10px; width:150px; font:600 13px/1 -apple-system, system-ui; }
+  .K .mb { height:6px; border-radius:3px; background:#2a2c31; margin-top:5px; } .K .mb b { display:block; height:6px; border-radius:3px; }
+  .K .li { display:flex; justify-content:space-between; align-items:center; font-size:16px; } .K .li small { display:block; color:#8a8d95; font-size:13px; }
+  .K .btn { background:#2a2c31; color:#f2f2f4; font:700 14px/1 -apple-system, system-ui; padding:10px 14px; border-radius:12px; }
+</style>
+</head>
+<body>
+<h1>Gym: pick a direction (all dark)</h1>
+<p class="lede">The new look for Gym, built from 7 Nov together with Part B. Each phone shows the new Today home from the Part B plan: calories and macros left, the next planned meal with one-tap Eaten, today's workout and the weigh-in. Sample numbers: your 2100 kcal target (193 g protein, 56 g fat, 207 g carbs), part of the day eaten. Every direction keeps a dark look, as you asked, and works the same on the Mac.</p>
+
+<!-- A -->
+<section class="row">
+  <div>
+    <div class="tag">DIRECTION 1 · MY RECOMMENDATION</div>
+    <h2>Discos</h2>
+    <p>Competition bumper plates on a rubber gym floor. The calibrated plate colours (red 25, blue 20, yellow 15, green 10) become the app's palette: protein is red, carbs blue, fat yellow, training green. Today's macros stand as three plates seen edge on, filling as you eat. Numbers are set in a heavy condensed type, like the numbers moulded into a plate.</p>
+    <dl>
+      <dt>Feels</dt><dd>Physical, strong, a real gym. Black rubber, saturated plate colour, chalk-white numbers.</dd>
+      <dt>Signature</dt><dd>The three macro plates: one look tells you what's left of each.</dd>
+      <dt>Training</dt><dd>Sets and PRs use the plate colours, and the plate calculator becomes part of the look.</dd>
+      <dt>Risk</dt><dd>Four saturated colours need discipline: they carry data, never decoration.</dd>
+    </dl>
+    <div class="chips"><i class="chip" style="background:#d7261e"></i><i class="chip" style="background:#1f5fbf"></i><i class="chip" style="background:#f2c230"></i><i class="chip" style="background:#2e9e4f"></i><i class="chip" style="background:#f4f4f2"></i><i class="chip" style="background:#0e0e0f"></i></div>
+  </div>
+  <div class="phones"><div><div class="ph"><div class="s A">
+    <div class="sb"><span>9:41</span><span>●●●</span></div>
+    <div class="w">
+      <div class="t">Today</div>
+      <div class="d">Monday 27 October · rest day</div>
+      <div class="kc"><div class="big num">1426<small>kcal left</small></div></div>
+      <div class="d num" style="margin-top:8px">674 of 2100 eaten</div>
+      <div class="plates">
+        <div class="pl"><b style="height:39%;background:#d7261e"></b><span>Protein</span><em class="num">117 g</em></div>
+        <div class="pl"><b style="height:22%;background:#1f5fbf"></b><span>Carbs</span><em class="num">161 g</em></div>
+        <div class="pl"><b style="height:30%;background:#f2c230"></b><span>Fat</span><em class="num" style="color:#fff">39 g</em></div>
+      </div>
+      <div class="d" style="margin-top:8px">left of each</div>
+      <div class="card"><h4>NEXT MEAL · 14:00</h4>
+        <div class="meal"><span><b>Lunch</b><small>Chicken breast 200 g · Potatoes 300 g · Spinach</small></span><span class="eat">Eaten</span></div></div>
+      <div class="card"><h4>TRAINING</h4>
+        <div class="wo"><i></i><span><b style="font:700 17px/1.3 -apple-system">Push</b><small style="display:block;color:#8b8d93;font-size:13px">Bench 80 kg × 10 · 4 exercises</small></span><span class="go">Start</span></div></div>
+    </div>
+    <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Food log</span><span><i></i>Progress</span><span><i></i>Training</span></div>
+  </div></div><div class="cap">Today</div></div></div>
+</section>
+
+<!-- B -->
+<section class="row">
+  <div>
+    <div class="tag">DIRECTION 2</div>
+    <h2>Cronos</h2>
+    <p>A Formula 1 timing tower: black, tight condensed numbers in one tabular column, and the timing colours that every racing fan reads instantly. Purple is a personal best, green is better than last time, yellow is a warning. Today reads like a lap: the day's numbers stacked with their deltas, and each lift's set marked purple when it's a PR.</p>
+    <dl>
+      <dt>Feels</dt><dd>Fast, precise, competitive. The densest of the three.</dd>
+      <dt>Signature</dt><dd>Purple, green and yellow deltas on everything that can improve (weight trend, lifts, protein streak).</dd>
+      <dt>Training</dt><dd>The live workout becomes a timing tower of sets, with a purple flash on a PR.</dd>
+      <dt>Risk</dt><dd>Dense; must stay calm on food days with nothing to "race".</dd>
+    </dl>
+    <div class="chips"><i class="chip" style="background:#a93bd8"></i><i class="chip" style="background:#3ad27a"></i><i class="chip" style="background:#f2c230"></i><i class="chip" style="background:#f2f2f2"></i><i class="chip" style="background:#050506"></i></div>
+  </div>
+  <div class="phones"><div><div class="ph"><div class="s B">
+    <div class="sb"><span>9:41</span><span>●●●</span></div>
+    <div class="w">
+      <div class="hd"><span class="t">TODAY</span><span class="d">MON 27 OCT · REST</span></div>
+      <div class="tower">
+        <div class="lead"><div><div class="d">KCAL LEFT</div><div class="n num">1426<small>/2100</small></div></div>
+          <div class="d num" style="text-align:right">674<br>eaten</div></div>
+        <div class="tr"><span class="p">P</span><span>Protein</span><span class="v num">117 g</span><span class="dl num" style="color:#7d8087">76 in</span></div>
+        <div class="tr"><span class="p">C</span><span>Carbs</span><span class="v num">161 g</span><span class="dl num" style="color:#7d8087">46 in</span></div>
+        <div class="tr"><span class="p">F</span><span>Fat</span><span class="v num">39 g</span><span class="dl num" style="color:#7d8087">17 in</span></div>
+        <div class="tr"><span class="p">W</span><span>Trend</span><span class="v num">111,1</span><span class="dl pu num">−0,6</span></div>
+        <div class="tr" style="border:0"><span class="p">S</span><span>Streak</span><span class="v num">4 d</span><span class="dl ye num">=</span></div>
+      </div>
+      <div class="card"><span><b>Lunch · 14:00</b><small>Chicken 200 g · Potatoes 300 g · Spinach</small></span><span class="btn">Eaten</span></div>
+      <div class="card"><span><b>Push</b><small>Bench 80 × 10 last time · aim 80 × 11</small></span><span class="btn" style="background:#a93bd8;color:#fff">Start</span></div>
+    </div>
+    <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Food log</span><span><i></i>Progress</span><span><i></i>Training</span></div>
+  </div></div><div class="cap">Today (illustrative: purple marks a personal best, here a week's trend drop)</div></div></div>
+</section>
+
+<!-- C -->
+<section class="row">
+  <div>
+    <div class="tag">DIRECTION 3</div>
+    <h2>Jueces</h2>
+    <p>The three referee lights at a lifting meet: white means good lift. Each day gets three lights: <b>Eat</b> (calories in your band), <b>Protein</b> (target hit) and <b>Train or rest</b> (the plan for today done). They light up as the day goes, filling as each gets closer. Black ground, white light, almost no colour: the calmest and most minimal.</p>
+    <dl>
+      <dt>Feels</dt><dd>Serious, quiet, a clear verdict. "Three white lights" becomes the daily goal.</dd>
+      <dt>Signature</dt><dd>Today's three lights, and a strip of past days' lights in Progress.</dd>
+      <dt>Training</dt><dd>Each set gets its own light when logged; a PR adds a gold edge.</dd>
+      <dt>Risk</dt><dd>Very little colour; macros need their small colour dots to stay apart.</dd>
+    </dl>
+    <div class="chips"><i class="chip" style="background:#f8f8f6"></i><i class="chip" style="background:#1a1a1c"></i><i class="chip" style="background:#000"></i><i class="chip" style="background:#e0453a"></i></div>
+  </div>
+  <div class="phones"><div><div class="ph"><div class="s C">
+    <div class="sb"><span>9:41</span><span>●●●</span></div>
+    <div class="w">
+      <div class="t">Today</div>
+      <div class="lights">
+        <div class="lt"><i class="half"></i><b>Eat</b><small class="num">674 of 2100</small></div>
+        <div class="lt"><i class="half" style="background:conic-gradient(#f8f8f6 0 39%, #1a1a1c 39% 100%)"></i><b>Protein</b><small class="num">76 of 193 g</small></div>
+        <div class="lt"><i class="on"></i><b>Rest day</b><small>nothing to do</small></div>
+      </div>
+      <div class="kc"><div class="n num">1426<small>kcal left</small></div>
+        <div class="mac num"><span><i style="background:#e0453a"></i>117 P</span><span><i style="background:#5b8de0"></i>161 C</span><span><i style="background:#e8b931"></i>39 F</span></div></div>
+      <div class="card"><span><b>Lunch · 14:00</b><small>Chicken 200 g · Potatoes 300 g · Spinach</small></span><span class="btn">Eaten</span></div>
+      <div class="card"><span><b>Weigh in</b><small>Trend 111,1 kg · last 2 days ago</small></span><span class="btn">Weigh</span></div>
+    </div>
+    <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Food log</span><span><i></i>Progress</span><span><i></i>Training</span></div>
+  </div></div><div class="cap">Today (rest day: its light is already on)</div></div></div>
+</section>
+
+<!-- Canon -->
+<section class="row" style="opacity:.92">
+  <div>
+    <div class="tag">OR: KEEP TODAY'S LOOK, REFINED</div>
+    <h2>Dark Titanium</h2>
+    <p>The current look (appearance × finish, titanium on black), cleaned up for the new Today home: rings, cards, metal accents. Familiar; the smallest change.</p>
+    <dl><dt>Risk</dt><dd>Close to every other dark fitness app.</dd></dl>
+  </div>
+  <div class="phones"><div><div class="ph"><div class="s K">
+    <div class="sb"><span>9:41</span><span>●●●</span></div>
+    <div class="lt">Today</div>
+    <div class="card"><div class="rings"><div class="r1"><div><span class="num">1426</span><small>kcal left</small></div></div>
+      <div class="ms num"><span>Protein 76/193<div class="mb"><b style="width:39%;background:#e07a6a"></b></div></span><span>Carbs 46/207<div class="mb"><b style="width:22%;background:#7ea6d8"></b></div></span><span>Fat 17/56<div class="mb"><b style="width:30%;background:#d9b65a"></b></div></span></div></div></div>
+    <div class="card"><div class="li"><span>Lunch · 14:00<small>Chicken · Potatoes · Spinach</small></span><span class="btn">Eaten</span></div></div>
+    <div class="card"><div class="li"><span>Push<small>4 exercises</small></span><span class="btn">Start</span></div></div>
+    <div class="tabs"><span class="on"><i></i>Today</span><span><i></i>Food log</span><span><i></i>Progress</span><span><i></i>Training</span></div>
+  </div></div><div class="cap">Today</div></div></div>
+</section>
+</body>
+</html>
